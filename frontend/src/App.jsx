@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import MainLayout from "./layouts/MainLayout";
+import LoginPage from "./pages/LoginPage";
+import ProtectedRoute from "./routes/ProtectedRoute";
 
 import DashboardPage from "./pages/DashboardPage";
-import NewScanPage from "./pages/NewScanPage";
+import ScanExecutionPage from "./pages/ScanExecutionPage";
 import ScanHistoryPage from "./pages/ScanHistoryPage";
 import VulnerabilitiesPage from "./pages/VulnerabilitiesPage";
 import ReportsPage from "./pages/ReportsPage";
@@ -13,9 +15,17 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route element={<MainLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+
+        <Route
+          element={
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/scan" element={<NewScanPage />} />
+          <Route path="/scans" element={<ScanExecutionPage />} />
           <Route path="/history" element={<ScanHistoryPage />} />
           <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
           <Route path="/reports" element={<ReportsPage />} />

@@ -1,5 +1,4 @@
 import Sidebar from "../components/layouts/Sidebar";
-import TopNavbar from "../components/layouts/TopNavbar";
 import { Outlet } from "react-router-dom";
 
 export default function MainLayout() {
@@ -14,29 +13,17 @@ export default function MainLayout() {
     >
       <Sidebar />
 
-      <div
+      <main
         style={{
           flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          width: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
+          padding: "16px 20px",
           minWidth: 0,
         }}
       >
-        <TopNavbar />
-
-        <main
-          style={{
-            flex: 1,
-            width: "100%",
-            overflowY: "auto",
-            overflowX: "hidden",
-            padding: "24px",
-          }}
-        >
-          <Outlet />
-        </main>
-      </div>
+        <Outlet />
+      </main>
     </div>
   );
 }

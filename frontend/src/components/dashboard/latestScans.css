@@ -1,5 +1,5 @@
 .latest-scroll::-webkit-scrollbar {
-  width: 4px;
+  width: 3px;
 }
 
 .latest-scroll::-webkit-scrollbar-track {
@@ -7,10 +7,10 @@
 }
 
 .latest-scroll::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.15);
+  background: linear-gradient(180deg, #8b5cf6, #f97316);
   border-radius: 999px;
 }
 
 .latest-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.3);
+  background: linear-gradient(180deg, #a855f7, #fb923c);
 }

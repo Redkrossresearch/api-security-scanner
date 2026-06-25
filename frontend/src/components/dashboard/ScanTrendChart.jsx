@@ -36,7 +36,7 @@ export default function ScanTrendChart({
         style={{
           margin: 0,
           marginBottom: "20px",
-          color: "#0F172A",
+          color: "#FFFFFF",
         }}
       >
         Security Posture Trend
@@ -98,7 +98,7 @@ export default function ScanTrendChart({
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height="78%">
+      <ResponsiveContainer width="100%" height={260}>
         <AreaChart data={chartData}>
           <defs>
             <linearGradient

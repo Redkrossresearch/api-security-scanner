@@ -1,0 +1,108 @@
+.athx-markdown {
+  color: #cbd5e1;
+  line-height: 2;
+  letter-spacing: 0.2px;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.athx-markdown h1 {
+  font-size: 34px;
+  letter-spacing: -0.8px;
+  font-weight: 800;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  color: #ffffff;
+}
+
+.athx-markdown h2 {
+  font-size: 28px;
+  letter-spacing: -0.5px;
+  font-weight: 700;
+  margin-top: 20px;
+  margin-bottom: 20px;
+  color: #ffffff;
+}
+
+.athx-markdown h3 {
+  font-size: 22px;
+  letter-spacing: -0.3px;
+  font-weight: 700;
+  margin-top: 16px;
+  margin-bottom: 10px;
+  color: #f8fafc;
+}
+
+.athx-markdown p {
+  margin-bottom: 18px;
+}
+
+.athx-markdown ul,
+.athx-markdown ol {
+  padding-left: 24px;
+  margin-bottom: 20px;
+}
+
+.athx-markdown li {
+  margin-bottom: 10px;
+}
+
+.athx-markdown blockquote {
+  border-left: 4px solid #3b82f6;
+  padding-left: 16px;
+  color: #94a3b8;
+  margin: 16px 0;
+}
+
+.athx-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+}
+
+.athx-markdown th {
+  background: #111827;
+  color: white;
+  text-align: left;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.athx-markdown td {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.athx-markdown pre {
+  background: #0b1220;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.athx-markdown code {
+  border-radius: 6px;
+}
+
+.athx-markdown strong {
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.athx-markdown hr {
+  border: none;
+  height: 1px;
+  background: rgba(255,255,255,.08);
+  margin: 28px 0;
+}
+
+.athx-markdown a {
+  color: #38BDF8;
+  text-decoration: none;
+}
+
+.athx-markdown a:hover {
+  text-decoration: underline;
+}

@@ -6,7 +6,27 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+import { useLocation } from "react-router-dom";
+
 export default function TopNavbar() {
+
+  const location = useLocation();
+  console.log(location.pathname);
+
+const titles = {
+  "/": "Dashboard",
+  "/scans": "API Security Scan",
+  "/scan-history": "Scan History",
+  "/vulnerabilities": "Vulnerabilities",
+  "/api-inventory": "API Inventory",
+  "/reports": "Reports",
+  "/ai-copilot": "AI Copilot",
+  "/compliance": "Compliance",
+  "/audit-logs": "Audit Logs",
+  "/settings": "Settings",
+};
+
+const pageTitle = titles[location.pathname] || "ATHX Security";
   return (
     <div
       style={{
@@ -29,7 +49,7 @@ export default function TopNavbar() {
           fontWeight: 600,
         }}
       >
-        Dashboard
+        {pageTitle}
       </h2>
 
       {/* Center Search */}

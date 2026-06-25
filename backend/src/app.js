@@ -7,16 +7,15 @@ const cookieParser = require("cookie-parser");
 const scanRoutes = require("./modules/scans/scan.routes");
 const authRoutes = require("./modules/auth/auth.routes");
 const env = require("./config/env");
-const dashboardRoutes =require("./modules/scans/dashboard.routes");
+const { apiLimiter, authLimiter } = require("./middleware/rateLimiter");
+const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
+const vulnerabilityRoutes = require("./modules/vulnerabilities/vulnerability.routes");
+const aiRoutes = require("./modules/ai/ai.routes");
 const app = express();
 
-const allowedOrigins = [
-  "http://localhost:5173",
-  env.clientUrl,
-].filter(Boolean);
+const allowedOrigins = ["http://localhost:5173", env.clientUrl].filter(Boolean);
 
 app.use(
-  
   cors({
     origin: (origin, callback) => {
       if (!origin) {
@@ -27,25 +26,21 @@ app.use(
         return callback(null, true);
       }
 
-      return callback(
-        new Error("Origin not allowed by CORS")
-      );
+      return callback(new Error("Origin not allowed by CORS"));
     },
     credentials: true,
-  })
+  }),
 );
 
-const reportRoutes =
-  require(
-    "./modules/scans/report.routes"
-  );
+const reportRoutes = require("./modules/reports/report.routes");
+
+app.use("/api/reports", reportRoutes);
 
 app.use(
-  "/api/reports",
-  reportRoutes
+  helmet({
+    crossOriginResourcePolicy: false,
+  }),
 );
-
-app.use(helmet());
 
 app.use(compression());
 
@@ -63,10 +58,18 @@ app.get("/health", (req, res) => {
     message: "API Security Scanner Backend Running",
   });
 });
+app.use("/api", apiLimiter);
+
+app.use("/api/auth", authLimiter);
+
 app.use("/api/auth", authRoutes);
 
 app.use("/api/dashboard", dashboardRoutes);
 
-app.use("/api/scans",scanRoutes);
+app.use("/api/scans", scanRoutes);
+
+app.use("/api/vulnerabilities", vulnerabilityRoutes);
+
+app.use("/api/ai", aiRoutes);
 
 module.exports = app;

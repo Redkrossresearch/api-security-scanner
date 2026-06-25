@@ -1,0 +1,21 @@
+.athx-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.athx-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.athx-scroll::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: linear-gradient(
+        180deg,
+        #3B82F6,
+        #8B5CF6,
+        #F97316
+    );
+}
+
+.athx-scroll::-webkit-scrollbar-thumb:hover {
+    opacity: .9;
+}

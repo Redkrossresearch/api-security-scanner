@@ -14,4 +14,8 @@ module.exports = {
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
 
   clientUrl: process.env.CLIENT_URL,
+
+  openRouterApiKey: process.env.OPENROUTER_API_KEY,
+
+  openRouterModel: process.env.OPENROUTER_MODEL,
 };
