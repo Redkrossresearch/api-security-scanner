@@ -185,6 +185,7 @@ const scanSchema = new mongoose.Schema(
     }
 );
 
+// ✅ Existing indexes
 scanSchema.index({
     createdAt: -1,
 });
@@ -203,6 +204,27 @@ scanSchema.index({
 
 scanSchema.index({
     status: 1,
+});
+
+// ✅ Sprint 3.1.1: Dashboard-specific compound indexes
+scanSchema.index({
+    createdAt: -1,
+    securityScore: -1,
+});
+
+scanSchema.index({
+    userId: 1,
+    createdAt: -1,
+});
+
+scanSchema.index({
+    riskLevel: 1,
+    createdAt: -1,
+});
+
+scanSchema.index({
+    grade: 1,
+    createdAt: -1,
 });
 
 module.exports = mongoose.model(
