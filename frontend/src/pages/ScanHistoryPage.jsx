@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 import ScanHistoryDrawer from "../components/scans/ScanHistoryDrawer";
 import ScanComparisonModal from "../components/scans/ScanComparisonModal";
@@ -15,8 +16,22 @@ import AssetSecurityLeaderboard from "../components/scans/AssetSecurityLeaderboa
 import SecurityPostureEvolution from "../components/scans/SecurityPostureEvolution";
 
 export default function ScanHistoryPage() {
+  const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [selectedScan, setSelectedScan] = useState(null);
+
+  useEffect(() => {
+    if (location.state?.scan) {
+      setSelectedScan(location.state.scan);
+      setDrawerOpen(true);
+    }
+  }, [location.state]);
+
+  const handleViewScan = (scan) => {
+    setSelectedScan(scan);
+    setDrawerOpen(true);
+  };
 
   return (
     <>
@@ -28,14 +43,10 @@ export default function ScanHistoryPage() {
           gap: "20px",
         }}
       >
-        {/* Header */}
         <HistoryHeader onCompare={() => setComparisonOpen(true)} />
-        {/* KPI Cards */}
         <HistoryKPICards />
         <SecurityPostureEvolution />
-        {/* Risk Trend */}
         <RiskTrendChart />
-        {/* Analytics */}
         <div
           style={{
             display: "grid",
@@ -46,9 +57,7 @@ export default function ScanHistoryPage() {
           <ScanVolumeChart />
           <FindingsTrendChart />
         </div>
-        {/* Scan Records */}
-        <ScanHistoryTable onView={() => setDrawerOpen(true)} />
-        {/* Insights */}
+        <ScanHistoryTable onView={handleViewScan} />
         <div
           style={{
             display: "grid",
@@ -60,7 +69,6 @@ export default function ScanHistoryPage() {
           <RiskDistribution />
           <AIHistoricalInsights />
         </div>
-        {/* Heatmap */}
         <div
           style={{
             display: "grid",
@@ -70,17 +78,17 @@ export default function ScanHistoryPage() {
         >
           <AssetSecurityLeaderboard />
           <VulnerabilityHeatMap />
-        </div>{" "}
+        </div>
       </div>
-
-      {/* Drawer */}
 
       <ScanHistoryDrawer
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => {
+          setDrawerOpen(false);
+          setSelectedScan(null);
+        }}
+        selectedScan={selectedScan}
       />
-
-      {/* Comparison Modal */}
 
       <ScanComparisonModal
         open={comparisonOpen}

@@ -6,23 +6,28 @@ import { REPORT_MESSAGES } from "../constants/messages";
 export const reportService = {
   /**
    * Export scan report as PDF
-   * @param {string} scanId - Scan ID
+   * @param {string} scanId - The scanId field (e.g., "SCAN-1782760224275-546"), NOT MongoDB _id
    * @param {Object} scanData - Scan data (optional, for better filename)
    * @throws {Error} When export fails
    */
   exportReport: async (scanId, scanData = null) => {
     try {
+      // ✅ Sprint 2.3.1: scanId is now the custom scanId string, not MongoDB _id
       const response = await api.get(`/reports/${scanId}/export/pdf`, {
         responseType: "blob",
       });
 
-      // Validate response - throw custom error
+      // Validate response
       if (!response.data || response.data.size === 0) {
         throw new Error(REPORT_MESSAGES.ERROR_EMPTY);
       }
 
       // Generate professional filename with sanitized target
-      const target = (scanData?.targetUrl || scanData?.target || scanId)
+      const target = (
+        scanData?.targetUrl ||
+        scanData?.target ||
+        scanId
+      )
         .replace(/^https?:\/\//, "") // Remove protocol
         .replace(/[^\w.-]/g, "_");   // Replace invalid chars with _
 
@@ -34,7 +39,7 @@ export const reportService = {
       // Download file
       const blob = new Blob([response.data], { type: "application/pdf" });
       downloadFile(blob, filename);
-      
+
     } catch (error) {
       // ✅ Preserve custom error messages (like ERROR_EMPTY)
       if (Object.values(REPORT_MESSAGES).includes(error.message)) {

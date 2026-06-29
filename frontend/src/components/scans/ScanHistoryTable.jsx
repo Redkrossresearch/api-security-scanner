@@ -29,9 +29,7 @@ export default function ScanHistoryTable({ onView }) {
   const fetchScanHistory = async () => {
     try {
       const response = await api.get("/scans/history");
-
       console.log("SCAN HISTORY API =", response.data);
-
       setScans(response.data.scans || []);
     } catch (error) {
       console.error("Failed to load scans", error);
@@ -46,7 +44,6 @@ export default function ScanHistoryTable({ onView }) {
     return "#22C55E";
   };
 
-  // --- Helper Functions for Upgrades ---
   const getRiskLabel = (risk) => {
     if (risk >= 8) return "Critical";
     if (risk >= 6) return "High";
@@ -188,7 +185,6 @@ export default function ScanHistoryTable({ onView }) {
       (scan.profile || "").toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  // --- Reusable Components ---
   const ActionButton = ({ icon: Icon, color, onClick }) => (
     <div
       onClick={onClick}
@@ -270,7 +266,6 @@ export default function ScanHistoryTable({ onView }) {
         padding: "24px",
       }}
     >
-      {/* Header */}
       <div
         style={{
           display: "flex",
@@ -309,7 +304,6 @@ export default function ScanHistoryTable({ onView }) {
         </div>
       </div>
 
-      {/* Toolbar: Search & Filters */}
       <div
         style={{
           display: "flex",
@@ -361,7 +355,6 @@ export default function ScanHistoryTable({ onView }) {
         </div>
       </div>
 
-      {/* KPI Cards */}
       <div
         style={{
           display: "grid",
@@ -451,7 +444,6 @@ export default function ScanHistoryTable({ onView }) {
         ))}
       </div>
 
-      {/* Table */}
       <div
         style={{
           overflowX: "auto",
@@ -463,7 +455,7 @@ export default function ScanHistoryTable({ onView }) {
           <thead>
             <tr style={{ background: "rgba(255,255,255,.02)" }}>
               {[
-                { label: "", width: "4px" }, // Severity Strip
+                { label: "", width: "4px" },
                 "Scan ID",
                 "Target",
                 "Profile",
@@ -520,7 +512,6 @@ export default function ScanHistoryTable({ onView }) {
                     onMouseEnter={() => setHoveredRow(scan.scanId)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    {/* Severity Strip */}
                     <td
                       style={{
                         padding: 0,
@@ -529,7 +520,6 @@ export default function ScanHistoryTable({ onView }) {
                       }}
                     />
 
-                    {/* Scan ID */}
                     <td
                       style={{ padding: "16px", cursor: "pointer" }}
                       onClick={() =>
@@ -570,7 +560,6 @@ export default function ScanHistoryTable({ onView }) {
                       </div>
                     </td>
 
-                    {/* Target */}
                     <td
                       style={{
                         padding: "16px",
@@ -582,7 +571,6 @@ export default function ScanHistoryTable({ onView }) {
                       {scan.targetUrl}
                     </td>
 
-                    {/* Profile Badge */}
                     <td style={{ padding: "16px" }}>
                       <span
                         style={{
@@ -599,7 +587,6 @@ export default function ScanHistoryTable({ onView }) {
                       </span>
                     </td>
 
-                    {/* Date */}
                     <td
                       style={{
                         padding: "16px",
@@ -610,7 +597,6 @@ export default function ScanHistoryTable({ onView }) {
                       {new Date(scan.createdAt).toLocaleDateString()}
                     </td>
 
-                    {/* Duration */}
                     <td
                       style={{
                         padding: "16px",
@@ -621,7 +607,6 @@ export default function ScanHistoryTable({ onView }) {
                       {scan.duration}s
                     </td>
 
-                    {/* Risk Badge */}
                     <td style={{ padding: "16px" }}>
                       <span
                         style={{
@@ -650,7 +635,6 @@ export default function ScanHistoryTable({ onView }) {
                       </span>
                     </td>
 
-                    {/* Findings Badge */}
                     <td style={{ padding: "16px" }}>
                       <span
                         style={{
@@ -667,7 +651,6 @@ export default function ScanHistoryTable({ onView }) {
                       </span>
                     </td>
 
-                    {/* Trend */}
                     <td style={{ padding: "16px" }}>
                       <span
                         style={{
@@ -686,7 +669,6 @@ export default function ScanHistoryTable({ onView }) {
                       </span>
                     </td>
 
-                    {/* AI Verdict */}
                     <td style={{ padding: "16px" }}>
                       <span
                         style={{
@@ -703,7 +685,6 @@ export default function ScanHistoryTable({ onView }) {
                       </span>
                     </td>
 
-                    {/* Status */}
                     <td style={{ padding: "16px" }}>
                       <div style={{ display: "flex", gap: "6px" }}>
                         <span
@@ -733,7 +714,6 @@ export default function ScanHistoryTable({ onView }) {
                       </div>
                     </td>
 
-                    {/* Actions */}
                     <td style={{ padding: "16px" }}>
                       <div
                         style={{
@@ -745,7 +725,7 @@ export default function ScanHistoryTable({ onView }) {
                         <ActionButton
                           icon={Eye}
                           color="#60A5FA"
-                          onClick={onView}
+                          onClick={() => onView(scan)}
                         />
                         <ActionButton icon={FileText} color="#A855F7" />
                         <ActionButton icon={RotateCw} color="#22C55E" />
@@ -753,7 +733,6 @@ export default function ScanHistoryTable({ onView }) {
                     </td>
                   </tr>
 
-                  {/* Expanded Row Details */}
                   {isExpanded && (
                     <tr>
                       <td
@@ -772,7 +751,6 @@ export default function ScanHistoryTable({ onView }) {
                             gap: "24px",
                           }}
                         >
-                          {/* Col 1: Exec Summary & Top Findings */}
                           <div>
                             <h4
                               style={{
@@ -865,7 +843,6 @@ export default function ScanHistoryTable({ onView }) {
                             </div>
                           </div>
 
-                          {/* Col 2: Risk Breakdown & Recommendations */}
                           <div>
                             <h4
                               style={{
@@ -969,7 +946,6 @@ export default function ScanHistoryTable({ onView }) {
                             </div>
                           </div>
 
-                          {/* Col 3: Affected Endpoints */}
                           <div>
                             <h4
                               style={{
@@ -1049,7 +1025,6 @@ export default function ScanHistoryTable({ onView }) {
         </table>
       </div>
 
-      {/* Table Footer */}
       <div
         style={{
           display: "flex",

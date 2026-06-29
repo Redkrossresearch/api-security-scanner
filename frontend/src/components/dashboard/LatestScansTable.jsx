@@ -1,5 +1,6 @@
 import { Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
 
 import "./latestScans.css";
 
@@ -11,7 +12,6 @@ export default function LatestScansTable({
 }) {
   const navigate = useNavigate();
 
-  // ✅ Issue 4 Fix: Empty state handling
   if (scans.length === 0) {
     return (
       <div
@@ -40,12 +40,48 @@ export default function LatestScansTable({
     );
   }
 
-  // ✅ Issue 3 Fix: Security score color ranges
   const getScoreColor = (score) => {
     if (score >= 90) return { bg: "rgba(34,197,94,.15)", text: "#22C55E" };
     if (score >= 70) return { bg: "rgba(234,179,8,.15)", text: "#F59E0B" };
     if (score >= 40) return { bg: "rgba(249,115,22,.15)", text: "#F97316" };
     return { bg: "rgba(239,68,68,.15)", text: "#EF4444" };
+  };
+
+  const getStatusBadge = (status) => {
+    const statusMap = {
+      completed: {
+        bg: "rgba(34,197,94,.15)",
+        color: "#22C55E",
+        label: "Completed",
+      },
+      running: {
+        bg: "rgba(234,179,8,.15)",
+        color: "#F59E0B",
+        label: "Running",
+      },
+      failed: {
+        bg: "rgba(239,68,68,.15)",
+        color: "#EF4444",
+        label: "Failed",
+      },
+    };
+    return statusMap[status?.toLowerCase()] || statusMap.completed;
+  };
+
+  const handleScanClick = (scan) => {
+    navigate("/history", {
+      state: {
+        scanId: scan._id,
+        scan: scan,
+      },
+    });
+  };
+
+  const handleKeyDown = (e, scan) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleScanClick(scan);
+    }
   };
 
   return (
@@ -79,7 +115,6 @@ export default function LatestScansTable({
           Recent Scans
         </h3>
 
-        {/* ✅ Sprint 1.2: View All navigation added */}
         <span
           onClick={() => navigate("/history")}
           style={{
@@ -101,122 +136,172 @@ export default function LatestScansTable({
           paddingRight: "6px",
         }}
       >
-        {scans.map((scan) => (
-          <div
-            // ✅ Issue 1 Fix: key={index} se key={scan._id}
-            key={scan._id}
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              padding: "16px 0",
-              borderBottom: "1px solid rgba(255,255,255,.05)",
-            }}
-          >
+        {scans.map((scan) => {
+          const statusBadge = getStatusBadge(scan.status);
+
+          return (
             <div
+              key={scan._id}
+              role="button"
+              tabIndex={0}
+              onClick={() => handleScanClick(scan)}
+              onKeyDown={(e) => handleKeyDown(e, scan)}
+              title={`View details for ${scan.targetUrl}`}
               style={{
                 display: "flex",
-                gap: "14px",
+                justifyContent: "space-between",
                 alignItems: "center",
+                padding: "16px 12px",
+                borderBottom: "1px solid rgba(255,255,255,.05)",
+                cursor: "pointer",
+                borderRadius: "8px",
+                transition: "all 0.2s ease",
+                outline: "none",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255,255,255,.03)";
+                e.currentTarget.style.transform = "translateX(4px)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.transform = "translateX(0)";
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.background = "rgba(255,255,255,.03)";
+                e.currentTarget.style.boxShadow =
+                  "0 0 0 2px rgba(139,92,246,.3)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.boxShadow = "none";
               }}
             >
               <div
                 style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,.05)",
                   display: "flex",
-                  justifyContent: "center",
+                  gap: "14px",
                   alignItems: "center",
-                }}
-              >
-                <Globe size={18} />
-              </div>
-
-              <div
-                style={{
-                  minWidth: 0,
                   flex: 1,
+                  minWidth: 0,
                 }}
               >
                 <div
                   style={{
-                    fontSize: "15px",
-                    fontWeight: "600",
-                    color: "#FFFFFF",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    maxWidth: "320px",
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,.05)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    flexShrink: 0,
                   }}
                 >
-                  {scan.targetUrl}
+                  <Globe size={18} />
                 </div>
 
                 <div
                   style={{
-                    color: "#94A3B8",
-                    fontSize: "13px",
-                    marginTop: "4px",
+                    minWidth: 0,
+                    flex: 1,
                   }}
                 >
-                  {new Date(scan.createdAt).toLocaleDateString()}
+                  <div
+                    style={{
+                      fontSize: "15px",
+                      fontWeight: "600",
+                      color: "#FFFFFF",
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      maxWidth: "320px",
+                    }}
+                    title={scan.targetUrl}
+                  >
+                    {scan.targetUrl}
+                  </div>
+
+                  <div
+                    style={{
+                      color: "#94A3B8",
+                      fontSize: "13px",
+                      marginTop: "4px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <span>
+                      {formatDistanceToNow(new Date(scan.createdAt), {
+                        addSuffix: true,
+                      })}
+                    </span>
+
+                    <span
+                      style={{
+                        background: statusBadge.bg,
+                        color: statusBadge.color,
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                        fontSize: "11px",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {statusBadge.label}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                flexShrink: 0,
-              }}
-            >
               <div
                 style={{
-                  minWidth: "42px",
-                  height: "36px",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  // ✅ Issue 3 Fix: Score ranges ke basis par color
-                  background: getScoreColor(scan.securityScore).bg,
-                  color: getScoreColor(scan.securityScore).text,
-                  borderRadius: "10px",
-                  fontWeight: "700",
-                  fontSize: "15px",
+                  gap: "12px",
+                  flexShrink: 0,
                 }}
               >
-                {scan.securityScore}
-              </div>
+                <div
+                  style={{
+                    minWidth: "42px",
+                    height: "36px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: getScoreColor(scan.securityScore).bg,
+                    color: getScoreColor(scan.securityScore).text,
+                    borderRadius: "10px",
+                    fontWeight: "700",
+                    fontSize: "15px",
+                  }}
+                >
+                  {scan.securityScore}
+                </div>
 
-              <div
-                style={{
-                  width: "55px",
-                  textAlign: "right",
-                  fontSize: "14px",
-                  // ✅ Issue 2 Fix: Critical risk level ka color add kiya
-                  color:
-                    scan.riskLevel === "Critical"
-                      ? "#DC2626"
-                      : scan.riskLevel === "High"
-                        ? "#EF4444"
-                        : scan.riskLevel === "Medium"
-                          ? "#F59E0B"
-                          : "#22C55E",
-                  fontWeight: "600",
-                }}
-              >
-                {scan.riskLevel}
+                <div
+                  style={{
+                    width: "55px",
+                    textAlign: "right",
+                    fontSize: "14px",
+                    color:
+                      scan.riskLevel === "Critical"
+                        ? "#DC2626"
+                        : scan.riskLevel === "High"
+                          ? "#EF4444"
+                          : scan.riskLevel === "Medium"
+                            ? "#F59E0B"
+                            : "#22C55E",
+                    fontWeight: "600",
+                  }}
+                >
+                  {scan.riskLevel}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* ✅ Sprint 3.4.5: Pagination Controls */}
       <div
         style={{
           display: "flex",

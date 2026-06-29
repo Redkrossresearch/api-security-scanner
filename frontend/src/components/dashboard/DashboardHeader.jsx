@@ -12,8 +12,9 @@ function DashboardHeader({ dashboardData }) {
   const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
 
+  // ✅ Sprint 2.3.1: Use scanId instead of _id
   const latestScan = dashboardData?.latestScans?.[0];
-  const latestScanId = latestScan?._id;
+  const latestScanId = latestScan?.scanId;
 
   const handleExport = async () => {
     if (!latestScanId || exporting) return;
