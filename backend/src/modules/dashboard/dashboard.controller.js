@@ -30,6 +30,25 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
+const getScanDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const scan = await dashboardService.getScanDetails(id);
+
+    res.json({
+      success: true,
+      scan,
+    });
+  } catch (error) {
+    res.status(404).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getDashboardStats,
+  getScanDetails,
 };

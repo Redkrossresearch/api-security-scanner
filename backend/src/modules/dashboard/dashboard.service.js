@@ -405,6 +405,19 @@ const getDashboardStats = async (
   return response;
 };
 
+// ✅ Fix: Added getScanDetails function
+const getScanDetails = async (id) => {
+  const scan = await Scan.findById(id).lean();
+
+  if (!scan) {
+    throw new Error("Scan not found");
+  }
+
+  return scan;
+};
+
+// ✅ Fix: Updated exports to include getScanDetails
 module.exports = {
   getDashboardStats,
+  getScanDetails,
 };

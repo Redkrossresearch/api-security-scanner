@@ -13,6 +13,13 @@ function DashboardTables({
   page,
   setPage,
   pagination,
+
+  selectedScan,
+  setSelectedScan,
+  fetchScanDetails, // ✅ NEW
+
+  selectedSeverity,
+  setSelectedSeverity,
 }) {
   return (
     <div style={styles.gridTables}>
@@ -21,11 +28,20 @@ function DashboardTables({
         page={page}
         setPage={setPage}
         pagination={pagination}
+
+        selectedScan={selectedScan}
+        setSelectedScan={setSelectedScan}
+        fetchScanDetails={fetchScanDetails} // ✅ NEW
       />
 
       <CriticalFindingsCard
         criticalFindings={criticalFindings}
         handleVulnerabilityClick={handleVulnerabilityClick}
+
+        selectedScan={selectedScan}
+
+        selectedSeverity={selectedSeverity}
+        setSelectedSeverity={setSelectedSeverity}
       />
 
       <ComplianceOverviewCard

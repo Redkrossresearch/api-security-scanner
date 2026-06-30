@@ -9,6 +9,10 @@ export default function LatestScansTable({
   page,
   setPage,
   pagination,
+
+  selectedScan,
+  setSelectedScan,
+  fetchScanDetails, // ✅ NEW
 }) {
   const navigate = useNavigate();
 
@@ -68,13 +72,10 @@ export default function LatestScansTable({
     return statusMap[status?.toLowerCase()] || statusMap.completed;
   };
 
-  const handleScanClick = (scan) => {
-    navigate("/history", {
-      state: {
-        scanId: scan._id,
-        scan: scan,
-      },
-    });
+  // ✅ UPDATED - Now fetches details AND sets selected scan
+  const handleScanClick = async (scan) => {
+    setSelectedScan(scan); // Instant UI update
+    await fetchScanDetails(scan._id); // Fetch full details with vulnerabilities
   };
 
   const handleKeyDown = (e, scan) => {
@@ -138,6 +139,7 @@ export default function LatestScansTable({
       >
         {scans.map((scan) => {
           const statusBadge = getStatusBadge(scan.status);
+          const isSelected = selectedScan?._id === scan._id;
 
           return (
             <div
@@ -146,34 +148,51 @@ export default function LatestScansTable({
               tabIndex={0}
               onClick={() => handleScanClick(scan)}
               onKeyDown={(e) => handleKeyDown(e, scan)}
-              title={`View details for ${scan.targetUrl}`}
+              title={`Select ${scan.targetUrl}`}
               style={{
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 padding: "16px 12px",
+                paddingLeft: "8px",
                 borderBottom: "1px solid rgba(255,255,255,.05)",
                 cursor: "pointer",
                 borderRadius: "8px",
                 transition: "all 0.2s ease",
                 outline: "none",
+                background: isSelected
+                  ? "rgba(139,92,246,.10)"
+                  : "transparent",
+                borderLeft: isSelected
+                  ? "4px solid #8B5CF6"
+                  : "4px solid transparent",
+                boxShadow: isSelected
+                  ? "0 0 16px rgba(139,92,246,.20)"
+                  : "none",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,.03)";
+                e.currentTarget.style.background = isSelected
+                  ? "rgba(139,92,246,.14)"
+                  : "rgba(255,255,255,.03)";
                 e.currentTarget.style.transform = "translateX(4px)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.background = isSelected
+                  ? "rgba(139,92,246,.10)"
+                  : "transparent";
                 e.currentTarget.style.transform = "translateX(0)";
               }}
               onFocus={(e) => {
-                e.currentTarget.style.background = "rgba(255,255,255,.03)";
+                e.currentTarget.style.background = isSelected
+                  ? "rgba(139,92,246,.14)"
+                  : "rgba(255,255,255,.03)";
                 e.currentTarget.style.boxShadow =
                   "0 0 0 2px rgba(139,92,246,.3)";
               }}
               onBlur={(e) => {
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.boxShadow = "none";
+                e.currentTarget.style.boxShadow = isSelected
+                  ? "0 0 16px rgba(139,92,246,.20)"
+                  : "none";
               }}
             >
               <div

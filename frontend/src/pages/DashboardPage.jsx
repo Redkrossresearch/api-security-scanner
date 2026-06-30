@@ -7,6 +7,7 @@ import DashboardLoading from "../components/dashboard/DashboardLoading";
 import DashboardError from "../components/dashboard/DashboardError";
 import useDashboard from "../hooks/useDashboard";
 import { styles } from "../styles/dashboardStyles";
+import { useState } from "react";
 
 export default function DashboardPage() {
   const {
@@ -25,7 +26,15 @@ export default function DashboardPage() {
     pagination,
     fetchDashboard,
     handleVulnerabilityClick,
+
+    // ✅ Hook se selectedScan le rahe hain
+    selectedScan,
+    setSelectedScan,
+    fetchScanDetails,
   } = useDashboard();
+
+  // ✅ Active severity filter (ye local rahega)
+  const [selectedSeverity, setSelectedSeverity] = useState("all");
 
   if (loading) {
     return <DashboardLoading />;
@@ -63,6 +72,13 @@ export default function DashboardPage() {
         page={page}
         setPage={setPage}
         pagination={pagination}
+
+        selectedScan={selectedScan}
+        setSelectedScan={setSelectedScan}
+        fetchScanDetails={fetchScanDetails}
+
+        selectedSeverity={selectedSeverity}
+        setSelectedSeverity={setSelectedSeverity}
       />
 
       {/* Vulnerability Panel */}
