@@ -1,62 +1,46 @@
 const puppeteer = require("puppeteer");
-
 const reportTemplate = require("./reportTemplate");
 
 const generatePdfReport = async (vulnerability, analysis, res) => {
-  let browser; // ✅ Browser leak fix: Declare outside try block
+  let browser;
 
   try {
-    // ✅ Validate res parameter
-    if (!res) {
-      throw new Error("Response object (res) is required");
-    }
+    if (!res) throw new Error("Response object required");
+    if (!vulnerability || !analysis) throw new Error("Missing data");
 
-    // ✅ Sandbox args & executablePath added for Render/production
+    // ✅ Production Launch - No executablePath, puppeteer khud manage karega
     browser = await puppeteer.launch({
       headless: true,
-      executablePath: puppeteer.executablePath(), // 🔴 Improvement 1: Explicit Chromium path
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
       ],
     });
 
     const page = await browser.newPage();
-
     const html = reportTemplate(vulnerability, analysis);
-
-    await page.setContent(html, {
-      waitUntil: "networkidle0",
-    });
-
+    
+    await page.setContent(html, { waitUntil: "networkidle0" });
+    
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
+      margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
     });
 
-    // ✅ Browser close removed from here - finally block handles it
-
-    // 🔴 Improvement 2: Explicitly set Content-Type for PDF
     res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${vulnerability.title}.pdf"`);
     res.send(pdfBuffer);
+
   } catch (error) {
-    console.error("PDF generation error:", error);
-    
-    // ✅ Send error response if res is available
+    console.error("PDF Error:", error);
     if (res && !res.headersSent) {
-      res.status(500).json({ 
-        error: "Failed to generate PDF",
-        message: error.message 
-      });
+      res.status(500).json({ error: "PDF generation failed", message: error.message });
     }
   } finally {
-    // ✅ Ensure browser closes even if error occurs
-    if (browser) {
-      await browser.close();
-    }
+    if (browser) await browser.close();
   }
 };
 
-module.exports = {
-  generatePdfReport,
-};
+module.exports = { generatePdfReport };
