@@ -8,6 +8,7 @@ import VerdictCard from "../ai/VerdictCard";
 import { useEffect, useState } from "react";
 import { analyzeVulnerability } from "../../services/vulnerabilityService";
 import { motion } from "framer-motion";
+import api from "../../services/api";
 
 export default function AnalyzeModal({ vulnerability, onClose }) {
   const loadingSteps = [
@@ -19,10 +20,9 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
   ];
 
   const [stepIndex, setStepIndex] = useState(0);
-
   const [analysis, setAnalysis] = useState(null);
-
   const [loading, setLoading] = useState(true);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     const runAnalysis = async () => {
@@ -30,13 +30,9 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
         const result = await analyzeVulnerability(vulnerability);
 
         console.log("FULL RESULT", result);
-
         console.log("VERDICT", result?.verdict);
-
         console.log("EXECUTIVE METRICS", result?.executiveMetrics);
-
         console.log("MITRE", result?.mitre);
-
         console.log("OWASP", result?.owaspContext);
 
         setAnalysis(result);
@@ -61,6 +57,52 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
 
     return () => clearInterval(timer);
   }, [loading]);
+
+  // ✅ PDF Download Handler with all improvements
+  const handleDownloadPdf = async () => {
+    try {
+      setPdfLoading(true);
+
+      const response = await api.post(
+        "/ai/export-pdf",
+        {
+          vulnerability,
+          analysis,
+        },
+        {
+          responseType: "blob",
+        },
+      );
+
+      const blob = response.data;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+
+      a.href = url;
+      // ✅ Improvement 2: Better filename with fallback
+      a.download = `${vulnerability.title || "security-report"}.pdf`;
+
+      // ✅ Improvement 1: Append to DOM (required for Firefox)
+      document.body.appendChild(a);
+      a.click();
+      
+      // ✅ Improvement 1: Clean up - remove element from DOM
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      
+      // ✅ Improvement 3: Better error message
+      const message =
+        error?.response?.data?.message ||
+        "Failed to generate PDF.";
+      
+      alert(message);
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   return (
     <div
@@ -100,13 +142,9 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
             position: "sticky",
             top: "-24px",
             zIndex: 50,
-
             background: "rgba(8,17,31,.95)",
-
             backdropFilter: "blur(12px)",
-
             borderBottom: "1px solid rgba(255,255,255,.08)",
-
             paddingBottom: "24px",
             marginBottom: "0px",
           }}
@@ -196,12 +234,7 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
               padding: "24px",
             }}
           >
-            <h3
-              style={{
-                marginTop: 0,
-                marginBottom: "12px",
-              }}
-            >
+            <h3 style={{ marginTop: 0, marginBottom: "12px" }}>
               ATHX Security Intelligence
             </h3>
 
@@ -242,7 +275,6 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
                         : index === stepIndex
                           ? "#38BDF8"
                           : "#64748B",
-
                     fontSize: "14px",
                     fontWeight: index === stepIndex ? "600" : "500",
                   }}
@@ -257,11 +289,7 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
 
         {analysis && (
           <>
-            <div
-              style={{
-                gridColumn: "1 / -1",
-              }}
-            >
+            <div style={{ gridColumn: "1 / -1" }}>
               <div
                 style={{
                   background: "linear-gradient(135deg,#0F172A,#111827)",
@@ -337,38 +365,19 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
               </div>
 
               <motion.div
-                style={{
-                  marginTop: "32px",
-                }}
-                initial={{
-                  opacity: 0,
-                  y: -30,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                transition={{
-                  duration: 0.5,
-                }}
+                style={{ marginTop: "32px" }}
+                initial={{ opacity: 0, y: -30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
               >
                 <ExecutiveSummaryCard data={analysis.executiveSummary} />
               </motion.div>
             </div>
 
             <motion.div
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.2,
-                duration: 0.5,
-              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
               style={{
                 gridColumn: "1 / -1",
                 display: "grid",
@@ -386,17 +395,9 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
                   borderRadius: "16px",
                   padding: "18px",
                 }}
-                whileHover={{
-                  y: -6,
-                  scale: 1.02,
-                }}
+                whileHover={{ y: -6, scale: 1.02 }}
               >
-                <div
-                  style={{
-                    color: "#94A3B8",
-                    fontSize: "12px",
-                  }}
-                >
+                <div style={{ color: "#94A3B8", fontSize: "12px" }}>
                   Risk Score
                 </div>
 
@@ -448,17 +449,9 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
                   justifyContent: "flex-start",
                   alignItems: "flex-start",
                 }}
-                whileHover={{
-                  y: -6,
-                  scale: 1.02,
-                }}
+                whileHover={{ y: -6, scale: 1.02 }}
               >
-                <div
-                  style={{
-                    color: "#94A3B8",
-                    fontSize: "12px",
-                  }}
-                >
+                <div style={{ color: "#94A3B8", fontSize: "12px" }}>
                   Severity
                 </div>
 
@@ -483,10 +476,6 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
                     fontWeight: "700",
                     marginTop: "8px",
                   }}
-                  whileHover={{
-                    y: -6,
-                    scale: 1.02,
-                  }}
                 >
                   {analysis?.riskRating?.severity}
                 </div>
@@ -506,17 +495,9 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
                   justifyContent: "flex-start",
                   alignItems: "flex-start",
                 }}
-                whileHover={{
-                  y: -6,
-                  scale: 1.02,
-                }}
+                whileHover={{ y: -6, scale: 1.02 }}
               >
-                <div
-                  style={{
-                    color: "#94A3B8",
-                    fontSize: "12px",
-                  }}
-                >
+                <div style={{ color: "#94A3B8", fontSize: "12px" }}>
                   Confidence
                 </div>
 
@@ -564,7 +545,6 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
                               "medium"
                             ? "65%"
                             : "40%",
-
                       height: "100%",
                       background: "linear-gradient(90deg,#10B981,#34D399)",
                     }}
@@ -586,26 +566,13 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
                   justifyContent: "flex-start",
                   alignItems: "flex-start",
                 }}
-                whileHover={{
-                  y: -6,
-                  scale: 1.02,
-                }}
+                whileHover={{ y: -6, scale: 1.02 }}
               >
-                <div
-                  style={{
-                    color: "#94A3B8",
-                    fontSize: "12px",
-                  }}
-                >
+                <div style={{ color: "#94A3B8", fontSize: "12px" }}>
                   ATHX Analysis
                 </div>
 
-                <div
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: "700",
-                  }}
-                >
+                <div style={{ fontSize: "16px", fontWeight: "700" }}>
                   <div
                     style={{
                       fontSize: "20px",
@@ -630,96 +597,48 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
             </motion.div>
 
             <motion.div
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.3,
-                duration: 0.5,
-              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
             >
               <BusinessImpactCard data={analysis.businessImpact} />
             </motion.div>
 
             <motion.div
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.4,
-                duration: 0.5,
-              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
             >
               <TechnicalAnalysisCard data={analysis.technicalAnalysis} />
             </motion.div>
 
             <motion.div
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.5,
-                duration: 0.5,
-              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
             >
               <AttackScenarioCard data={analysis.attackScenario} />
             </motion.div>
 
             <motion.div
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.6,
-                duration: 0.5,
-              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6, duration: 0.5 }}
             >
               <RemediationPlanCard data={analysis.remediationPlan} />
             </motion.div>
 
             <motion.div
-              initial={{
-                opacity: 0,
-                y: 20,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              transition={{
-                delay: 0.7,
-                duration: 0.5,
-              }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
             >
               <VerdictCard data={analysis.verdict} />
 
-              <div
-                style={{
-                  marginTop: "32px",
-                }}
-              >
+              <div style={{ marginTop: "32px" }}>
                 <ReferencesCard data={analysis.references} />
               </div>
+
               <div
                 style={{
                   display: "flex",
@@ -728,52 +647,22 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
                 }}
               >
                 <button
-                  onClick={async () => {
-                    const response = await fetch(
-                      "http://localhost:5000/api/ai/export-pdf",
-                      {
-                        method: "POST",
-
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-
-                        body: JSON.stringify({
-                          vulnerability,
-                          analysis,
-                        }),
-                      },
-                    );
-
-                    if (!response.ok) {
-                      throw new Error("PDF generation failed");
-                    }
-
-                    const blob = await response.blob();
-
-                    const url = window.URL.createObjectURL(blob);
-
-                    const a = document.createElement("a");
-
-                    a.href = url;
-
-                    a.download = `${vulnerability.title}.pdf`;
-
-                    a.click();
-
-                    window.URL.revokeObjectURL(url);
-                  }}
+                  onClick={handleDownloadPdf}
+                  disabled={pdfLoading}
                   style={{
-                    background: "linear-gradient(135deg,#2563EB,#3B82F6)",
+                    background: pdfLoading
+                      ? "#64748B"
+                      : "linear-gradient(135deg,#2563EB,#3B82F6)",
                     color: "#fff",
                     border: "none",
                     borderRadius: "12px",
                     padding: "14px 22px",
                     fontWeight: "700",
-                    cursor: "pointer",
+                    cursor: pdfLoading ? "not-allowed" : "pointer",
+                    opacity: pdfLoading ? 0.7 : 1,
                   }}
                 >
-                  Download PDF Report
+                  {pdfLoading ? "Generating PDF..." : "Download PDF Report"}
                 </button>
               </div>
             </motion.div>
