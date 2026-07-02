@@ -2,6 +2,9 @@ const mongoose = require("mongoose");
 const { createScan, getUserScans } = require("./scan.service");
 
 const Scan = require("./scan.model");
+const Vulnerability = require("../vulnerabilities/vulnerability.model");
+
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // ==================== CORE APIs ====================
 
@@ -24,9 +27,6 @@ const create = async (req, res) => {
         message: "Invalid URL format",
       });
     }
-
-    console.log("REQ USER:", req.user);
-    console.log("TARGET URL:", targetUrl);
 
     const scan = await createScan(req.user._id, targetUrl);
 
@@ -61,8 +61,6 @@ const getAll = async (req, res) => {
 // ✅ UPDATE 2 & 3: Page & Limit safety added
 const getScanHistory = async (req, res) => {
   try {
-    console.log("REQ USER =", req.user);
-
     if (!req.user) {
       return res.status(500).json({
         success: false,
@@ -82,10 +80,11 @@ const getScanHistory = async (req, res) => {
     const query = { userId: req.user._id };
 
     if (search) {
+      const escaped = escapeRegex(search);
       query.$or = [
-        { scanId: { $regex: search, $options: "i" } },
-        { assetName: { $regex: search, $options: "i" } },
-        { targetUrl: { $regex: search, $options: "i" } },
+        { scanId: { $regex: escaped, $options: "i" } },
+        { assetName: { $regex: escaped, $options: "i" } },
+        { targetUrl: { $regex: escaped, $options: "i" } },
       ];
     }
 
@@ -221,26 +220,10 @@ const getDashboardSummary = async (req, res) => {
     ]);
     const criticalFindings = criticalResult[0]?.total || 0;
 
-    const vulnStats = await Scan.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
-      { $unwind: "$vulnerabilities" },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          resolved: {
-            $sum: {
-              $cond: [{ $eq: ["$vulnerabilities.status", "resolved"] }, 1, 0],
-            },
-          },
-        },
-      },
-    ]);
-
-    const remediatedRate =
-      vulnStats[0]?.total > 0
-        ? Math.round((vulnStats[0].resolved / vulnStats[0].total) * 100)
-        : 0;
+    const totalVulns = await Vulnerability.countDocuments({
+      scanId: { $in: await Scan.find({ userId }).distinct("_id") },
+    });
+    const remediatedRate = 0; // Vulnerability model has no status field yet
 
     return res.json({
       success: true,
@@ -413,8 +396,6 @@ const getVulnerabilityTrends = async (req, res) => {
 const getAssetLeaderboard = async (req, res) => {
   try {
     const userId = req.user?._id; // 🔧 FIX 5
-    console.log("USER:", req.user);
-    console.log("USER ID:", userId);
 
     const result = await Scan.aggregate([
       {
@@ -484,17 +465,18 @@ const getHeatmap = async (req, res) => {
   try {
     const userId = req.user?._id; // 🔧 FIX 6
 
-    const result = await Scan.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
-      { $unwind: "$vulnerabilities" },
+    const userScanIds = await Scan.find({ userId }).distinct("_id");
+
+    const result = await Vulnerability.aggregate([
+      { $match: { scanId: { $in: userScanIds } } },
       {
         $group: {
           _id: {
-            category: "$vulnerabilities.category",
+            category: "$category",
             month: {
               $dateToString: {
                 format: "%Y-%m",
-                date: "$vulnerabilities.detectedAt",
+                date: "$createdAt",
               },
             },
           },
@@ -535,41 +517,7 @@ const getAIInsights = async (req, res) => {
   try {
     const userId = req.user?._id; // 🔧 FIX 7
 
-    const mttrResult = await Scan.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
-      { $unwind: "$vulnerabilities" },
-      {
-        $match: {
-          "vulnerabilities.status": "resolved",
-          "vulnerabilities.resolvedAt": { $exists: true },
-        },
-      },
-      {
-        $project: {
-          daysToResolve: {
-            $divide: [
-              {
-                $subtract: [
-                  "$vulnerabilities.resolvedAt",
-                  "$vulnerabilities.detectedAt",
-                ],
-              },
-              1000 * 60 * 60 * 24,
-            ],
-          },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          avgDays: { $avg: "$daysToResolve" },
-        },
-      },
-    ]);
-
-    const mttr = mttrResult[0]?.avgDays
-      ? `${mttrResult[0].avgDays.toFixed(1)} Days`
-      : "N/A";
+    const mttr = "N/A"; // Vulnerability model has no status/resolvedAt fields yet
 
     const firstScan = await Scan.findOne({ userId, status: "completed" }).sort({
       createdAt: 1,
@@ -593,12 +541,13 @@ const getAIInsights = async (req, res) => {
       riskReduction = `${Math.round(reduction)}%`;
     }
 
-    const commonResult = await Scan.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
-      { $unwind: "$vulnerabilities" },
+    const userScanIds = await Scan.find({ userId }).distinct("_id");
+
+    const commonResult = await Vulnerability.aggregate([
+      { $match: { scanId: { $in: userScanIds } } },
       {
         $group: {
-          _id: "$vulnerabilities.category",
+          _id: "$category",
           count: { $sum: 1 },
         },
       },
@@ -608,28 +557,7 @@ const getAIInsights = async (req, res) => {
 
     const commonIssue = commonResult[0]?._id || "N/A";
 
-    const remediationResult = await Scan.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
-      { $unwind: "$vulnerabilities" },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          resolved: {
-            $sum: {
-              $cond: [{ $eq: ["$vulnerabilities.status", "resolved"] }, 1, 0],
-            },
-          },
-        },
-      },
-    ]);
-
-    const remediationRate =
-      remediationResult[0]?.total > 0
-        ? `${Math.round(
-            (remediationResult[0].resolved / remediationResult[0].total) * 100,
-          )}%`
-        : "N/A";
+    const remediationRate = "N/A"; // Vulnerability model has no status field yet
 
     return res.json({
       success: true,

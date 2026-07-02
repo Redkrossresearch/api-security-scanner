@@ -7,10 +7,14 @@ import { getGreeting } from "../../utils/greeting";
 import { reportService } from "../../services/reportService";
 import { REPORT_MESSAGES } from "../../constants/messages";
 import { styles } from "../../styles/dashboardStyles";
+import { useAuth } from "../../contexts/AuthContext";
 
 function DashboardHeader({ dashboardData }) {
   const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
+  const { currentUser } = useAuth();
+
+  const firstName = currentUser?.displayName?.split(" ")[0] || "User";
 
   // ✅ Sprint 2.3.1: Use scanId instead of _id
   const latestScan = dashboardData?.latestScans?.[0];
@@ -39,7 +43,7 @@ function DashboardHeader({ dashboardData }) {
     <div style={styles.header}>
       <div>
         <h1 style={styles.headerTitle}>
-          {getGreeting()}, Atharv 👋
+          {getGreeting()}, {firstName} 👋
         </h1>
 
         <p style={styles.headerSubtitle}>

@@ -39,6 +39,7 @@ const menuItems = [
     name: "API Inventory",
     path: "/inventory",
     icon: <Globe size={18} />,
+    comingSoon: true,
   },
   {
     name: "Reports",
@@ -49,16 +50,19 @@ const menuItems = [
     name: "AI Copilot",
     path: "/copilot",
     icon: <Bot size={18} />,
+    comingSoon: true,
   },
   {
     name: "Compliance",
     path: "/compliance",
     icon: <ShieldCheck size={18} />,
+    comingSoon: true,
   },
   {
     name: "Audit Logs",
     path: "/audit-logs",
     icon: <ClipboardList size={18} />,
+    comingSoon: true,
   },
   {
     name: "Settings",
@@ -138,6 +142,48 @@ function Sidebar() {
       >
         {menuItems.map((item) => {
           const active = location.pathname === item.path;
+
+          if (item.comingSoon) {
+            return (
+              <div
+                key={item.path}
+                style={{
+                  padding: "14px 16px",
+                  borderRadius: "12px",
+                  background: "transparent",
+                  color: "#6B7280",
+                  border: "1px solid transparent",
+                  fontWeight: 600,
+                  fontSize: "15px",
+                  cursor: "not-allowed",
+                  opacity: 0.5,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                  }}
+                >
+                  {item.icon}
+                  <span>{item.name}</span>
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      fontSize: "10px",
+                      background: "#1E293B",
+                      color: "#9CA3AF",
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    Soon
+                  </span>
+                </div>
+              </div>
+            );
+          }
 
           return (
             <Link

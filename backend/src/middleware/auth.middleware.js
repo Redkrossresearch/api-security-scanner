@@ -6,8 +6,6 @@ const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    console.log("AUTH HEADER =", authHeader);
-
     if (!authHeader) {
       return res.status(401).json({
         success: false,
@@ -17,16 +15,12 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    console.log("TOKEN =", token);
-
     const decoded = jwt.verify(
       token,
       env.jwtAccessSecret
     );
 
-    console.log("DECODED:", decoded);
-
-    const user = await User.findById(decoded.id)
+    const user = await User.findOne({ _id: decoded.id, isDeleted: { $ne: true } })
       .select("-passwordHash");
 
     if (!user) {
@@ -41,7 +35,6 @@ const authenticate = async (req, res, next) => {
     next();
 
   } catch (error) {
-    console.log("JWT ERROR FULL:", error);
 
     return res.status(401).json({
       success: false,
