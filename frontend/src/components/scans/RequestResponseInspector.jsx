@@ -10,17 +10,107 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-export default function RequestResponseInspector() {
+const getInspectorData = (vuln) => {
+  if (!vuln) {
+    return {
+      request: `GET /api/users/123 HTTP/1.1\nHost: api.example.com\nAuthorization: Bearer *********\nAccept: application/json`,
+      response: `HTTP/1.1 200 OK\nContent-Type: application/json\n\n{\n  "id": 123,\n  "name": "John Doe",\n  "email": "john.doe@example.com",\n  "role": "admin"\n}`,
+      insights: [
+        { icon: <ShieldAlert size={14} />, text: "Potential BOLA vulnerability detected" },
+        { icon: <User size={14} />, text: "Personally identifiable information exposed" },
+        { icon: <Lock size={14} />, text: "Authorization validation missing" },
+      ]
+    };
+  }
+
+  const title = String(vuln.title || "").toLowerCase();
+  
+  if (title.includes("frame") || title.includes("x-frame")) {
+    return {
+      request: `GET / HTTP/1.1\nHost: target.com\nUser-Agent: Mozilla/5.0\nAccept: text/html`,
+      response: `HTTP/1.1 200 OK\nContent-Type: text/html\nServer: Nginx\nConnection: keep-alive\n\n<!DOCTYPE html>\n<html>\n  <!-- Missing X-Frame-Options header allows clickjacking inside frames -->\n</html>`,
+      insights: [
+        { icon: <ShieldAlert size={14} />, text: "Missing X-Frame-Options security header" },
+        { icon: <Lock size={14} />, text: "Vulnerable to Clickjacking attack vectors" },
+      ]
+    };
+  }
+  
+  if (title.includes("csp") || title.includes("content-security-policy")) {
+    return {
+      request: `GET / HTTP/1.1\nHost: target.com\nAccept: text/html`,
+      response: `HTTP/1.1 200 OK\nContent-Type: text/html\nServer: Nginx\n\n<!DOCTYPE html>\n<html>\n  <script>eval(window.location.hash);</script>\n</html>`,
+      insights: [
+        { icon: <ShieldAlert size={14} />, text: "Missing Content-Security-Policy (CSP) header" },
+        { icon: <Lock size={14} />, text: "Vulnerable to Cross-Site Scripting (XSS) injection" },
+      ]
+    };
+  }
+
+  if (title.includes("cors")) {
+    return {
+      request: `OPTIONS /api/data HTTP/1.1\nHost: api.target.com\nOrigin: http://evil-domain.com\nAccess-Control-Request-Method: GET`,
+      response: `HTTP/1.1 200 OK\nAccess-Control-Allow-Origin: *\nAccess-Control-Allow-Credentials: true\nServer: Nginx`,
+      insights: [
+        { icon: <ShieldAlert size={14} />, text: "CORS wildcard configuration detected" },
+        { icon: <Lock size={14} />, text: "Allows unauthorized cross-origin requests" },
+      ]
+    };
+  }
+
+  if (title.includes("cookie")) {
+    return {
+      request: `POST /api/auth/login HTTP/1.1\nHost: api.target.com\nContent-Type: application/json\n\n{"username":"admin"}`,
+      response: `HTTP/1.1 200 OK\nSet-Cookie: session_id=abc123xyz; Path=/\nServer: Nginx`,
+      insights: [
+        { icon: <ShieldAlert size={14} />, text: "Session cookie missing HttpOnly flag" },
+        { icon: <Lock size={14} />, text: "Cookie session ID accessible via client scripts" },
+      ]
+    };
+  }
+
+  if (title.includes("rate")) {
+    return {
+      request: `GET /api/v1/auth/login HTTP/1.1 (Request 150/sec)\nHost: api.target.com`,
+      response: `HTTP/1.1 200 OK (Still processing requests without rate limits)\nContent-Type: application/json`,
+      insights: [
+        { icon: <ShieldAlert size={14} />, text: "No HTTP 429 Too Many Requests response limits" },
+        { icon: <Lock size={14} />, text: "Vulnerable to automated brute force attempts" },
+      ]
+    };
+  }
+
+  return {
+    request: `GET / HTTP/1.1\nHost: target.com\nUser-Agent: Scanner/1.0`,
+    response: `HTTP/1.1 200 OK\nServer: WebServer\nContent-Length: 0\n\n(Vulnerability identified in response headers/structure)`,
+    insights: [
+      { icon: <ShieldAlert size={14} />, text: vuln.title || "Vulnerability detected" },
+      { icon: <Lock size={14} />, text: vuln.description || "Review target implementation" },
+    ]
+  };
+};
+
+export default function RequestResponseInspector({ selectedVuln }) {
   const [tab, setTab] = useState("pretty");
-
-  const requestData = `GET /api/users/123 HTTP/1.1
-...`;
-
-  const responseData = `HTTP/1.1 200 OK
-...`;
+  const data = getInspectorData(selectedVuln);
+  const requestData = data.request;
+  const responseData = data.response;
+  const insights = data.insights;
 
   return (
-    <div style={{ background: "#071126", border: "1px solid rgba(255,255,255,.08)", borderRadius: "24px", padding: "24px", minHeight: "100%" }}>
+    <div
+      style={{
+        background: "#071126",
+        border: "1px solid rgba(255,255,255,.08)",
+        borderRadius: "24px",
+        padding: "24px",
+        height: "100%",
+        maxHeight: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
       {/* 1. Updated Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
         <div>
@@ -40,7 +130,18 @@ export default function RequestResponseInspector() {
 
       {/* ... badges ... */}
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      {/* ─── Scrollable body container ─── */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          paddingRight: "6px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+          marginBottom: "12px",
+        }}
+      >
         {/* 2. Request Panel — boxShadow + emoji title + icon buttons */}
         <div style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,.08)", borderRadius: "16px", overflow: "hidden", boxShadow: "0 0 20px rgba(59,130,246,.08)" }}>
           <div style={{ padding: "14px", borderBottom: "1px solid rgba(255,255,255,.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -76,18 +177,11 @@ export default function RequestResponseInspector() {
             {responseData}
           </pre>
         </div>
-      </div>
 
-      {/* 4. Security Insights — icon rows with ChevronRight */}
       <div style={{ marginTop: "16px", background: "#0B1220", border: "1px solid rgba(255,255,255,.08)", borderRadius: "14px", padding: "12px" }}>
         <div style={{ color: "#F97316", fontWeight: "700", marginBottom: "12px" }}>Security Insights</div>
         <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {[
-            { icon: <ShieldAlert size={14} />, text: "Potential BOLA vulnerability detected" },
-            { icon: <User size={14} />, text: "Personally identifiable information exposed" },
-            { icon: <Lock size={14} />, text: "Authorization validation missing" },
-            { icon: <FileJson size={14} />, text: "Sensitive response fields discovered" },
-          ].map((item) => (
+          {insights.map((item) => (
             <div key={item.text} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", borderRadius: "10px", background: "#111827", color: "#CBD5E1", fontSize: "13px" }}>
               {item.icon}
               <span>{item.text}</span>
@@ -95,6 +189,8 @@ export default function RequestResponseInspector() {
             </div>
           ))}
         </div>
+      </div>
+
       </div>
 
       {/* 5. Footer Tabs — gradient active + transition */}

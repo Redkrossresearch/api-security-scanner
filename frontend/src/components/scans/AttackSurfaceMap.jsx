@@ -145,11 +145,11 @@ const edges = [
   },
 ];
 
-export default function AttackSurfaceMap() {
+export default function AttackSurfaceMap({ scan, scanStatus }) {
   const stats = [
-    { label: "5 APIs", color: "#3B82F6" },
-    { label: "1 Critical", color: "#EF4444" },
-    { label: "67% Secure", color: "#22C55E" },
+    { label: scan ? `${scan.totalFindings} Issues` : "5 APIs", color: "#3B82F6" },
+    { label: scan ? `${scan.criticalCount} Critical` : "1 Critical", color: "#EF4444" },
+    { label: scan ? `${scan.securityScore}% Secure` : "67% Secure", color: "#22C55E" },
   ];
 
   const legend = [
@@ -167,6 +167,8 @@ export default function AttackSurfaceMap() {
         borderRadius: "24px",
         overflow: "hidden",
         height: "560px",
+        width: "100%",
+        minWidth: "300px",
       }}
     >
       <div
@@ -228,6 +230,7 @@ export default function AttackSurfaceMap() {
       <div
         style={{
           height: "500px",
+          width: "100%",
           position: "relative",
         }}
       >

@@ -7,39 +7,87 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-export default function ScanStatusCard() {
-  const progress = 67;
+export default function ScanStatusCard({ scan, scanStatus }) {
+  const progress = scanStatus
+    ? scanStatus.progress
+    : scan
+    ? (scan.status === "completed" ? 100 : 0)
+    : 67;
+
+  const startedAtString = scan?.startedAt
+    ? new Date(scan.startedAt).toLocaleString()
+    : "Jun 14, 2026 · 02:30 PM";
+
+  const durationString = scan?.duration
+    ? `${Math.floor(scan.duration / 60)}m ${scan.duration % 60}s`
+    : scanStatus
+    ? "Running..."
+    : "12m 35s";
+
+  const scanIdString = scan?.scanId || "SCAN-2026-001";
 
   const stats = [
     {
       icon: <Clock3 size={18} />,
       label: "Duration",
-      value: "12m 35s",
+      value: durationString,
     },
     {
       icon: <CalendarDays size={18} />,
       label: "Started At",
-      value: "Jun 14, 2026 · 02:30 PM",
+      value: startedAtString,
     },
     {
       icon: <Activity size={18} />,
       label: "Estimated",
-      value: "18m 45s",
+      value: scanStatus ? "1m 30s" : "18m 45s",
     },
     {
       icon: <FileText size={18} />,
       label: "Scan ID",
-      value: "SCAN-2026-001",
+      value: scanIdString,
     },
   ];
 
+  // Helper to determine stage status from scanners
+  const getStageStatus = (scannersList) => {
+    if (!scanStatus || !scanStatus.scanners) {
+      if (scan && scan.status === "completed") return "completed";
+      if (scan && scan.status === "failed") return "failed";
+      return "pending";
+    }
+    const states = scannersList.map(s => scanStatus.scanners[s] || "pending");
+    if (states.every(s => s === "completed")) return "completed";
+    if (states.some(s => s === "running")) return "running";
+    if (states.some(s => s === "failed")) return "failed";
+    return "pending";
+  };
+
   const stages = [
-    { name: "Recon", status: "completed" },
-    { name: "Discovery", status: "completed" },
-    { name: "Authentication", status: "running" },
-    { name: "Authorization", status: "pending" },
-    { name: "Testing", status: "pending" },
-    { name: "Reporting", status: "pending" },
+    {
+      name: "Recon",
+      status: scanStatus ? getStageStatus(["security-header", "ssl", "server", "technology"]) : "completed"
+    },
+    {
+      name: "Discovery",
+      status: scanStatus ? getStageStatus(["api-inventory", "openapi"]) : "completed"
+    },
+    {
+      name: "Authentication",
+      status: scanStatus ? getStageStatus(["jwt", "cookie"]) : "running"
+    },
+    {
+      name: "Authorization",
+      status: scanStatus ? getStageStatus(["cors"]) : "pending"
+    },
+    {
+      name: "Testing",
+      status: scanStatus ? getStageStatus(["rate-limit", "attack-surface"]) : "pending"
+    },
+    {
+      name: "Reporting",
+      status: scanStatus ? getStageStatus(["endpoint-risk"]) : "pending"
+    },
   ];
 
   const getColor = (status) => {
@@ -47,6 +95,8 @@ export default function ScanStatusCard() {
     if (status === "running") return "#F97316";
     return "#334155";
   };
+
+  const status = scanStatus?.status || scan?.status || "idle";
 
   return (
     <div
@@ -100,13 +150,23 @@ export default function ScanStatusCard() {
               style={{
                 padding: "8px 14px",
                 borderRadius: "999px",
-                background: "rgba(34,197,94,.15)",
-                color: "#22C55E",
+                background:
+                  status === "completed"
+                    ? "rgba(34,197,94,.15)"
+                    : status === "failed"
+                    ? "rgba(239,68,68,.15)"
+                    : "rgba(249,115,22,.15)",
+                color:
+                  status === "completed"
+                    ? "#22C55E"
+                    : status === "failed"
+                    ? "#EF4444"
+                    : "#F97316",
                 fontWeight: 700,
                 fontSize: "13px",
               }}
             >
-              ● RUNNING
+              ● {status.toUpperCase()}
             </div>
 
             <div
@@ -119,7 +179,7 @@ export default function ScanStatusCard() {
                 fontSize: "13px",
               }}
             >
-              127 ENDPOINTS
+              {scan ? `${scan.totalFindings} FINDINGS` : "127 ENDPOINTS"}
             </div>
 
             <div
@@ -132,7 +192,7 @@ export default function ScanStatusCard() {
                 fontSize: "13px",
               }}
             >
-              1 CRITICAL
+              {scan ? `${scan.criticalCount} CRITICAL` : "1 CRITICAL"}
             </div>
           </div>
         </div>

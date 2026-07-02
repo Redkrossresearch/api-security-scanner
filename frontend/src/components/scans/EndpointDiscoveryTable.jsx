@@ -1,7 +1,23 @@
 import { Search, ChevronDown } from "lucide-react";
 
-export default function EndpointDiscoveryTable() {
-  const endpoints = [
+export default function EndpointDiscoveryTable({ scan, scanStatus }) {
+  const isCompleted = scan?.status === "completed";
+  const rawFindings = (isCompleted && scan?.vulnerabilities) || [];
+  const inventoryFinding = rawFindings.find(f => f.category === "API Inventory" || f.title === "API Inventory Analysis");
+
+  let endpointsList = [];
+  if (inventoryFinding && inventoryFinding.inventory && inventoryFinding.inventory.endpoints) {
+    endpointsList = inventoryFinding.inventory.endpoints.flatMap(e =>
+      (e.methods || ["GET"]).map(method => ({
+        method,
+        endpoint: e.path,
+        status: "200",
+        source: "OpenAPI",
+      }))
+    );
+  }
+
+  const defaultEndpoints = [
     {
       method: "GET",
       endpoint: "/api/users",
@@ -51,6 +67,8 @@ export default function EndpointDiscoveryTable() {
       source: "Crawled",
     },
   ];
+
+  const endpoints = endpointsList.length > 0 ? endpointsList : defaultEndpoints;
 
   const methodColor = (method) => {
     switch (method) {

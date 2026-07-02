@@ -15,7 +15,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
-export default function ScanHistoryTable({ onView }) {
+export default function ScanHistoryTable({ onView, onExport, onRerun }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [hoveredRow, setHoveredRow] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
@@ -727,8 +727,16 @@ export default function ScanHistoryTable({ onView }) {
                           color="#60A5FA"
                           onClick={() => onView(scan)}
                         />
-                        <ActionButton icon={FileText} color="#A855F7" />
-                        <ActionButton icon={RotateCw} color="#22C55E" />
+                        <ActionButton
+                          icon={FileText}
+                          color="#A855F7"
+                          onClick={() => onExport && onExport(scan)}
+                        />
+                        <ActionButton
+                          icon={RotateCw}
+                          color="#22C55E"
+                          onClick={() => onRerun && onRerun(scan)}
+                        />
                       </div>
                     </td>
                   </tr>

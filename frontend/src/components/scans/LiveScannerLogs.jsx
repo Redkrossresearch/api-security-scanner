@@ -6,49 +6,103 @@ import {
   Terminal,
 } from "lucide-react";
 
-export default function LiveScannerLogs() {
-  const logs = [
-    {
+export default function LiveScannerLogs({ scan, scanStatus }) {
+  let logs = [];
+
+  if (scanStatus && scanStatus.scanners) {
+    logs.push({
       level: "INFO",
-      time: "14:21:04",
-      message: "Initializing API security scan",
-    },
-    {
-      level: "INFO",
-      time: "14:21:08",
-      message: "OpenAPI specification detected",
-    },
-    {
-      level: "INFO",
-      time: "14:21:11",
-      message: "127 endpoints discovered",
-    },
-    {
-      level: "WARN",
-      time: "14:21:16",
-      message: "Swagger UI publicly accessible",
-    },
-    {
-      level: "INFO",
-      time: "14:21:19",
-      message: "Authentication testing started",
-    },
-    {
-      level: "CRITICAL",
-      time: "14:21:24",
-      message: "Potential BOLA vulnerability identified",
-    },
-    {
-      level: "INFO",
-      time: "14:21:30",
-      message: "Authorization fuzzing in progress",
-    },
-    {
-      level: "INFO",
-      time: "14:21:36",
-      message: "Security assessment running",
-    },
-  ];
+      time: "INIT",
+      message: `Initializing security scan for ${scan?.targetUrl || "target"}...`,
+    });
+    Object.entries(scanStatus.scanners).forEach(([name, status]) => {
+      if (status === "running") {
+        logs.push({
+          level: "WARN",
+          time: "ACTIVE",
+          message: `Scanner [${name}] is currently executing...`,
+        });
+      } else if (status === "completed") {
+        logs.push({
+          level: "INFO",
+          time: "DONE",
+          message: `Scanner [${name}] completed successfully.`,
+        });
+      } else if (status === "failed") {
+        logs.push({
+          level: "CRITICAL",
+          time: "FAIL",
+          message: `Scanner [${name}] failed.`,
+        });
+      }
+    });
+  } else if (scan && scan.status === "completed") {
+    logs = [
+      {
+        level: "INFO",
+        time: "COMPLETED",
+        message: "Scan pipeline successfully finished all 12 modules.",
+      },
+      {
+        level: "INFO",
+        time: "SUMMARY",
+        message: `Identified ${scan.totalFindings} vulnerabilities in total.`,
+      },
+      {
+        level: "INFO",
+        time: "SUMMARY",
+        message: `Critical Count: ${scan.criticalCount} | High Count: ${scan.highCount}`,
+      },
+      {
+        level: "INFO",
+        time: "REPORT",
+        message: "PDF Security Report compiled and generated.",
+      },
+    ];
+  } else {
+    logs = [
+      {
+        level: "INFO",
+        time: "14:21:04",
+        message: "Initializing API security scan",
+      },
+      {
+        level: "INFO",
+        time: "14:21:08",
+        message: "OpenAPI specification detected",
+      },
+      {
+        level: "INFO",
+        time: "14:21:11",
+        message: "127 endpoints discovered",
+      },
+      {
+        level: "WARN",
+        time: "14:21:16",
+        message: "Swagger UI publicly accessible",
+      },
+      {
+        level: "INFO",
+        time: "14:21:19",
+        message: "Authentication testing started",
+      },
+      {
+        level: "CRITICAL",
+        time: "14:21:24",
+        message: "Potential BOLA vulnerability identified",
+      },
+      {
+        level: "INFO",
+        time: "14:21:30",
+        message: "Authorization fuzzing in progress",
+      },
+      {
+        level: "INFO",
+        time: "14:21:36",
+        message: "Security assessment running",
+      },
+    ];
+  }
 
   const getColor = (level) => {
     switch (level) {

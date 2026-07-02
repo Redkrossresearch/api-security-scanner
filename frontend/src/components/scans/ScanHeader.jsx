@@ -1,10 +1,10 @@
 import { Search, Calendar, Save, Play, Shield, Activity } from "lucide-react";
 
-export default function ScanHeader() {
+export default function ScanHeader({ scan, onStartScan, onSchedule, onTemplate }) {
   const stats = [
-    { label: "Endpoints", value: "127", color: "#3B82F6" },
-    { label: "Critical", value: "1", color: "#EF4444" },
-    { label: "Coverage", value: "92%", color: "#22C55E" },
+    { label: "Total Findings", value: scan ? String(scan.totalFindings) : "127", color: "#3B82F6" },
+    { label: "Critical", value: scan ? String(scan.criticalCount) : "1", color: "#EF4444" },
+    { label: "Coverage", value: scan ? "100%" : "92%", color: "#22C55E" },
   ];
 
   return (
@@ -128,6 +128,7 @@ export default function ScanHeader() {
           </div>
 
           <button
+            onClick={onSchedule}
             style={{
               height: "50px",
               padding: "0 16px",
@@ -147,6 +148,7 @@ export default function ScanHeader() {
           </button>
 
           <button
+            onClick={onTemplate}
             style={{
               height: "50px",
               padding: "0 16px",
@@ -166,6 +168,7 @@ export default function ScanHeader() {
           </button>
 
           <button
+            onClick={onStartScan}
             style={{
               height: "50px",
               padding: "0 22px",
@@ -257,13 +260,13 @@ export default function ScanHeader() {
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              color: "#F97316",
+              color: scan?.status === "completed" ? "#22C55E" : "#F97316",
               marginTop: "6px",
               fontWeight: 700,
             }}
           >
             <Activity size={16} />
-            Authentication Testing
+            {scan?.status === "completed" ? "Scan Completed" : (scan ? "Running Assessment" : "Idle")}
           </div>
         </div>
       </div>

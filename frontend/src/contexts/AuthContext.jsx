@@ -7,6 +7,7 @@ import {
 } from "firebase/auth";
 
 import { auth } from "../firebase";
+import api from "../services/api";
 
 const googleProvider = new GoogleAuthProvider();
 
@@ -27,6 +28,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await signOut(auth);
+      localStorage.removeItem("token");
     } catch (error) {
       console.error(
         "Logout Error:",
@@ -44,6 +46,17 @@ export const AuthProvider = ({ children }) => {
         googleProvider
       );
 
+      // Exchange Firebase user for backend JWT token immediately
+      const { user } = result;
+      const res = await api.post("/auth/google-login", {
+        name: user.displayName,
+        email: user.email,
+      });
+
+      if (res.data && res.data.accessToken) {
+        localStorage.setItem("token", res.data.accessToken);
+      }
+
       return result;
     } catch (error) {
       console.error(
@@ -57,6 +70,21 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const res = await api.post("/auth/google-login", {
+            name: user.displayName,
+            email: user.email,
+          });
+          if (res.data && res.data.accessToken) {
+            localStorage.setItem("token", res.data.accessToken);
+          }
+        } catch (err) {
+          console.error("Auth session sync failed:", err);
+        }
+      } else {
+        localStorage.removeItem("token");
+      }
       setCurrentUser(user);
       setLoading(false);
     });

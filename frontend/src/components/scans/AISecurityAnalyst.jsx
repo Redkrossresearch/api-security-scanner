@@ -7,7 +7,50 @@ import {
   FileText,
 } from "lucide-react";
 
-export default function AISecurityAnalyst() {
+export default function AISecurityAnalyst({
+  scan,
+  scanStatus,
+  selectedVuln,
+  onGenerateFix,
+  onGenerateReport,
+  onExplainRisk,
+}) {
+  const isCompleted = scan?.status === "completed";
+  const rawFindings = (isCompleted && scan?.vulnerabilities) || [];
+  const score = scan ? scan.securityScore : 91;
+  const gradeText = score >= 80 ? "Excellent" : (score >= 60 ? "Medium" : "Poor");
+
+  const criticalCount = scan ? scan.criticalCount : 3;
+  const highCount = scan ? scan.highCount : 5;
+
+  const sortedRisks = [...rawFindings].sort((a,b) => (b.cvss || 0) - (a.cvss || 0)).slice(0, 3);
+  
+  const risks = sortedRisks.length > 0 ? sortedRisks.map(r => ({
+    name: r.title,
+    severity: r.severity ? r.severity.charAt(0).toUpperCase() + r.severity.slice(1).toLowerCase() : "Medium",
+    color: r.severity?.toLowerCase() === "critical" ? "#EF4444" : (r.severity?.toLowerCase() === "high" ? "#F97316" : "#FACC15"),
+  })) : [
+    { name: "BOLA", severity: "Critical", color: "#EF4444" },
+    { name: "IDOR", severity: "High", color: "#F97316" },
+    { name: "Rate Limiting", severity: "Medium", color: "#FACC15" },
+  ];
+
+  const plans = (selectedVuln && (selectedVuln.remediationSteps?.length > 0 || selectedVuln.raw?.remediationSteps?.length > 0))
+    ? (selectedVuln.remediationSteps || selectedVuln.raw.remediationSteps)
+    : (selectedVuln && (selectedVuln.recommendation || selectedVuln.raw?.recommendation)
+        ? [selectedVuln.recommendation || selectedVuln.raw.recommendation]
+        : (sortedRisks.length > 0 ? sortedRisks.map(r => r.recommendation || "Remediate finding.") : [
+            "Implement object ownership validation",
+            "Restrict Swagger UI access",
+            "Add rate limiting to auth endpoints",
+            "Use UUIDs instead of sequential IDs",
+          ]));
+
+  const summaryText = selectedVuln 
+    ? `AI Copilot Focus: Analyzing "${selectedVuln.title || selectedVuln.raw?.title}". This vulnerability has a CVSS score of ${selectedVuln.cvss || selectedVuln.raw?.cvss || 5.0} and is classified as ${selectedVuln.severity || selectedVuln.raw?.severity || "medium"} severity. Description: ${selectedVuln.description || selectedVuln.raw?.description || "Review exposed endpoint data."}`
+    : (scan 
+        ? `The scan successfully analyzed ${scan.assetName || "the target"}. Discovered ${scan.totalFindings} vulnerabilities in total. Recommended to immediately address critical access issues.`
+        : "The scan identified multiple authorization weaknesses, exposed API documentation, and missing rate limiting controls. Immediate remediation is recommended for critical authorization findings.");
   return (
     <div
       style={{
@@ -16,8 +59,10 @@ export default function AISecurityAnalyst() {
         borderRadius: "24px",
         padding: "18px",
         height: "100%",
+        maxHeight: "100%",
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
       }}
     >
       {/* Scoped Animations & Hover Styles */}
@@ -113,17 +158,28 @@ export default function AISecurityAnalyst() {
         </div>
       </div>
 
-      {/* ─── Score Cards ─── */}
+      {/* ─── Scrollable Body Container ─── */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "10px",
-          marginBottom: "16px",
+          flex: 1,
+          overflowY: "auto",
+          paddingRight: "6px",
+          marginBottom: "12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
         }}
       >
-        {/* Security Score */}
+        {/* ─── Score Cards ─── */}
         <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "10px",
+          }}
+        >
+          {/* Security Score */}
+          <div
           style={{
             background: "#0B1220",
             border: "1px solid rgba(255,255,255,.06)",
@@ -172,7 +228,7 @@ export default function AISecurityAnalyst() {
                 lineHeight: "1",
               }}
             >
-              91
+              {score}
             </span>
             <span
               style={{ color: "#475569", fontSize: "16px", fontWeight: "600" }}
@@ -188,7 +244,7 @@ export default function AISecurityAnalyst() {
               fontWeight: "600",
             }}
           >
-            Excellent
+            {gradeText}
           </div>
           <div
             style={{
@@ -201,7 +257,7 @@ export default function AISecurityAnalyst() {
           >
             <div
               style={{
-                width: "91%",
+                width: `${score}%`,
                 height: "100%",
                 background: "linear-gradient(90deg, #22C55E, #4ADE80)",
                 borderRadius: "999px",
@@ -343,7 +399,7 @@ export default function AISecurityAnalyst() {
               fontWeight: "600",
             }}
           >
-            3 Critical
+            {criticalCount} Critical
           </span>
           <span
             style={{
@@ -355,7 +411,7 @@ export default function AISecurityAnalyst() {
               fontWeight: "600",
             }}
           >
-            5 High
+            {highCount} High
           </span>
           <span
             style={{
@@ -367,7 +423,7 @@ export default function AISecurityAnalyst() {
               fontWeight: "600",
             }}
           >
-            12 Fixed
+            {scan ? (scan.totalFindings - criticalCount - highCount) : 12} Low/Medium
           </span>
           <span
             style={{
@@ -379,7 +435,7 @@ export default function AISecurityAnalyst() {
               fontWeight: "600",
             }}
           >
-            91 Security Score
+            {score} Security Score
           </span>
         </div>
 
@@ -391,9 +447,7 @@ export default function AISecurityAnalyst() {
             marginTop: "12px",
           }}
         >
-          The scan identified multiple authorization weaknesses, exposed API
-          documentation, and missing rate limiting controls. Immediate
-          remediation is recommended for critical authorization findings.
+          {summaryText}
           <div
             style={{
               marginTop: "12px",
@@ -412,7 +466,7 @@ export default function AISecurityAnalyst() {
                 fontWeight: "600",
               }}
             >
-              Predicted Risk: 6.8
+              Predicted Risk: {scan ? (scan.riskScore || "0.0") : "6.8"}
             </span>
             <span
               style={{
@@ -491,11 +545,7 @@ export default function AISecurityAnalyst() {
             gap: "8px",
           }}
         >
-          {[
-            { name: "BOLA", severity: "Critical", color: "#EF4444" },
-            { name: "IDOR", severity: "High", color: "#F97316" },
-            { name: "Rate Limiting", severity: "Medium", color: "#FACC15" },
-          ].map((risk) => (
+          {risks.map((risk) => (
             <div
               key={risk.name}
               className="ai-risk-card"
@@ -529,7 +579,12 @@ export default function AISecurityAnalyst() {
                     color: "#FFFFFF",
                     fontSize: "13px",
                     fontWeight: "600",
+                    maxWidth: 180,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
                   }}
+                  title={risk.name}
                 >
                   {risk.name}
                 </span>
@@ -577,12 +632,7 @@ export default function AISecurityAnalyst() {
             gap: "8px",
           }}
         >
-          {[
-            "Implement object ownership validation",
-            "Restrict Swagger UI access",
-            "Add rate limiting to auth endpoints",
-            "Use UUIDs instead of sequential IDs",
-          ].map((action, idx) => (
+          {plans.map((action, idx) => (
             <div
               key={idx}
               className="ai-action-card"
@@ -633,9 +683,7 @@ export default function AISecurityAnalyst() {
           ))}
         </div>
       </div>
-
-      {/* ─── Spacer ─── */}
-      <div style={{ flex: 1 }} />
+      </div>
 
       {/* ─── Actions ─── */}
       <div
@@ -648,6 +696,7 @@ export default function AISecurityAnalyst() {
       >
         <button
           className="ai-btn-primary"
+          onClick={onGenerateFix}
           style={{
             height: "44px",
             border: "none",
@@ -673,6 +722,7 @@ export default function AISecurityAnalyst() {
 
         <button
           className="ai-btn-secondary"
+          onClick={onGenerateReport}
           style={{
             height: "44px",
             borderRadius: "12px",
@@ -695,6 +745,7 @@ export default function AISecurityAnalyst() {
 
         <button
           className="ai-btn-outline"
+          onClick={onExplainRisk}
           style={{
             height: "44px",
             borderRadius: "12px",

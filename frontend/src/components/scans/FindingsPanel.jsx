@@ -9,8 +9,33 @@ import {
   Link2,
 } from "lucide-react";
 
-export default function FindingsPanel() {
-  const findings = [
+export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelectVuln }) {
+  const isCompleted = scan?.status === "completed";
+  const rawFindings = (isCompleted && scan?.vulnerabilities) || [];
+
+  const criticalCount = rawFindings.filter(f => f.severity?.toLowerCase() === "critical").length;
+  const highCount = rawFindings.filter(f => f.severity?.toLowerCase() === "high").length;
+  const mediumCount = rawFindings.filter(f => f.severity?.toLowerCase() === "medium").length;
+  const lowCount = rawFindings.filter(f => f.severity?.toLowerCase() === "low").length;
+
+  const formattedFindings = rawFindings.map((f, idx) => {
+    const isSelected = selectedVuln ? (selectedVuln._id === f._id || selectedVuln.title === f.title) : idx === 0;
+    return {
+      id: f._id || `ATHX-${String(idx).padStart(3, "0")}`,
+      severity: f.severity ? f.severity.charAt(0).toUpperCase() + f.severity.slice(1).toLowerCase() : "Medium",
+      status: "Open",
+      owasp: f.owasp || "OWASP N/A",
+      title: f.title,
+      endpoint: f.cwe || "API Endpoint",
+      impact: f.description || "No impact details available.",
+      evidence: f.recommendation || "Verify authentication checks.",
+      cvss: f.cvss || 5.0,
+      expanded: isSelected,
+      raw: f
+    };
+  });
+
+  const mockFindings = [
     {
       id: "ATHX-001",
       severity: "Critical",
@@ -56,6 +81,17 @@ export default function FindingsPanel() {
     },
   ];
 
+  const mockFindingsWithRaw = mockFindings.map((m, idx) => {
+    const isSelected = selectedVuln ? (selectedVuln.id === m.id || selectedVuln.title === m.title) : idx === 0;
+    return {
+      ...m,
+      expanded: isSelected,
+      raw: m
+    };
+  });
+
+  const findings = formattedFindings.length > 0 ? formattedFindings : mockFindingsWithRaw;
+
   const getColor = (severity) => {
     switch (severity.toLowerCase()) {
       case "critical":
@@ -93,8 +129,10 @@ export default function FindingsPanel() {
         borderRadius: "20px",
         padding: "20px",
         height: "100%",
+        maxHeight: "100%",
         display: "flex",
         flexDirection: "column",
+        overflow: "hidden",
       }}
     >
       {/* Header */}
@@ -129,8 +167,6 @@ export default function FindingsPanel() {
         </span>
       </div>
 
-      {/* Summary */}
-
       <div
         style={{
           display: "flex",
@@ -140,10 +176,10 @@ export default function FindingsPanel() {
           fontWeight: "600",
         }}
       >
-        <span style={{ color: "#EF4444" }}>5 Critical</span>
-        <span style={{ color: "#F97316" }}>12 High</span>
-        <span style={{ color: "#FACC15" }}>27 Medium</span>
-        <span style={{ color: "#22C55E" }}>6 Low</span>
+        <span style={{ color: "#EF4444" }}>{scan ? criticalCount : 5} Critical</span>
+        <span style={{ color: "#F97316" }}>{scan ? highCount : 12} High</span>
+        <span style={{ color: "#FACC15" }}>{scan ? mediumCount : 27} Medium</span>
+        <span style={{ color: "#22C55E" }}>{scan ? lowCount : 6} Low</span>
       </div>
 
       {/* Findings */}
@@ -162,11 +198,12 @@ export default function FindingsPanel() {
         {findings.map((item) => (
           <div
             key={item.id}
+            onClick={() => onSelectVuln && onSelectVuln(item.raw)}
             style={{
-              border:
-                item.severity === "Critical"
-                  ? "1px solid rgba(239,68,68,.55)"
-                  : "1px solid rgba(255,255,255,.06)",
+              cursor: "pointer",
+              border: item.expanded
+                ? `1px solid ${getColor(item.severity)}`
+                : "1px solid rgba(255,255,255,.06)",
 
               background: "#0B1220",
               borderRadius: "14px",
@@ -175,7 +212,7 @@ export default function FindingsPanel() {
               transition: "all .25s ease",
 
               boxShadow: item.expanded
-                ? "0 0 18px rgba(239,68,68,.12)"
+                ? `0 0 18px ${getColor(item.severity)}18`
                 : "none",
             }}
           >

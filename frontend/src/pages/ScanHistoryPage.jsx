@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import api from "../services/api";
 
 import ScanHistoryDrawer from "../components/scans/ScanHistoryDrawer";
 import ScanComparisonModal from "../components/scans/ScanComparisonModal";
@@ -17,6 +19,7 @@ import SecurityPostureEvolution from "../components/scans/SecurityPostureEvoluti
 
 export default function ScanHistoryPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [comparisonOpen, setComparisonOpen] = useState(false);
   const [selectedScan, setSelectedScan] = useState(null);
@@ -31,6 +34,45 @@ export default function ScanHistoryPage() {
   const handleViewScan = (scan) => {
     setSelectedScan(scan);
     setDrawerOpen(true);
+  };
+
+  const handleExportScan = async (scan) => {
+    const toastId = toast.loading("Generating PDF report...");
+    try {
+      const res = await api.get(`/reports/${scan.scanId}/export/pdf`, {
+        responseType: "blob",
+      });
+      const file = new Blob([res.data], { type: "application/pdf" });
+      const fileURL = URL.createObjectURL(file);
+      const link = document.createElement("a");
+      link.href = fileURL;
+      link.setAttribute("download", `API_Security_Report_${scan.scanId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.dismiss(toastId);
+      toast.success("Report downloaded successfully!");
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error("Failed to generate PDF report.");
+    }
+  };
+
+  const handleRerunScan = async (scan) => {
+    const toastId = toast.loading("Re-triggering security assessment...");
+    try {
+      const res = await api.post("/scans", {
+        url: scan.targetUrl || scan.target || "https://api.example.com",
+        profile: scan.profile || "Full Security Scan",
+        authType: scan.authType || "Bearer Token",
+      });
+      toast.dismiss(toastId);
+      toast.success("Scan re-triggered! Redirecting to runner progress...");
+      navigate("/scans", { state: { scan: res.data.scan } });
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error("Failed to re-run scan: " + (err.response?.data?.message || err.message));
+    }
   };
 
   return (
@@ -57,7 +99,11 @@ export default function ScanHistoryPage() {
           <ScanVolumeChart />
           <FindingsTrendChart />
         </div>
-        <ScanHistoryTable onView={handleViewScan} />
+        <ScanHistoryTable 
+          onView={handleViewScan} 
+          onExport={handleExportScan} 
+          onRerun={handleRerunScan} 
+        />
         <div
           style={{
             display: "grid",
