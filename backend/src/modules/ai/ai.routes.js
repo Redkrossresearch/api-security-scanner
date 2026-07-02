@@ -3,9 +3,10 @@ const express = require("express");
 const router = express.Router();
 
 const { analyze, exportPdf } = require("./ai.controller");
+const authenticate = require("../../middleware/auth.middleware");
 
-router.post("/analyze", analyze);
+router.post("/analyze", authenticate, analyze);
 
-router.post("/export-pdf", exportPdf);
+router.post("/export-pdf", authenticate, exportPdf);
 
 module.exports = router;

@@ -17,6 +17,7 @@ const {
   getAssetLeaderboard,
   getHeatmap,
   getAIInsights,
+  getScanStatus,
 } = require("./scan.controller");
 
 // ==================== CORE ROUTES ====================
@@ -27,23 +28,25 @@ router.get("/", authenticate, getAll);
 
 router.get("/history", authenticate, getScanHistory);
 
-// ==================== DASHBOARD ROUTES (NO AUTH - DEV MODE) ====================
+// ==================== DASHBOARD ROUTES ====================
 
-router.get("/dashboard/summary", getDashboardSummary);
+router.get("/dashboard/summary", authenticate, getDashboardSummary);
 
-router.get("/dashboard/risk-distribution", getRiskDistribution);
+router.get("/dashboard/risk-distribution", authenticate, getRiskDistribution);
 
-router.get("/dashboard/activity", getScanActivity);
+router.get("/dashboard/activity", authenticate, getScanActivity);
 
-router.get("/dashboard/vulnerability-trends", getVulnerabilityTrends);
+router.get("/dashboard/vulnerability-trends", authenticate, getVulnerabilityTrends);
 
 router.get("/dashboard/leaderboard", authenticate, getAssetLeaderboard);
 
-router.get("/dashboard/heatmap", getHeatmap);
+router.get("/dashboard/heatmap", authenticate, getHeatmap);
 
-router.get("/dashboard/ai-insights", getAIInsights);
+router.get("/dashboard/ai-insights", authenticate, getAIInsights);
 
 // ==================== DYNAMIC ROUTES (LAST) ====================
+
+router.get("/:id/status", authenticate, getScanStatus);
 
 router.get("/:id", authenticate, getScanById);
 

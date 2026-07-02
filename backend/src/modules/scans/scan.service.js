@@ -17,8 +17,14 @@ const { scanEndpointRisk } = require("../scanner/endpoint-risk.scanner");
 const { calculateSecurityScore } = require("../engines/security-score.engine");
 
 // ✅ FIX 2: Added random suffix to prevent duplicate scanIds
+const activeScans = new Map();
+
 const generateScanId = () => {
   return `SCAN-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+};
+
+const getActiveScanProgress = (scanId) => {
+  return activeScans.get(scanId.toString()) || null;
 };
 
 const createScan = async (userId, targetUrl) => {
@@ -43,156 +49,198 @@ const createScan = async (userId, targetUrl) => {
     startedAt: new Date(),
   });
 
-  try {
-    const [
-      headerFindings,
-      sslFindings,
-      corsFindings,
-      cookieFindings,
-      technologyFindings,
-      serverFindings,
-      jwtFindings,
-      rateLimitFindings,
-      openApiFindings,
-      apiInventoryFindings,
-      attackSurfaceFindings,
-      endpointRiskFindings,
-    ] = await Promise.all([
-      scanSecurityHeaders(targetUrl),
-      scanSSL(targetUrl),
-      scanCORS(targetUrl),
-      scanCookies(targetUrl),
-      scanTechnology(targetUrl),
-      scanServerDisclosure(targetUrl),
-      scanJWT(targetUrl),
-      scanRateLimit(targetUrl),
-      scanOpenAPI(targetUrl),
-      scanApiInventory(targetUrl),
-      scanAttackSurface(targetUrl),
-      scanEndpointRisk(targetUrl),
-    ]);
+  const scanIdString = scan._id.toString();
 
-    const findings = [
-      ...headerFindings,
-      ...sslFindings,
-      ...corsFindings,
-      ...cookieFindings,
-      ...serverFindings,
-      ...technologyFindings,
-      ...jwtFindings,
-      ...rateLimitFindings,
-      ...openApiFindings,
-      ...apiInventoryFindings,
-      ...attackSurfaceFindings,
-      ...endpointRiskFindings,
-    ];
-
-    const criticalCount = findings.filter(
-      (v) => v.severity === "critical"
-    ).length;
-
-    const highCount = findings.filter(
-      (v) => v.severity === "high"
-    ).length;
-
-    const mediumCount = findings.filter(
-      (v) => v.severity === "medium"
-    ).length;
-
-    const lowCount = findings.filter(
-      (v) => v.severity === "low"
-    ).length;
-
-    const totalFindings = findings.length;
-
-    const scoreData = calculateSecurityScore(findings);
-
-    scan.vulnerabilities = findings;
-
-    scan.securityScore = scoreData.score;
-
-    scan.grade = scoreData.grade;
-
-    scan.riskLevel = scoreData.riskLevel;
-
-    scan.criticalCount = criticalCount;
-
-    scan.highCount = highCount;
-
-    scan.mediumCount = mediumCount;
-
-    scan.lowCount = lowCount;
-
-    scan.totalFindings = totalFindings;
-
-    scan.riskScore =
-      criticalCount * 1.5 +
-      highCount * 0.8 +
-      mediumCount * 0.3 +
-      lowCount * 0.1;
-
-    scan.riskScore = Math.min(
-      10,
-      Number(scan.riskScore.toFixed(1))
-    );
-
-    scan.status = "completed";
-
-    scan.completedAt = new Date();
-
-    // ✅ UNTOUCHED: Duration stays in seconds (frontend will convert)
-    scan.duration = Math.round(
-      (scan.completedAt - scan.startedAt) / 1000
-    );
-
-    if (findings.length > 0) {
-      await Vulnerability.insertMany(
-        findings.map((finding) => ({
-          scanId: scan._id,
-
-          severity: finding.severity,
-          title: finding.title,
-          description: finding.description,
-          recommendation: finding.recommendation,
-
-          cwe: finding.cwe,
-          owasp: finding.owasp,
-
-          cvss: finding.cvss,
-
-          category: finding.category,
-
-          references: finding.references,
-
-          remediationSteps: finding.remediationSteps,
-
-          inventory: finding.inventory || null,
-        })),
-      );
+  activeScans.set(scanIdString, {
+    scanId: scan.scanId,
+    status: "running",
+    progress: 0,
+    scanners: {
+      "security-header": "pending",
+      "ssl": "pending",
+      "cors": "pending",
+      "cookie": "pending",
+      "technology": "pending",
+      "server": "pending",
+      "jwt": "pending",
+      "rate-limit": "pending",
+      "openapi": "pending",
+      "api-inventory": "pending",
+      "attack-surface": "pending",
+      "endpoint-risk": "pending"
     }
-    await scan.save();
+  });
+
+  // Start the scan pipeline in the background
+  (async () => {
+    const runScanner = async (name, scanFn) => {
+      const active = activeScans.get(scanIdString);
+      if (active) active.scanners[name] = "running";
+      try {
+        const findings = await scanFn(targetUrl);
+        if (active) {
+          active.scanners[name] = "completed";
+          const keys = Object.keys(active.scanners);
+          const completed = keys.filter(k => active.scanners[k] === "completed").length;
+          active.progress = Math.round((completed / keys.length) * 100);
+        }
+        return findings;
+      } catch (err) {
+        if (active) {
+          active.scanners[name] = "failed";
+        }
+        return [];
+      }
+    };
 
     try {
-      await createReport(scan, findings);
+      const [
+        headerFindings,
+        sslFindings,
+        corsFindings,
+        cookieFindings,
+        technologyFindings,
+        serverFindings,
+        jwtFindings,
+        rateLimitFindings,
+        openApiFindings,
+        apiInventoryFindings,
+        attackSurfaceFindings,
+        endpointRiskFindings,
+      ] = await Promise.all([
+        runScanner("security-header", scanSecurityHeaders),
+        runScanner("ssl", scanSSL),
+        runScanner("cors", scanCORS),
+        runScanner("cookie", scanCookies),
+        runScanner("technology", scanTechnology),
+        runScanner("server", scanServerDisclosure),
+        runScanner("jwt", scanJWT),
+        runScanner("rate-limit", scanRateLimit),
+        runScanner("openapi", scanOpenAPI),
+        runScanner("api-inventory", scanApiInventory),
+        runScanner("attack-surface", scanAttackSurface),
+        runScanner("endpoint-risk", scanEndpointRisk),
+      ]);
+
+      const findings = [
+        ...headerFindings,
+        ...sslFindings,
+        ...corsFindings,
+        ...cookieFindings,
+        ...serverFindings,
+        ...technologyFindings,
+        ...jwtFindings,
+        ...rateLimitFindings,
+        ...openApiFindings,
+        ...apiInventoryFindings,
+        ...attackSurfaceFindings,
+        ...endpointRiskFindings,
+      ];
+
+      const criticalCount = findings.filter(
+        (v) => v.severity === "critical"
+      ).length;
+
+      const highCount = findings.filter(
+        (v) => v.severity === "high"
+      ).length;
+
+      const mediumCount = findings.filter(
+        (v) => v.severity === "medium"
+      ).length;
+
+      const lowCount = findings.filter(
+        (v) => v.severity === "low"
+      ).length;
+
+      const totalFindings = findings.length;
+
+      const scoreData = calculateSecurityScore(findings);
+
+      const dbScan = await Scan.findById(scanIdString);
+      if (!dbScan) return;
+
+      dbScan.securityScore = scoreData.score;
+      dbScan.grade = scoreData.grade;
+      dbScan.riskLevel = scoreData.riskLevel;
+      dbScan.criticalCount = criticalCount;
+      dbScan.highCount = highCount;
+      dbScan.mediumCount = mediumCount;
+      dbScan.lowCount = lowCount;
+      dbScan.totalFindings = totalFindings;
+
+      dbScan.riskScore =
+        criticalCount * 1.5 +
+        highCount * 0.8 +
+        mediumCount * 0.3 +
+        lowCount * 0.1;
+
+      dbScan.riskScore = Math.min(
+        10,
+        Number(dbScan.riskScore.toFixed(1))
+      );
+
+      dbScan.status = "completed";
+      dbScan.completedAt = new Date();
+
+      dbScan.duration = Math.round(
+        (dbScan.completedAt - dbScan.startedAt) / 1000
+      );
+
+      if (findings.length > 0) {
+        await Vulnerability.insertMany(
+          findings.map((finding) => ({
+            scanId: dbScan._id,
+            severity: finding.severity,
+            title: finding.title,
+            description: finding.description,
+            recommendation: finding.recommendation,
+            cwe: finding.cwe,
+            owasp: finding.owasp,
+            cvss: finding.cvss,
+            category: finding.category,
+            references: finding.references,
+            remediationSteps: finding.remediationSteps,
+            inventory: finding.inventory || null,
+          })),
+        );
+      }
+      await dbScan.save();
+
+      try {
+        await createReport(dbScan, findings);
+      } catch (error) {
+        console.error("Report generation failed:", error);
+      }
+
+      const active = activeScans.get(scanIdString);
+      if (active) {
+        active.status = "completed";
+        active.progress = 100;
+      }
+      setTimeout(() => activeScans.delete(scanIdString), 2 * 60 * 1000);
+
     } catch (error) {
-      console.error("Report generation failed:", error);
+      console.error("Background scan failed:", error);
+      const active = activeScans.get(scanIdString);
+      if (active) {
+        active.status = "failed";
+      }
+      setTimeout(() => activeScans.delete(scanIdString), 2 * 60 * 1000);
+
+      const dbScan = await Scan.findById(scanIdString);
+      if (dbScan) {
+        dbScan.status = "failed";
+        dbScan.completedAt = new Date();
+        dbScan.duration = Math.round(
+          (dbScan.completedAt - dbScan.startedAt) / 1000
+        );
+        await dbScan.save();
+      }
     }
+  })();
 
-    return scan;
-  } catch (error) {
-    scan.status = "failed";
-
-    scan.completedAt = new Date();
-
-    // ✅ UNTOUCHED: Duration stays in seconds for failed scans too
-    scan.duration = Math.round(
-      (scan.completedAt - scan.startedAt) / 1000
-    );
-
-    await scan.save();
-
-    throw error;
-  }
+  return scan;
 };
 
 const getUserScans = async (userId) => {
@@ -206,4 +254,5 @@ const getUserScans = async (userId) => {
 module.exports = {
   createScan,
   getUserScans,
+  getActiveScanProgress,
 };

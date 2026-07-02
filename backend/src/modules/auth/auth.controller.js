@@ -1,6 +1,7 @@
 const {
   registerUser,
   loginUser,
+  googleLoginUser,
   refreshAccessToken,
   logoutUser,
   logoutAllUser,
@@ -32,6 +33,22 @@ const login = async (req, res) => {
     });
   } catch (error) {
     return res.status(401).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+const googleLogin = async (req, res) => {
+  try {
+    const result = await googleLoginUser(req.body);
+
+    return res.status(200).json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    return res.status(400).json({
       success: false,
       message: error.message,
     });
@@ -98,6 +115,7 @@ const logoutAll = async (req, res) => {
 module.exports = {
   register,
   login,
+  googleLogin,
   refresh,
   logout,
   logoutAll,

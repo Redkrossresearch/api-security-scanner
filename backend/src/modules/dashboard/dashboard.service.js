@@ -349,6 +349,44 @@ const getDashboardStats = async (
   const complianceScore =
     totalChecks > 0 ? Math.round((passed / totalChecks) * 100) : 100;
 
+  const complianceRadarData = [
+    { subject: "A1", value: 100 },
+    { subject: "A2", value: 100 },
+    { subject: "A3", value: 100 },
+    { subject: "A4", value: 100 },
+    { subject: "A5", value: 100 },
+    { subject: "A6", value: 100 },
+    { subject: "A7", value: 100 },
+    { subject: "A8", value: 100 },
+    { subject: "A9", value: 100 },
+    { subject: "A10", value: 100 },
+  ];
+
+  const allVulnerabilities = await Vulnerability.find().lean();
+  allVulnerabilities.forEach((v) => {
+    const owaspStr = String(v.owasp || "").toUpperCase();
+    let index = -1;
+    for (let i = 1; i <= 10; i++) {
+      if (
+        owaspStr.includes(`A${i}:`) || 
+        owaspStr.includes(`A0${i}:`) || 
+        owaspStr.includes(`API${i}:`) ||
+        owaspStr.startsWith(`A${i} `) ||
+        owaspStr.startsWith(`A0${i} `)
+      ) {
+        index = i - 1;
+        break;
+      }
+    }
+    if (index !== -1) {
+      let deduction = 5;
+      if (v.severity?.toLowerCase() === "critical") deduction = 25;
+      else if (v.severity?.toLowerCase() === "high") deduction = 15;
+      else if (v.severity?.toLowerCase() === "medium") deduction = 10;
+      complianceRadarData[index].value = Math.max(30, complianceRadarData[index].value - deduction);
+    }
+  });
+
   const response = {
     totalScans,
     averageScore,
@@ -369,6 +407,7 @@ const getDashboardStats = async (
       warning,
       failed,
     },
+    complianceRadarData,
     securityTrend,
     activityTimeline,
     apiInventory,
@@ -412,6 +451,9 @@ const getScanDetails = async (id) => {
   if (!scan) {
     throw new Error("Scan not found");
   }
+
+  const vulnerabilities = await Vulnerability.find({ scanId: id }).lean();
+  scan.vulnerabilities = vulnerabilities;
 
   return scan;
 };

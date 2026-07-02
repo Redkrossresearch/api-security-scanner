@@ -178,9 +178,48 @@ const logoutAllUser = async (
 
 
 
+const googleLoginUser = async ({ name, email }) => {
+  let user = await User.findOne({
+    email,
+    isDeleted: false,
+  });
+
+  if (!user) {
+    const dummyPasswordHash = await bcrypt.hash("google-auth-no-password-" + Math.random(), 12);
+    user = await User.create({
+      name,
+      email,
+      passwordHash: dummyPasswordHash,
+    });
+  }
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+  const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
+
+  user.refreshTokens.push({
+    token: refreshTokenHash,
+  });
+
+  user.lastLogin = new Date();
+  await user.save();
+
+  return {
+    accessToken,
+    refreshToken,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    },
+  };
+};
+
 module.exports = {
   registerUser,
   loginUser,
+  googleLoginUser,
   refreshAccessToken,
   logoutUser,
   logoutAllUser,

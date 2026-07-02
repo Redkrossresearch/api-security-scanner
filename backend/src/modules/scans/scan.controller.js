@@ -1,8 +1,9 @@
 const mongoose = require("mongoose");
-const { createScan, getUserScans } = require("./scan.service");
+const { createScan, getUserScans, getActiveScanProgress } = require("./scan.service");
 
 const Scan = require("./scan.model");
 const Vulnerability = require("../vulnerabilities/vulnerability.model");
+const Report = require("../reports/report.model");
 
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -135,7 +136,7 @@ const getScanById = async (req, res) => {
     const scan = await Scan.findOne({
       _id: req.params.id,
       userId: req.user._id,
-    });
+    }).lean();
 
     if (!scan) {
       return res.status(404).json({
@@ -143,6 +144,9 @@ const getScanById = async (req, res) => {
         message: "Scan not found",
       });
     }
+
+    const vulnerabilities = await Vulnerability.find({ scanId: scan._id }).lean();
+    scan.vulnerabilities = vulnerabilities;
 
     return res.json({
       success: true,
@@ -176,6 +180,10 @@ const deleteScan = async (req, res) => {
         message: "Scan not found",
       });
     }
+
+    // Cascade delete associated vulnerabilities and reports
+    await Vulnerability.deleteMany({ scanId: scan._id });
+    await Report.deleteMany({ scanId: scan._id });
 
     return res.json({
       success: true,
@@ -576,6 +584,55 @@ const getAIInsights = async (req, res) => {
   }
 };
 
+const getScanStatus = async (req, res) => {
+  try {
+    const scanId = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(scanId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid scan id",
+      });
+    }
+
+    // Check in-memory active scans
+    const active = getActiveScanProgress(scanId);
+    if (active) {
+      return res.json({
+        success: true,
+        progress: active.progress,
+        status: active.status,
+        scanners: active.scanners,
+      });
+    }
+
+    // Fallback to database
+    const scan = await Scan.findOne({
+      _id: scanId,
+      userId: req.user._id,
+    });
+
+    if (!scan) {
+      return res.status(404).json({
+        success: false,
+        message: "Scan not found",
+      });
+    }
+
+    // If it's already in DB, it is completed or failed
+    return res.json({
+      success: true,
+      progress: scan.status === "completed" ? 100 : 0,
+      status: scan.status,
+      scanners: null,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   create,
   getAll,
@@ -589,4 +646,5 @@ module.exports = {
   getAssetLeaderboard,
   getHeatmap,
   getAIInsights,
+  getScanStatus,
 };

@@ -9,6 +9,7 @@ const validate = require("../../middleware/validate.middleware");
 const {
   register,
   login,
+  googleLogin,
   refresh,
   logout,
   logoutAll,
@@ -45,6 +46,11 @@ router.post(
 router.post(
   "/refresh",
   refresh
+);
+
+router.post(
+  "/google-login",
+  googleLogin
 );
 
 /*
