@@ -277,6 +277,16 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
                     }}
                   >
                     {item.title}
+                    {/* CVSS badge */}
+                    <span style={{
+                      backgroundColor: `${getColor(item.severity)}20`,
+                      color: getColor(item.severity),
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      marginLeft: "8px",
+                    }}>{`CVSS ${item.cvss}/10`}</span>
                   </div>
 
                   <div

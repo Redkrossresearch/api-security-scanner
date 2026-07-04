@@ -2,6 +2,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import GoogleButton from "../components/auth/GoogleButton";
+import api from "../services/api";
 import { motion, useAnimation, AnimatePresence } from "framer-motion";
 import GlobeGL from "react-globe.gl";
 import {
@@ -1056,6 +1057,40 @@ const LoginCard = () => {
       </div>
 
       <GoogleButton />
+
+      {import.meta.env.DEV && (
+        <button
+          onClick={async () => {
+            try {
+              const res = await api.post("/auth/google-login", {
+                name: "Dev User",
+                email: "dev@example.com",
+              });
+              if (res.data && res.data.accessToken) {
+                localStorage.setItem("token", res.data.accessToken);
+                window.location.reload();
+              }
+            } catch (err) {
+              console.error("Dev login failed:", err);
+            }
+          }}
+          style={{
+            marginTop: "12px",
+            width: "100%",
+            height: "48px",
+            background: "linear-gradient(90deg, #7C3AED, #2563EB)",
+            border: "none",
+            borderRadius: "12px",
+            color: "#ffffff",
+            fontSize: "15px",
+            fontWeight: "700",
+            cursor: "pointer",
+            boxShadow: "0 4px 20px rgba(124,58,237,0.3)",
+          }}
+        >
+          Bypass Login (Dev Mode)
+        </button>
+      )}
 
       <div style={{ display:"flex", justifyContent:"center", gap:10, marginTop:11, fontSize:"9px", color:"#475569" }}>
         <span>Secure</span><span>•</span><span>Fast</span><span>•</span><span>Passwordless</span>

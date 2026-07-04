@@ -6,6 +6,7 @@ import RemediationPlanCard from "../ai/RemediationPlanCard";
 import ReferencesCard from "../ai/ReferencesCard";
 import VerdictCard from "../ai/VerdictCard";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { analyzeVulnerability } from "../../services/vulnerabilityService";
 import { motion } from "framer-motion";
 import api from "../../services/api";
@@ -104,190 +105,292 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
     }
   };
 
-  return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,.75)",
-        zIndex: 10000,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <div
-        className="athx-scroll"
-        style={{
-          fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-          lineHeight: 1.7,
-          alignContent: "start",
-          position: "relative",
-          width: "95vw",
-          maxWidth: "1600px",
-          maxHeight: "90vh",
-          display: "grid",
-          gridTemplateColumns: "1fr",
-          gap: "32px",
-          overflowY: "auto",
-          background: "#08111F",
-          border: "1px solid rgba(255,255,255,.08)",
-          borderRadius: "20px",
-          padding: "32px",
-          color: "#FFFFFF",
-        }}
-      >
-        <div
+  const modalContent = (() => {
+    if (loading) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
           style={{
-            position: "sticky",
-            top: "-24px",
-            zIndex: 50,
-            background: "rgba(8,17,31,.95)",
-            backdropFilter: "blur(12px)",
-            borderBottom: "1px solid rgba(255,255,255,.08)",
-            paddingBottom: "24px",
-            marginBottom: "0px",
-          }}
-        >
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "32px",
-              fontWeight: "800",
-              letterSpacing: "-0.5px",
-              color: "#FFFFFF",
-            }}
-          >
-            AI Security Analysis
-          </h2>
-
-          {analysis && (
-            <div
-              style={{
-                marginTop: "10px",
-                display: "flex",
-                gap: "10px",
-                flexWrap: "wrap",
-              }}
-            >
-              <span
-                style={{
-                  background: "#EF4444",
-                  padding: "4px 10px",
-                  borderRadius: "999px",
-                  fontSize: "12px",
-                }}
-              >
-                {analysis?.riskRating?.severity}
-              </span>
-
-              <span
-                style={{
-                  background: "#111827",
-                  padding: "4px 10px",
-                  borderRadius: "999px",
-                  fontSize: "12px",
-                }}
-              >
-                Risk Score: {analysis?.riskRating?.score}
-              </span>
-
-              <span
-                style={{
-                  background: "#111827",
-                  padding: "4px 10px",
-                  borderRadius: "999px",
-                  fontSize: "12px",
-                }}
-              >
-                {vulnerability?.cwe}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <button
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            top: "20px",
-            right: "20px",
-            zIndex: 100,
-            background: "transparent",
-            border: "none",
+            fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+            background: "#08111F",
+            border: "1px solid rgba(124, 58, 237, 0.25)",
+            borderRadius: "20px",
+            padding: "36px",
+            width: "90vw",
+            maxWidth: "540px",
             color: "#FFFFFF",
-            fontSize: "24px",
-            cursor: "pointer",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.15)",
+            position: "relative",
           }}
         >
-          ✕
-        </button>
+          <style>{`
+            @keyframes spin {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+            .athx-spinner {
+              animation: spin 1.2s linear infinite;
+            }
+          `}</style>
+          
+          <button
+            onClick={onClose}
+            style={{
+              position: "absolute",
+              top: "20px",
+              right: "20px",
+              background: "transparent",
+              border: "none",
+              color: "#94A3B8",
+              fontSize: "20px",
+              cursor: "pointer",
+              transition: "color 0.2s",
+            }}
+            onMouseEnter={(e) => (e.target.style.color = "#FFFFFF")}
+            onMouseLeave={(e) => (e.target.style.color = "#94A3B8")}
+          >
+            ✕
+          </button>
 
-        {loading && (
+          <div style={{ textAlign: "center", marginBottom: "24px" }}>
+            <div style={{ fontSize: "24px", fontWeight: "800", color: "#FFF", marginBottom: "8px", letterSpacing: "-0.5px" }}>
+              AI Analysis In Progress
+            </div>
+            <div style={{ color: "#94A3B8", fontSize: "14px" }}>
+              Evaluating vulnerability report details...
+            </div>
+          </div>
+
           <div
             style={{
-              gridColumn: "1 / -1",
-              background: "#0F172A",
-              boxShadow: "0 0 25px rgba(16,185,129,.18)",
-              border: "1px solid rgba(255,255,255,.08)",
-              borderRadius: "16px",
-              padding: "24px",
+              width: "100%",
+              height: "6px",
+              background: "#111827",
+              borderRadius: "999px",
+              overflow: "hidden",
+              marginBottom: "28px",
             }}
           >
-            <h3 style={{ marginTop: 0, marginBottom: "12px" }}>
-              ATHX Security Intelligence
-            </h3>
-
-            <div
+            <motion.div
               style={{
-                width: "100%",
-                height: "8px",
-                background: "#111827",
+                height: "100%",
+                background: "linear-gradient(90deg, #7C3AED, #2563EB, #38BDF8)",
                 borderRadius: "999px",
-                overflow: "hidden",
               }}
-            >
-              <div
-                style={{
-                  width: "60%",
-                  height: "100%",
-                  background: "linear-gradient(90deg,#2563EB,#38BDF8)",
-                  borderRadius: "999px",
-                }}
-              />
-            </div>
+              animate={{
+                width: `${((stepIndex + 1) / loadingSteps.length) * 100}%`,
+              }}
+              transition={{ duration: 0.5, ease: "easeInOut" }}
+            />
+          </div>
 
-            <div
-              style={{
-                marginTop: "18px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-              }}
-            >
-              {loadingSteps.map((step, index) => (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+              background: "rgba(15, 23, 42, 0.4)",
+              borderRadius: "16px",
+              padding: "20px",
+              border: "1px solid rgba(255, 255, 255, 0.05)",
+            }}
+          >
+            {loadingSteps.map((step, index) => {
+              const isCompleted = index < stepIndex;
+              const isActive = index === stepIndex;
+              return (
                 <div
                   key={step}
                   style={{
-                    color:
-                      index < stepIndex
-                        ? "#22C55E"
-                        : index === stepIndex
-                          ? "#38BDF8"
-                          : "#64748B",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    color: isCompleted ? "#10B981" : isActive ? "#38BDF8" : "#64748B",
                     fontSize: "14px",
-                    fontWeight: index === stepIndex ? "600" : "500",
+                    fontWeight: isActive ? "600" : "500",
                   }}
                 >
-                  {index < stepIndex ? "✓" : index === stepIndex ? "⏳" : "○"}{" "}
-                  {step}
+                  <div
+                    style={{
+                      width: "24px",
+                      height: "24px",
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "12px",
+                      background: isCompleted
+                        ? "rgba(16, 185, 129, 0.1)"
+                        : isActive
+                        ? "rgba(56, 189, 248, 0.1)"
+                        : "rgba(255, 255, 255, 0.03)",
+                      border: `1px solid ${
+                        isCompleted
+                          ? "rgba(16, 185, 129, 0.3)"
+                          : isActive
+                          ? "rgba(56, 189, 248, 0.4)"
+                          : "rgba(255, 255, 255, 0.05)"
+                      }`,
+                    }}
+                  >
+                    {isCompleted ? (
+                      "✓"
+                    ) : isActive ? (
+                      <svg
+                        className="athx-spinner"
+                        style={{ width: "12px", height: "12px", color: "#38BDF8" }}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path style={{ opacity: 0.85 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : (
+                      "○"
+                    )}
+                  </div>
+                  <span>{step}</span>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        )}
+        </motion.div>
+      );
+    }
 
-        {analysis && (
+    if (analysis) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="athx-scroll athx-modal-scroll"
+          style={{
+            fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+            lineHeight: 1.7,
+            alignContent: "start",
+            position: "relative",
+            width: "95vw",
+            maxWidth: "1400px",
+            maxHeight: "90vh",
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            gap: "32px",
+            overflowY: "auto",
+            overflowX: "hidden",
+            background: "#08111F",
+            border: "1px solid rgba(255,255,255,.08)",
+            borderRadius: "20px",
+            padding: "32px",
+            color: "#FFFFFF",
+            boxShadow: "0 25px 70px -10px rgba(0,0,0,0.8), 0 0 50px rgba(59, 130, 246, 0.05)",
+          }}
+        >
+          <style>{`
+            .athx-modal-scroll::-webkit-scrollbar {
+              width: 8px;
+              height: 8px;
+            }
+            .athx-modal-scroll::-webkit-scrollbar-track {
+              background: rgba(8, 17, 31, 0.5);
+            }
+            .athx-modal-scroll::-webkit-scrollbar-thumb {
+              background: rgba(255, 255, 255, 0.1);
+              border-radius: 4px;
+            }
+            .athx-modal-scroll::-webkit-scrollbar-thumb:hover {
+              background: rgba(255, 255, 255, 0.2);
+            }
+          `}</style>
+          
+          <div
+            style={{
+              position: "sticky",
+              top: "-32px",
+              zIndex: 50,
+              background: "rgba(8,17,31,.95)",
+              backdropFilter: "blur(12px)",
+              borderBottom: "1px solid rgba(255,255,255,.08)",
+              paddingBottom: "24px",
+              marginBottom: "0px",
+              marginTop: "-16px",
+            }}
+          >
+            <h2
+              style={{
+                margin: 0,
+                fontSize: "32px",
+                fontWeight: "800",
+                letterSpacing: "-0.5px",
+                color: "#FFFFFF",
+              }}
+            >
+              AI Security Analysis
+            </h2>
+
+            {analysis && (
+              <div
+                style={{
+                  marginTop: "10px",
+                  display: "flex",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span
+                  style={{
+                    background: "#EF4444",
+                    padding: "4px 10px",
+                    borderRadius: "999px",
+                    fontSize: "12px",
+                  }}
+                >
+                  {analysis?.riskRating?.severity}
+                </span>
+
+                <span
+                  style={{
+                    background: "#111827",
+                    padding: "4px 10px",
+                    borderRadius: "999px",
+                    fontSize: "12px",
+                  }}
+                >
+                  Risk Score: {analysis?.riskRating?.score}
+                </span>
+
+                <span
+                  style={{
+                    background: "#111827",
+                    padding: "4px 10px",
+                    borderRadius: "999px",
+                    fontSize: "12px",
+                  }}
+                >
+                  {vulnerability?.cwe}
+                </span>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={onClose}
+            style={{
+              position: "absolute",
+              top: "24px",
+              right: "24px",
+              zIndex: 100,
+              background: "transparent",
+              border: "none",
+              color: "#FFFFFF",
+              fontSize: "24px",
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+
           <>
             <div style={{ gridColumn: "1 / -1" }}>
               <div
@@ -667,8 +770,28 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
               </div>
             </motion.div>
           </>
-        )}
-      </div>
-    </div>
+        </motion.div>
+      );
+    }
+
+    return null;
+  })();
+
+  return createPortal(
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(3, 7, 18, 0.8)",
+        backdropFilter: "blur(8px)",
+        zIndex: 10000,
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+      }}
+    >
+      {modalContent}
+    </div>,
+    document.body
   );
 }

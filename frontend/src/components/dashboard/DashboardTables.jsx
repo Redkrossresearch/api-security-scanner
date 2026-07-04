@@ -1,23 +1,19 @@
 import { memo } from "react";
 import LatestScansTable from "./LatestScansTable";
 import CriticalFindingsCard from "./CriticalFindingsCard";
-import ComplianceOverviewCard from "./ComplianceOverviewCard";
+import LiveThreatFeed from "./LiveThreatFeed";
 import { styles } from "../../styles/dashboardStyles";
 
 function DashboardTables({
   latestScans,
   criticalFindings,
   handleVulnerabilityClick,
-  complianceOverview,
-  complianceData,
   page,
   setPage,
   pagination,
-
   selectedScan,
   setSelectedScan,
-  fetchScanDetails, // ✅ NEW
-
+  fetchScanDetails,
   selectedSeverity,
   setSelectedSeverity,
 }) {
@@ -28,26 +24,20 @@ function DashboardTables({
         page={page}
         setPage={setPage}
         pagination={pagination}
-
         selectedScan={selectedScan}
         setSelectedScan={setSelectedScan}
-        fetchScanDetails={fetchScanDetails} // ✅ NEW
+        fetchScanDetails={fetchScanDetails}
       />
 
       <CriticalFindingsCard
         criticalFindings={criticalFindings}
         handleVulnerabilityClick={handleVulnerabilityClick}
-
         selectedScan={selectedScan}
-
         selectedSeverity={selectedSeverity}
         setSelectedSeverity={setSelectedSeverity}
       />
 
-      <ComplianceOverviewCard
-        complianceOverview={complianceOverview}
-        complianceData={complianceData}
-      />
+      <LiveThreatFeed />
     </div>
   );
 }

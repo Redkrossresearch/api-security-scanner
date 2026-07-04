@@ -128,23 +128,50 @@ function CriticalFindingsCard({
   return (
     <div
       style={{
-        ...styles.cardDarkAlt,
-        height: SIZE.chartCard,
+        background: "radial-gradient(130px circle at top left, rgba(245, 158, 11, 0.1), transparent 90%), linear-gradient(180deg, #090d16 0%, #030712 100%)",
+        border: "1px solid rgba(255,255,255,.08)",
+        borderRadius: "24px",
+        height: "360px",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
       }}
     >
       {/* Header */}
-      <div style={styles.cardHeader}>
+      <div 
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "14px",
+          borderBottom: "1px solid rgba(255,255,255,0.04)",
+          paddingBottom: "10px",
+          paddingLeft: "20px",
+          paddingRight: "20px",
+          paddingTop: "20px"
+        }}
+      >
         <div>
-          <h3 style={styles.cardTitle}>Security Findings</h3>
+          <h3 
+            style={{
+              margin: 0,
+              fontSize: "14px",
+              fontWeight: "800",
+              background: "linear-gradient(90deg, #FFFFFF, #94A3B8)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent"
+            }}
+          >
+            Security Findings
+          </h3>
           <div
             style={{
-              color: "#94A3B8",
-              fontSize: 13,
-              marginTop: 4,
-              maxWidth: 250,
+              color: "#64748B",
+              fontSize: 10,
+              fontWeight: "600",
+              marginTop: 2,
+              maxWidth: 220,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -157,7 +184,9 @@ function CriticalFindingsCard({
         
         <span
           style={{
-            ...styles.cardLink,
+            color: "#8B5CF6",
+            fontSize: "12px",
+            fontWeight: "700",
             cursor: "pointer",
           }}
           onClick={() => navigate("/vulnerabilities")}
@@ -173,8 +202,8 @@ function CriticalFindingsCard({
           gap: 8,
           flexWrap: "wrap",
           marginBottom: 16,
-          paddingLeft: 24, 
-          paddingRight: 24,
+          paddingLeft: 20, 
+          paddingRight: 20,
         }}
       >
         {severityLevels.map((level) => {
@@ -203,7 +232,7 @@ function CriticalFindingsCard({
         })}
       </div>
 
-      <div style={styles.tableGrid}>
+      <div style={{ ...styles.tableGrid, paddingLeft: "20px", paddingRight: "20px" }}>
         <div>SEVERITY</div>
         <div>FINDING</div>
         <div>TARGET</div>
@@ -211,7 +240,7 @@ function CriticalFindingsCard({
         <div>TIME</div>
       </div>
 
-      <div className="latest-scroll" style={styles.scrollContainer}>
+      <div className="latest-scroll" style={{ ...styles.scrollContainer, paddingBottom: "20px" }}>
         {filteredFindings.length > 0 ? (
           filteredFindings.map((item) => {
             const badgeStyle = getSeverityBadgeStyle(item.severity);
@@ -223,6 +252,8 @@ function CriticalFindingsCard({
                 onClick={() => handleVulnerabilityClick(item)}
                 style={{
                   ...styles.tableRow,
+                  paddingLeft: "20px",
+                  paddingRight: "20px",
                   cursor: "pointer",
                 }}
               >

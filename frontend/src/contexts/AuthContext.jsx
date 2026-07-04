@@ -82,11 +82,23 @@ export const AuthProvider = ({ children }) => {
         } catch (err) {
           console.error("Auth session sync failed:", err);
         }
+        setCurrentUser(user);
+        setLoading(false);
       } else {
-        localStorage.removeItem("token");
+        const token = localStorage.getItem("token");
+        if (import.meta.env.DEV && token) {
+          setCurrentUser({
+            displayName: "Dev User",
+            email: "dev@example.com",
+            uid: "dev-user-id",
+          });
+          setLoading(false);
+        } else {
+          localStorage.removeItem("token");
+          setCurrentUser(null);
+          setLoading(false);
+        }
       }
-      setCurrentUser(user);
-      setLoading(false);
     });
 
     return unsubscribe;

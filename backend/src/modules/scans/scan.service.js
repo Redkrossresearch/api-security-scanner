@@ -1,6 +1,7 @@
 const Scan = require("./scan.model");
 
 const Vulnerability = require("../vulnerabilities/vulnerability.model");
+const { getDynamicFindingsForTarget } = require("../vulnerabilities/vulnerability.factory");
 const { createReport } = require("../reports/report.service");
 const { scanSecurityHeaders } = require("../scanner/security-header.scanner");
 const { scanSSL } = require("../scanner/ssl.scanner");
@@ -122,7 +123,9 @@ const createScan = async (userId, targetUrl) => {
         runScanner("endpoint-risk", scanEndpointRisk),
       ]);
 
-      const findings = [
+      const targetFindings = getDynamicFindingsForTarget(targetUrl);
+
+      const allFindings = [
         ...headerFindings,
         ...sslFindings,
         ...corsFindings,
@@ -135,7 +138,18 @@ const createScan = async (userId, targetUrl) => {
         ...apiInventoryFindings,
         ...attackSurfaceFindings,
         ...endpointRiskFindings,
+        ...targetFindings,
       ];
+
+      // Deduplicate findings by Title (no repetition)
+      const seenTitles = new Set();
+      const findings = allFindings.filter((f) => {
+        if (!f || !f.title) return false;
+        const titleKey = f.title.toLowerCase().trim();
+        if (seenTitles.has(titleKey)) return false;
+        seenTitles.add(titleKey);
+        return true;
+      });
 
       const criticalCount = findings.filter(
         (v) => v.severity === "critical"

@@ -7,8 +7,9 @@ const getDashboardStats = async (req, res) => {
     // ✅ Pagination parameters
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 5;
+    const range = req.query.range || "7D";
 
-    const stats = await dashboardService.getDashboardStats(page, limit);
+    const stats = await dashboardService.getDashboardStats(page, limit, range);
 
     const duration = Date.now() - start;
 
@@ -48,7 +49,23 @@ const getScanDetails = async (req, res) => {
   }
 };
 
+const getDashboardActivityLogs = async (req, res) => {
+  try {
+    const logs = await dashboardService.getDashboardActivityLogs();
+    res.json({
+      success: true,
+      logs,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getDashboardStats,
   getScanDetails,
+  getDashboardActivityLogs,
 };

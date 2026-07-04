@@ -88,15 +88,16 @@ export default function LatestScansTable({
   return (
     <div
       style={{
-        background: "linear-gradient(180deg,#0F172A,#020617)",
+        background: "radial-gradient(130px circle at top left, rgba(59, 130, 246, 0.1), transparent 90%), linear-gradient(180deg, #090d16 0%, #030712 100%)",
         border: "1px solid rgba(255,255,255,.08)",
-        borderRadius: "20px",
-        padding: "24px",
+        borderRadius: "24px",
+        padding: "20px",
         color: "white",
-        height: "340px",
+        height: "360px",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
       }}
     >
       <div
@@ -104,13 +105,19 @@ export default function LatestScansTable({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          marginBottom: "20px",
+          marginBottom: "16px",
+          borderBottom: "1px solid rgba(255,255,255,0.04)",
+          paddingBottom: "10px"
         }}
       >
         <h3
           style={{
             margin: 0,
-            fontSize: "20px",
+            fontSize: "14px",
+            fontWeight: "800",
+            background: "linear-gradient(90deg, #FFFFFF, #94A3B8)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent"
           }}
         >
           Recent Scans
@@ -120,7 +127,8 @@ export default function LatestScansTable({
           onClick={() => navigate("/history")}
           style={{
             color: "#8B5CF6",
-            fontSize: "14px",
+            fontSize: "12px",
+            fontWeight: "700",
             cursor: "pointer",
           }}
         >
@@ -135,6 +143,7 @@ export default function LatestScansTable({
           overflowY: "auto",
           minHeight: 0,
           paddingRight: "6px",
+          paddingBottom: "20px",
         }}
       >
         {scans.map((scan) => {
@@ -153,8 +162,8 @@ export default function LatestScansTable({
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-                padding: "16px 12px",
-                paddingLeft: "8px",
+                padding: "16px 16px",
+                paddingLeft: "12px",
                 borderBottom: "1px solid rgba(255,255,255,.05)",
                 cursor: "pointer",
                 borderRadius: "8px",

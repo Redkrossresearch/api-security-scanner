@@ -21,26 +21,47 @@ export default function ScanTrendChart({
     score: item.score,
   }));
 
+  const activeColor = "#8B5CF6";
+  const activeColorSecondary = "#EC4899";
+
   return (
     <div
       style={{
         background:
-          "linear-gradient(180deg,#0B1220,#07101F)",
-        border: "1px solid rgba(255,255,255,.06)",
+          "radial-gradient(140px circle at top left, rgba(139,92,246,0.12), transparent 90%), linear-gradient(180deg,#090d16 0%,#030712 100%)",
+        border: "1px solid rgba(255,255,255,.08)",
         borderRadius: "24px",
         padding: "24px",
         height: "360px",
+        position: "relative",
+        boxShadow: "0 8px 24px rgba(0,0,0,0.3)"
       }}
     >
-      <h3
-        style={{
-          margin: 0,
-          marginBottom: "20px",
-          color: "#FFFFFF",
-        }}
-      >
-        Security Posture Trend
-      </h3>
+      <style>{`
+        .range-btn {
+          background: rgba(255,255,255,0.02);
+          color: #64748B;
+          border: 1px solid rgba(255,255,255,.08);
+          border-radius: 8px;
+          padding: 6px 14px;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .range-btn:hover {
+          color: #FFF;
+          border-color: rgba(255,255,255,.2);
+          background: rgba(255,255,255,.05);
+        }
+        .range-btn-active {
+          background: linear-gradient(135deg, rgba(139,92,246,0.25), rgba(236,72,153,0.25)) !important;
+          color: #FFFFFF !important;
+          border: 1px solid #8B5CF6 !important;
+          box-shadow: 0 0 16px rgba(139,92,246,0.45);
+          text-shadow: 0 0 4px rgba(255,255,255,0.4);
+        }
+      `}</style>
 
       <div
         style={{
@@ -50,14 +71,19 @@ export default function ScanTrendChart({
           marginBottom: "16px",
         }}
       >
-        <div
+        <h3
           style={{
-            color: "#94A3B8",
-            fontSize: "13px",
+            margin: 0,
+            color: "#FFFFFF",
+            fontSize: "15px",
+            fontWeight: "800",
+            background: "linear-gradient(90deg, #FFFFFF, #94A3B8)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent"
           }}
         >
-          Score
-        </div>
+          Security Posture Trend
+        </h3>
 
         <div
           style={{
@@ -69,28 +95,7 @@ export default function ScanTrendChart({
             <button
               key={item}
               onClick={() => setRange(item)}
-              style={{
-                background:
-                  item === range
-                    ? "#111827"
-                    : "transparent",
-
-                color:
-                  item === range
-                    ? "#FFFFFF"
-                    : "#64748B",
-
-                border:
-                  "1px solid rgba(255,255,255,.08)",
-
-                borderRadius: "8px",
-
-                padding: "6px 12px",
-
-                fontSize: "12px",
-
-                cursor: "pointer",
-              }}
+              className={item === range ? "range-btn range-btn-active" : "range-btn"}
             >
               {item}
             </button>
@@ -98,7 +103,19 @@ export default function ScanTrendChart({
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={260}>
+      <div
+        style={{
+          color: "#94A3B8",
+          fontSize: "12px",
+          fontWeight: "700",
+          marginBottom: "8px",
+          letterSpacing: "0.5px"
+        }}
+      >
+        SCORE OVER TIME
+      </div>
+
+      <ResponsiveContainer width="100%" height={210}>
         <AreaChart data={chartData}>
           <defs>
             <linearGradient
@@ -110,50 +127,54 @@ export default function ScanTrendChart({
             >
               <stop
                 offset="0%"
-                stopColor="#F97316"
-                stopOpacity={0.45}
+                stopColor={activeColor}
+                stopOpacity={0.35}
               />
-
               <stop
                 offset="100%"
-                stopColor="#F97316"
+                stopColor={activeColorSecondary}
                 stopOpacity={0}
               />
             </linearGradient>
           </defs>
 
           <CartesianGrid
-            stroke="rgba(255,255,255,.08)"
+            stroke="rgba(255,255,255,.04)"
             strokeDasharray="3 3"
+            vertical={false}
           />
 
           <XAxis
             dataKey="day"
-            tick={{ fill: "#94A3B8", fontSize: 12 }}
+            tick={{ fill: "#64748B", fontSize: 11, fontWeight: "600" }}
             axisLine={false}
             tickLine={false}
           />
           <YAxis
-            tick={{ fill: "#94A3B8", fontSize: 12 }}
+            tick={{ fill: "#64748B", fontSize: 11, fontWeight: "600" }}
             axisLine={false}
             tickLine={false}
+            domain={[0, 100]}
           />
 
           <Tooltip
             contentStyle={{
-              background: "#111827",
-              border: "1px solid rgba(255,255,255,.08)",
+              background: "rgba(15,23,42,0.85)",
+              backdropFilter: "blur(8px)",
+              border: "1px solid rgba(139,92,246,.25)",
               borderRadius: "12px",
               color: "#fff",
+              fontSize: "12px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.5)"
             }}
           />
 
           <Area
             dot={false}
-            activeDot={{ r: 6, fill: "#F97316", }}
-            type="natural"
+            activeDot={{ r: 6, fill: activeColor, stroke: "#FFF", strokeWidth: 2 }}
+            type="monotone"
             dataKey="score"
-            stroke="#F97316"
+            stroke={activeColor}
             strokeWidth={3}
             fill="url(#scanGradient)"
           />
