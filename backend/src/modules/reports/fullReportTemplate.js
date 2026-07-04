@@ -1,7 +1,7 @@
 const reportStyles = require("./reportStyles");
 const { marked } = require("marked");
 
-const fullReportTemplate = (report) => {
+const fullReportTemplate = (report, vulnerabilities = []) => {
   const riskLevelClass = report.riskLevel?.toLowerCase() || "medium";
 
   return `
@@ -199,6 +199,46 @@ ${reportStyles}
         ${report.remediationRoadmap.mediumPriorityActions.map(act => `<li>${act}</li>`).join("")}
       </ul>
     ` : ""}
+  </div>
+  ` : ""}
+
+  ${vulnerabilities && vulnerabilities.length > 0 ? `
+  <div class="page-break"></div>
+  <div class="report-page">
+    <h1>Detailed Vulnerabilities List</h1>
+    ${vulnerabilities.map((v, i) => {
+      const sev = v.severity?.toLowerCase() || "info";
+      return `
+      <div style="margin-bottom: 25px; padding: 15px; border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3 style="margin: 0; color: #fff; font-size: 16px;">#${i + 1} ${v.title}</h3>
+          <span class="finding-severity severity-badge-${sev}">${v.severity}</span>
+        </div>
+        <div style="font-size: 13px; color: rgba(255, 255, 255, 0.6); margin-bottom: 8px;">
+          <strong>Category:</strong> ${v.category || "General"} |
+          <strong>CWE:</strong> ${v.cwe || "N/A"} |
+          <strong>OWASP:</strong> ${v.owasp || "N/A"} |
+          <strong>CVSS:</strong> ${v.cvss || "N/A"}
+        </div>
+        <div style="font-size: 13px; color: rgba(255, 255, 255, 0.8); line-height: 1.6; margin-bottom: 8px;">
+          <strong>Description:</strong> ${v.description || "No description provided."}
+        </div>
+        ${v.endpoint ? `
+        <div style="font-size: 13px; color: rgba(255, 255, 255, 0.8); font-family: monospace; background: rgba(0, 0, 0, 0.2); padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; word-break: break-all;">
+          <strong>Endpoint:</strong> ${v.endpoint}
+        </div>
+        ` : ""}
+        ${v.exploitPayload ? `
+        <div style="font-size: 13px; color: rgba(255, 255, 255, 0.8); font-family: monospace; background: rgba(0, 0, 0, 0.2); padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; word-break: break-all;">
+          <strong>Exploit Payload:</strong> ${v.exploitPayload}
+        </div>
+        ` : ""}
+        <div style="font-size: 13px; color: #10B981; line-height: 1.6;">
+          <strong>Recommendation:</strong> ${v.recommendation || "Restrict access and validate user inputs."}
+        </div>
+      </div>
+      `;
+    }).join("")}
   </div>
   ` : ""}
 

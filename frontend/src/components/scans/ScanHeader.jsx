@@ -1,6 +1,39 @@
-import { Search, Calendar, Save, Play, Shield, Activity } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Calendar, Save, Play, Shield, Activity, ChevronDown } from "lucide-react";
+import toast from "react-hot-toast";
+import { getSettings, updateSettings } from "../../services/settingService";
 
-export default function ScanHeader({ scan, onStartScan, onSchedule, onTemplate }) {
+export default function ScanHeader({ scan, onStartScan, onTemplate }) {
+  const [showScheduleMenu, setShowScheduleMenu] = useState(false);
+  const [currentSchedule, setCurrentSchedule] = useState("disabled");
+
+  useEffect(() => {
+    getSettings()
+      .then((settings) => {
+        if (settings?.cronSchedule) {
+          setCurrentSchedule(settings.cronSchedule);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSelectSchedule = async (val) => {
+    try {
+      await updateSettings({ cronSchedule: val });
+      setCurrentSchedule(val);
+      setShowScheduleMenu(false);
+      toast.success(`Automated scanner configured: ${scheduleLabels[val]}`);
+    } catch (err) {
+      toast.error("Failed to update schedule settings");
+    }
+  };
+
+  const scheduleLabels = {
+    disabled: "Disabled (On-Demand)",
+    daily: "Daily Run",
+    weekly: "Weekly Run",
+    monthly: "Monthly Run",
+  };
   const stats = [
     { label: "Total Findings", value: scan ? String(scan.totalFindings) : "127", color: "#3B82F6", glow: "rgba(59, 130, 246, 0.15)" },
     { label: "Critical", value: scan ? String(scan.criticalCount) : "1", color: "#EF4444", glow: "rgba(239, 68, 68, 0.15)" },
@@ -123,13 +156,93 @@ export default function ScanHeader({ scan, onStartScan, onSchedule, onTemplate }
             />
           </div>
 
-          <button
-            onClick={onSchedule}
-            className="action-btn-custom"
-          >
-            <Calendar size={14} color="#F97316" />
-            Schedule
-          </button>
+          <div style={{ position: "relative" }}>
+            <button
+              onClick={() => setShowScheduleMenu(!showScheduleMenu)}
+              className="action-btn-custom"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <Calendar size={14} color="#F97316" />
+              <span>Schedule: {scheduleLabels[currentSchedule] || currentSchedule}</span>
+              <ChevronDown size={12} color="#64748B" />
+            </button>
+
+            {showScheduleMenu && (
+              <>
+                <div
+                  style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 998,
+                  }}
+                  onClick={() => setShowScheduleMenu(false)}
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "calc(100% + 8px)",
+                    right: 0,
+                    width: "250px",
+                    background: "rgba(10, 15, 30, 0.95)",
+                    backdropFilter: "blur(12px)",
+                    border: "1px solid rgba(139, 92, 246, 0.25)",
+                    borderRadius: "14px",
+                    boxShadow: "0 10px 30px rgba(0,0,0,0.5), 0 0 15px rgba(139,92,246,0.15)",
+                    zIndex: 999,
+                    overflow: "hidden",
+                    padding: "6px",
+                  }}
+                >
+                  {Object.entries(scheduleLabels).map(([key, label]) => {
+                    const isActive = currentSchedule === key;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleSelectSchedule(key)}
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          padding: "10px 14px",
+                          background: isActive
+                            ? "linear-gradient(90deg, rgba(139,92,246,0.2), transparent)"
+                            : "transparent",
+                          border: "none",
+                          borderRadius: "8px",
+                          color: isActive ? "#FFF" : "#94A3B8",
+                          fontSize: "12.5px",
+                          fontWeight: isActive ? "700" : "500",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease",
+                          display: "block",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = "rgba(255, 255, 255, 0.03)";
+                            e.currentTarget.style.color = "#FFF";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.background = "transparent";
+                            e.currentTarget.style.color = "#94A3B8";
+                          }
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
 
           <button
             onClick={onTemplate}

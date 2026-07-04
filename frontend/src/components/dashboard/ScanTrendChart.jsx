@@ -13,13 +13,23 @@ export default function ScanTrendChart({
   range,
   setRange,
 }) {
-  const chartData = data.map((item) => ({
-    day: new Date(item.date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    }),
-    score: item.score,
-  }));
+  const chartData = data.map((item) => {
+    const isHourFormat = range === "24H";
+    const dayLabel = isHourFormat
+      ? new Date(item.date).toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : new Date(item.date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+    return {
+      day: dayLabel,
+      score: item.score,
+    };
+  });
 
   const activeColor = "#8B5CF6";
   const activeColorSecondary = "#EC4899";

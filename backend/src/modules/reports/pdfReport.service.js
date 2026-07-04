@@ -22,7 +22,9 @@ const generatePdfReport = async (vulnerability, analysis, res) => {
 
     if (isFullScanReport) {
       const report = vulnerability;
-      html = fullReportTemplate(report);
+      const Vulnerability = require("../vulnerabilities/vulnerability.model");
+      const vulnerabilities = await Vulnerability.find({ scanId: report.scanId });
+      html = fullReportTemplate(report, vulnerabilities);
       filename = `athx-report-${report.scanId || "scan"}.pdf`;
     } else {
       if (!vulnerability || !analysis) throw new Error("Missing data");

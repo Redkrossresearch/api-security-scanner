@@ -41,6 +41,11 @@ const settingSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Tracking cron runs
+    lastCronRun: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
