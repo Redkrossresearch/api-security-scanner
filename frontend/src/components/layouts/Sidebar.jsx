@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-
 import {
   LayoutDashboard,
   Search,
@@ -12,62 +11,63 @@ import {
   ShieldCheck,
   ClipboardList,
   Settings,
+  LogOut,
 } from "lucide-react";
 
 const menuItems = [
   {
     name: "Dashboard",
     path: "/",
-    icon: <LayoutDashboard size={18} />,
+    icon: <LayoutDashboard size={17} />,
   },
   {
     name: "Scans",
     path: "/scans",
-    icon: <Search size={18} />,
+    icon: <Search size={17} />,
   },
   {
     name: "Scan History",
     path: "/history",
-    icon: <History size={18} />,
+    icon: <History size={17} />,
   },
   {
     name: "Vulnerabilities",
     path: "/vulnerabilities",
-    icon: <ShieldAlert size={18} />,
+    icon: <ShieldAlert size={17} />,
   },
   {
     name: "API Inventory",
     path: "/inventory",
-    icon: <Globe size={18} />,
+    icon: <Globe size={17} />,
     comingSoon: true,
   },
   {
     name: "Reports",
     path: "/reports",
-    icon: <FileText size={18} />,
+    icon: <FileText size={17} />,
   },
   {
     name: "AI Copilot",
     path: "/copilot",
-    icon: <Bot size={18} />,
+    icon: <Bot size={17} />,
     comingSoon: true,
   },
   {
     name: "Compliance",
     path: "/compliance",
-    icon: <ShieldCheck size={18} />,
+    icon: <ShieldCheck size={17} />,
     comingSoon: true,
   },
   {
     name: "Audit Logs",
     path: "/audit-logs",
-    icon: <ClipboardList size={18} />,
+    icon: <ClipboardList size={17} />,
     comingSoon: true,
   },
   {
     name: "Settings",
     path: "/settings",
-    icon: <Settings size={18} />,
+    icon: <Settings size={17} />,
   },
 ];
 
@@ -75,69 +75,61 @@ function Sidebar() {
   const location = useLocation();
   const { currentUser, logout } = useAuth();
 
-  const userName =
-    currentUser?.displayName || "Authenticated User";
-
-  const userEmail =
-    currentUser?.email || "No Email";
-
-  const userPhoto =
-    currentUser?.photoURL || null;
+  const userName = currentUser?.displayName || "Authenticated User";
+  const userEmail = currentUser?.email || "No Email";
+  const userPhoto = currentUser?.photoURL || null;
 
   return (
     <aside
       style={{
-        width: "260px",
-        minWidth: "260px",
+        width: "265px",
+        minWidth: "265px",
         flexShrink: 0,
-        background: "#0F172A",
-        borderRight: "1px solid #1E293B",
+        background: "linear-gradient(180deg, #070D19 0%, #030710 100%)",
+        borderRight: "1px solid rgba(255, 255, 255, 0.05)",
         minHeight: "100vh",
-        padding: "24px",
+        padding: "26px 20px",
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
+        boxShadow: "10px 0 30px rgba(0,0,0,0.25)",
       }}
     >
-      <div style={{ marginBottom: "40px" }}>
-        <div style={{ marginBottom: "40px" }}>
-          <h1
-            style={{
-              color: "#F9FAFB",
-              fontSize: "28px",
-              fontWeight: "800",
-              margin: 0,
-            }}
-          >
-            ATHX Security
-          </h1>
-
-          <p
-            style={{
-              color: "#9CA3AF",
-              fontSize: "13px",
-              marginTop: "6px",
-            }}
-          >
-            Enterprise API Security
-          </p>
-        </div>
-
-        <p
+      {/* Sidebar Header */}
+      <div style={{ marginBottom: "34px", paddingLeft: "8px" }}>
+        <h1
           style={{
-            color: "#9CA3AF",
-            fontSize: "13px",
+            fontSize: "23px",
+            fontWeight: "900",
+            margin: 0,
+            background: "linear-gradient(135deg, #FF7A1A 0%, #F97316 50%, #FB923C 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+            filter: "drop-shadow(0 0 15px rgba(249,115,22,0.25))",
+            letterSpacing: "0.5px",
           }}
         >
-          API Security Platform
+          ATHX Security
+        </h1>
+        <p
+          style={{
+            color: "#64748B",
+            fontSize: "12px",
+            fontWeight: "600",
+            margin: "4px 0 0 0",
+            letterSpacing: "0.2px",
+          }}
+        >
+          Enterprise API Security
         </p>
       </div>
 
+      {/* Navigation List */}
       <nav
         style={{
           display: "flex",
           flexDirection: "column",
-          gap: "8px",
+          gap: "6px",
         }}
       >
         {menuItems.map((item) => {
@@ -148,39 +140,20 @@ function Sidebar() {
               <div
                 key={item.path}
                 style={{
-                  padding: "14px 16px",
-                  borderRadius: "12px",
-                  background: "transparent",
-                  color: "#6B7280",
-                  border: "1px solid transparent",
+                  padding: "11px 14px",
+                  borderRadius: "10px",
+                  color: "#475569",
+                  fontSize: "14px",
                   fontWeight: 600,
-                  fontSize: "15px",
                   cursor: "not-allowed",
-                  opacity: 0.5,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                  }}
-                >
-                  {item.icon}
-                  <span>{item.name}</span>
-                  <span
-                    style={{
-                      marginLeft: "auto",
-                      fontSize: "10px",
-                      background: "#1E293B",
-                      color: "#9CA3AF",
-                      padding: "2px 6px",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    Soon
-                  </span>
-                </div>
+                {item.icon}
+                <span>{item.name}</span>
+                <span className="coming-soon-pill">Soon</span>
               </div>
             );
           }
@@ -189,40 +162,21 @@ function Sidebar() {
             <Link
               key={item.path}
               to={item.path}
-              style={{
-                textDecoration: "none",
-                padding: "14px 16px",
-                borderRadius: "12px",
-                background: active ? "#FFF7ED" : "transparent",
-
-                color: active ? "#F97316" : "#E5E7EB",
-
-                border: active ? "1px solid #FED7AA" : "1px solid transparent",
-                fontWeight: 600,
-                fontSize: "15px",
-                transition: "all .2s ease",
-              }}
+              className={`sidebar-link ${active ? "active" : ""}`}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                }}
-              >
-                {item.icon}
-                <span>{item.name}</span>
-              </div>
+              {item.icon}
+              <span>{item.name}</span>
             </Link>
           );
         })}
       </nav>
 
+      {/* User Profile Info Footer */}
       <div
         style={{
           marginTop: "auto",
-          paddingTop: "24px",
-          borderTop: "1px solid #1F2937",
+          paddingTop: "20px",
+          borderTop: "1px solid rgba(255,255,255,0.04)",
         }}
       >
         <div
@@ -230,7 +184,8 @@ function Sidebar() {
             display: "flex",
             alignItems: "center",
             gap: "12px",
-            marginBottom: "16px",
+            marginBottom: "18px",
+            paddingLeft: "4px",
           }}
         >
           {userPhoto ? (
@@ -238,42 +193,57 @@ function Sidebar() {
               src={userPhoto}
               alt="Profile"
               style={{
-                width: "42px",
-                height: "42px",
-                borderRadius: "50%",
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
                 objectFit: "cover",
+                border: "1.5px solid rgba(249, 115, 22, 0.4)",
+                boxShadow: "0 0 8px rgba(249, 115, 22, 0.2)",
               }}
             />
           ) : (
             <div
               style={{
-                width: "42px",
-                height: "42px",
-                borderRadius: "50%",
-                background: "#1E293B",
+                width: "40px",
+                height: "40px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #1E293B, #0F172A)",
+                border: "1.5px solid rgba(249, 115, 22, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#F97316",
+                fontWeight: "800",
+                fontSize: "15px",
+                boxShadow: "0 0 8px rgba(249, 115, 22, 0.15)",
               }}
-            />
+            >
+              {userName.charAt(0)}
+            </div>
           )}
 
-          <div>
+          <div style={{ minWidth: 0 }}>
             <div
               style={{
-                color: "#F9FAFB",
-                fontWeight: "600",
-                fontSize: "14px",
+                color: "#F1F5F9",
+                fontWeight: "700",
+                fontSize: "13.5px",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
               }}
             >
               {userName}
             </div>
-
             <div
               style={{
-                color: "#9CA3AF",
-                fontSize: "12px",
-                maxWidth: "160px",
+                color: "#64748B",
+                fontSize: "11px",
+                fontWeight: "500",
+                marginTop: "1px",
+                whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
               }}
             >
               {userEmail}
@@ -289,18 +259,86 @@ function Sidebar() {
               console.error(error);
             }
           }}
-          style={{
-            width: "100%",
-            height: "42px",
-            border: "none",
-            borderRadius: "10px",
-            cursor: "pointer",
-            fontWeight: "600",
-          }}
+          className="logout-btn"
         >
+          <LogOut size={14} />
           Logout
         </button>
       </div>
+
+      {/* CSS Styling Injection */}
+      <style>{`
+        .sidebar-link {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          text-decoration: none;
+          padding: 11px 14px;
+          border-radius: 10px;
+          font-weight: 600;
+          font-size: 14.5px;
+          transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+          border: 1px solid transparent;
+          color: #94A3B8;
+        }
+        
+        .sidebar-link:hover {
+          color: #F8FAFC;
+          background: rgba(255, 255, 255, 0.025);
+          border-color: rgba(255, 255, 255, 0.06);
+          padding-left: 18px;
+        }
+
+        .sidebar-link.active {
+          background: linear-gradient(90deg, rgba(249, 115, 22, 0.13) 0%, rgba(249, 115, 22, 0.02) 100%);
+          color: #F97316;
+          border-color: rgba(249, 115, 22, 0.32);
+          box-shadow: 0 0 15px rgba(249, 115, 22, 0.08);
+        }
+
+        .sidebar-link.active:hover {
+          color: #FF8A2E;
+          border-color: rgba(249, 115, 22, 0.5);
+          padding-left: 18px;
+        }
+
+        .coming-soon-pill {
+          margin-left: auto;
+          font-size: 9px;
+          background: rgba(255, 255, 255, 0.035);
+          color: #475569;
+          padding: 2px 7px;
+          border-radius: 4px;
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          font-weight: 700;
+        }
+
+        .logout-btn {
+          width: 100%;
+          height: 38px;
+          background: rgba(239, 68, 68, 0.06);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: 10px;
+          color: #EF4444;
+          font-weight: 700;
+          font-size: 13.5px;
+          cursor: pointer;
+          transition: all 0.22s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .logout-btn:hover {
+          background: #EF4444;
+          color: #FFFFFF;
+          box-shadow: 0 0 15px rgba(239, 68, 68, 0.35);
+          border-color: #EF4444;
+        }
+      `}</style>
     </aside>
   );
 }

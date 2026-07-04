@@ -17,6 +17,14 @@ const { scanApiInventory } = require("../scanner/api-inventory.scanner");
 const { scanEndpointRisk } = require("../scanner/endpoint-risk.scanner");
 const { calculateSecurityScore } = require("../engines/security-score.engine");
 
+// Active Scanners & Crawler
+const { crawlTarget } = require("../scanner/web-crawler.service");
+const { scanSQLi } = require("../scanner/sql-injection.scanner");
+const { scanXSS } = require("../scanner/xss.scanner");
+const { scanPathTraversal } = require("../scanner/path-traversal.scanner");
+const { scanCommandInjection } = require("../scanner/command-injection.scanner");
+const { scanExposedFiles } = require("../scanner/exposed-files.scanner");
+
 // ✅ FIX 2: Added random suffix to prevent duplicate scanIds
 const activeScans = new Map();
 
@@ -74,11 +82,24 @@ const createScan = async (userId, targetUrl) => {
 
   // Start the scan pipeline in the background
   (async () => {
-    const runScanner = async (name, scanFn) => {
-      const active = activeScans.get(scanIdString);
+    // 1. Initialize scanners state tracker
+    const active = activeScans.get(scanIdString);
+    if (active) {
+      active.scanners = {
+        ...active.scanners,
+        "crawler": "pending",
+        "sqli": "pending",
+        "xss": "pending",
+        "path-traversal": "pending",
+        "command-injection": "pending",
+        "exposed-files": "pending"
+      };
+    }
+
+    const runScanner = async (name, scanFn, arg) => {
       if (active) active.scanners[name] = "running";
       try {
-        const findings = await scanFn(targetUrl);
+        const findings = await scanFn(arg || targetUrl);
         if (active) {
           active.scanners[name] = "completed";
           const keys = Object.keys(active.scanners);
@@ -95,6 +116,11 @@ const createScan = async (userId, targetUrl) => {
     };
 
     try {
+      // Run Web Crawler first to get local URLs and parameters
+      if (active) active.scanners["crawler"] = "running";
+      const crawledEndpoints = await crawlTarget(targetUrl);
+      if (active) active.scanners["crawler"] = "completed";
+
       const [
         headerFindings,
         sslFindings,
@@ -108,6 +134,11 @@ const createScan = async (userId, targetUrl) => {
         apiInventoryFindings,
         attackSurfaceFindings,
         endpointRiskFindings,
+        sqliFindings,
+        xssFindings,
+        traversalFindings,
+        commandFindings,
+        exposedFileFindings,
       ] = await Promise.all([
         runScanner("security-header", scanSecurityHeaders),
         runScanner("ssl", scanSSL),
@@ -118,9 +149,14 @@ const createScan = async (userId, targetUrl) => {
         runScanner("jwt", scanJWT),
         runScanner("rate-limit", scanRateLimit),
         runScanner("openapi", scanOpenAPI),
-        runScanner("api-inventory", scanApiInventory),
+        runScanner("api-inventory", scanApiInventory, { targetUrl, crawledEndpoints }),
         runScanner("attack-surface", scanAttackSurface),
         runScanner("endpoint-risk", scanEndpointRisk),
+        runScanner("sqli", scanSQLi, targetUrl),
+        runScanner("xss", scanXSS, targetUrl),
+        runScanner("path-traversal", scanPathTraversal, targetUrl),
+        runScanner("command-injection", scanCommandInjection, targetUrl),
+        runScanner("exposed-files", scanExposedFiles, targetUrl),
       ]);
 
       const targetFindings = getDynamicFindingsForTarget(targetUrl);
@@ -138,6 +174,11 @@ const createScan = async (userId, targetUrl) => {
         ...apiInventoryFindings,
         ...attackSurfaceFindings,
         ...endpointRiskFindings,
+        ...sqliFindings,
+        ...xssFindings,
+        ...traversalFindings,
+        ...commandFindings,
+        ...exposedFileFindings,
         ...targetFindings,
       ];
 
@@ -216,6 +257,12 @@ const createScan = async (userId, targetUrl) => {
             references: finding.references,
             remediationSteps: finding.remediationSteps,
             inventory: finding.inventory || null,
+            verified: finding.verified || false,
+            exploitPayload: finding.exploitPayload || "",
+            vulnerableParameter: finding.vulnerableParameter || "",
+            evidenceSnippet: finding.evidenceSnippet || "",
+            evidence: finding.evidence || "",
+            endpoint: finding.endpoint || "",
           })),
         );
       }
@@ -227,7 +274,6 @@ const createScan = async (userId, targetUrl) => {
         console.error("Report generation failed:", error);
       }
 
-      const active = activeScans.get(scanIdString);
       if (active) {
         active.status = "completed";
         active.progress = 100;
@@ -236,7 +282,6 @@ const createScan = async (userId, targetUrl) => {
 
     } catch (error) {
       console.error("Background scan failed:", error);
-      const active = activeScans.get(scanIdString);
       if (active) {
         active.status = "failed";
       }

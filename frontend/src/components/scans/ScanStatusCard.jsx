@@ -5,6 +5,11 @@ import {
   CalendarDays,
   FileText,
   ShieldCheck,
+  Zap,
+  Fingerprint,
+  FolderSearch,
+  KeyRound,
+  FileBadge2,
 } from "lucide-react";
 
 export default function ScanStatusCard({ scan, scanStatus }) {
@@ -28,28 +33,31 @@ export default function ScanStatusCard({ scan, scanStatus }) {
 
   const stats = [
     {
-      icon: <Clock3 size={18} />,
+      icon: <Clock3 size={16} />,
       label: "Duration",
       value: durationString,
+      accent: "#3B82F6",
     },
     {
-      icon: <CalendarDays size={18} />,
+      icon: <CalendarDays size={16} />,
       label: "Started At",
       value: startedAtString,
+      accent: "#10B981",
     },
     {
-      icon: <Activity size={18} />,
+      icon: <Activity size={16} />,
       label: "Estimated",
       value: scanStatus ? "1m 30s" : "18m 45s",
+      accent: "#F97316",
     },
     {
-      icon: <FileText size={18} />,
+      icon: <FileText size={16} />,
       label: "Scan ID",
       value: scanIdString,
+      accent: "#A855F7",
     },
   ];
 
-  // Helper to determine stage status from scanners
   const getStageStatus = (scannersList) => {
     if (!scanStatus || !scanStatus.scanners) {
       if (scan && scan.status === "completed") return "completed";
@@ -61,6 +69,23 @@ export default function ScanStatusCard({ scan, scanStatus }) {
     if (states.some(s => s === "running")) return "running";
     if (states.some(s => s === "failed")) return "failed";
     return "pending";
+  };
+
+  const getStageIcon = (name, color) => {
+    switch (name) {
+      case "Recon":
+        return <FolderSearch size={20} color={color} />;
+      case "Discovery":
+        return <Zap size={20} color={color} />;
+      case "Authentication":
+        return <KeyRound size={20} color={color} />;
+      case "Authorization":
+        return <Fingerprint size={20} color={color} />;
+      case "Testing":
+        return <ShieldCheck size={20} color={color} />;
+      default:
+        return <FileBadge2 size={20} color={color} />;
+    }
   };
 
   const stages = [
@@ -90,10 +115,30 @@ export default function ScanStatusCard({ scan, scanStatus }) {
     },
   ];
 
-  const getColor = (status) => {
-    if (status === "completed") return "#22C55E";
-    if (status === "running") return "#F97316";
-    return "#334155";
+  const getStageColors = (status) => {
+    if (status === "completed") {
+      return {
+        color: "#10B981",
+        bg: "rgba(16, 185, 129, 0.08)",
+        border: "1px solid rgba(16, 185, 129, 0.25)",
+        glow: "rgba(16, 185, 129, 0.08)",
+      };
+    }
+    if (status === "running") {
+      return {
+        color: "#F97316",
+        bg: "rgba(249, 115, 22, 0.1)",
+        border: "1px solid rgba(249, 115, 22, 0.35)",
+        glow: "rgba(249, 115, 22, 0.15)",
+        class: "running-glow-pulse",
+      };
+    }
+    return {
+      color: "#475569",
+      bg: "rgba(1, 2, 5, 0.6)",
+      border: "1px solid rgba(255, 255, 255, 0.03)",
+      glow: "none",
+    };
   };
 
   const status = scanStatus?.status || scan?.status || "idle";
@@ -101,10 +146,11 @@ export default function ScanStatusCard({ scan, scanStatus }) {
   return (
     <div
       style={{
-        background: "linear-gradient(180deg,#08111F,#050B16)",
-        border: "1px solid rgba(255,255,255,.08)",
-        borderRadius: "24px",
-        padding: "28px",
+        background: "linear-gradient(180deg, #070D1A 0%, #03070E 100%)",
+        border: "1px solid rgba(255, 255, 255, 0.05)",
+        borderRadius: "22px",
+        padding: "26px",
+        boxShadow: "0 20px 45px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03)",
       }}
     >
       {/* HEADER */}
@@ -113,16 +159,17 @@ export default function ScanStatusCard({ scan, scanStatus }) {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          marginBottom: "28px",
+          marginBottom: "24px",
         }}
       >
         <div>
           <h2
             style={{
               margin: 0,
-              color: "#fff",
-              fontSize: "30px",
-              fontWeight: 700,
+              color: "#FFFFFF",
+              fontSize: "23px",
+              fontWeight: "900",
+              letterSpacing: "0.5px",
             }}
           >
             Scan Execution Status
@@ -130,9 +177,10 @@ export default function ScanStatusCard({ scan, scanStatus }) {
 
           <div
             style={{
-              color: "#94A3B8",
-              marginTop: "8px",
-              fontSize: "14px",
+              color: "#64748B",
+              marginTop: "5px",
+              fontSize: "13px",
+              fontWeight: "500",
             }}
           >
             Running active API security assessment
@@ -148,35 +196,47 @@ export default function ScanStatusCard({ scan, scanStatus }) {
           >
             <div
               style={{
-                padding: "8px 14px",
+                padding: "5px 12px",
                 borderRadius: "999px",
                 background:
                   status === "completed"
-                    ? "rgba(34,197,94,.15)"
+                    ? "rgba(16,185,129,.12)"
                     : status === "failed"
-                    ? "rgba(239,68,68,.15)"
-                    : "rgba(249,115,22,.15)",
+                    ? "rgba(239,68,68,.12)"
+                    : "rgba(249,115,22,.12)",
                 color:
                   status === "completed"
-                    ? "#22C55E"
+                    ? "#10B981"
                     : status === "failed"
                     ? "#EF4444"
                     : "#F97316",
-                fontWeight: 700,
-                fontSize: "13px",
+                fontWeight: "800",
+                fontSize: "11px",
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+                border: `1px solid ${
+                  status === "completed"
+                    ? "#10B98135"
+                    : status === "failed"
+                    ? "#EF444435"
+                    : "#F9731635"
+                }`,
               }}
             >
-              ● {status.toUpperCase()}
+              ● {status}
             </div>
 
             <div
               style={{
-                padding: "8px 14px",
+                padding: "5px 12px",
                 borderRadius: "999px",
-                background: "rgba(59,130,246,.15)",
+                background: "rgba(59,130,246,.12)",
                 color: "#3B82F6",
-                fontWeight: 700,
-                fontSize: "13px",
+                fontWeight: "800",
+                fontSize: "11px",
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+                border: "1px solid rgba(59,130,246,.25)",
               }}
             >
               {scan ? `${scan.totalFindings} FINDINGS` : "127 ENDPOINTS"}
@@ -184,12 +244,15 @@ export default function ScanStatusCard({ scan, scanStatus }) {
 
             <div
               style={{
-                padding: "8px 14px",
+                padding: "5px 12px",
                 borderRadius: "999px",
-                background: "rgba(239,68,68,.15)",
+                background: "rgba(239,68,68,.12)",
                 color: "#EF4444",
-                fontWeight: 700,
-                fontSize: "13px",
+                fontWeight: "800",
+                fontSize: "11px",
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+                border: "1px solid rgba(239,68,68,.25)",
               }}
             >
               {scan ? `${scan.criticalCount} CRITICAL` : "1 CRITICAL"}
@@ -198,60 +261,44 @@ export default function ScanStatusCard({ scan, scanStatus }) {
         </div>
 
         {/* PROGRESS RING */}
-        <div
-          style={{
-            width: "130px",
-            height: "130px",
-            borderRadius: "50%",
-            background: `conic-gradient(#22C55E ${progress}%, rgba(255,255,255,.08) ${progress}%)`,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 0 30px rgba(34,197,94,.25)",
-          }}
-        >
+        <div className="progress-ring-outer">
           <div
+            className="progress-ring-conic"
             style={{
-              width: "100px",
-              height: "100px",
-              borderRadius: "50%",
-              background: "#08111F",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontSize: "28px",
-              fontWeight: 800,
+              background: `conic-gradient(#10B981 ${progress}%, rgba(255,255,255,.05) ${progress}%)`,
             }}
           >
-            {progress}%
+            <div className="progress-ring-inner">
+              <span className="progress-value-label">{progress}%</span>
+              <span className="progress-status-sub">COMPLETED</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* STATS */}
+      {/* STATS ROW */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: "16px",
-          marginBottom: "28px",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "14px",
+          marginBottom: "24px",
         }}
       >
         {stats.map((item) => (
-          <div
-            key={item.label}
-            style={{
-              background: "#0B1220",
-              border: "1px solid rgba(255,255,255,.06)",
-              borderRadius: "18px",
-              padding: "18px",
-            }}
-          >
+          <div key={item.label} className="stats-metric-box">
             <div
               style={{
-                color: "#3B82F6",
-                marginBottom: "10px",
+                color: item.accent,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "28px",
+                height: "28px",
+                borderRadius: "8px",
+                background: `${item.accent}12`,
+                border: `1px solid ${item.accent}25`,
+                marginBottom: "8px",
               }}
             >
               {item.icon}
@@ -260,7 +307,10 @@ export default function ScanStatusCard({ scan, scanStatus }) {
             <div
               style={{
                 color: "#64748B",
-                fontSize: "12px",
+                fontSize: "11px",
+                fontWeight: "700",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
               }}
             >
               {item.label}
@@ -268,10 +318,10 @@ export default function ScanStatusCard({ scan, scanStatus }) {
 
             <div
               style={{
-                color: "#fff",
-                marginTop: "6px",
-                fontWeight: 700,
-                fontSize: "15px",
+                color: "#FFFFFF",
+                marginTop: "4px",
+                fontWeight: "800",
+                fontSize: "13.5px",
               }}
             >
               {item.value}
@@ -280,26 +330,30 @@ export default function ScanStatusCard({ scan, scanStatus }) {
         ))}
       </div>
 
-      {/* PIPELINE */}
+      {/* PIPELINE SECTION */}
       <div
         style={{
-          background: "#0B1220",
-          border: "1px solid rgba(255,255,255,.06)",
-          borderRadius: "20px",
-          padding: "24px",
+          background: "rgba(1, 2, 5, 0.4)",
+          border: "1px solid rgba(255, 255, 255, 0.04)",
+          borderRadius: "18px",
+          padding: "22px",
         }}
       >
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
-            marginBottom: "24px",
+            alignItems: "center",
+            marginBottom: "20px",
           }}
         >
           <h3
             style={{
               margin: 0,
-              color: "#fff",
+              color: "#FFFFFF",
+              fontSize: "16px",
+              fontWeight: "900",
+              letterSpacing: "0.5px",
             }}
           >
             Security Assessment Pipeline
@@ -308,9 +362,18 @@ export default function ScanStatusCard({ scan, scanStatus }) {
           <div
             style={{
               color: "#F97316",
-              fontWeight: 700,
+              fontWeight: "800",
+              fontSize: "12px",
+              background: "rgba(249, 115, 22, 0.1)",
+              padding: "4px 10px",
+              borderRadius: "6px",
+              border: "1px solid rgba(249, 115, 22, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
             }}
           >
+            <span className="pipeline-running-dot" />
             Authentication Running
           </div>
         </div>
@@ -318,67 +381,163 @@ export default function ScanStatusCard({ scan, scanStatus }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(6,1fr)",
-            gap: "16px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+            gap: "12px",
           }}
         >
-          {stages.map((stage) => (
-            <div
-              key={stage.name}
-              style={{
-                background:
-                  stage.status === "running"
-                    ? "rgba(249,115,22,.12)"
-                    : "#08111F",
-                border: `1px solid ${getColor(stage.status)}40`,
-                borderRadius: "16px",
-                padding: "18px",
-                textAlign: "center",
-                boxShadow:
-                  stage.status === "running"
-                    ? "0 0 20px rgba(249,115,22,.15)"
-                    : "none",
-              }}
-            >
+          {stages.map((stage) => {
+            const styles = getStageColors(stage.status);
+            return (
               <div
+                key={stage.name}
+                className={`pipeline-stage-card ${styles.class || ""}`}
                 style={{
-                  width: "50px",
-                  height: "50px",
-                  borderRadius: "50%",
-                  margin: "0 auto 12px",
-                  background: getColor(stage.status),
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  background: styles.bg,
+                  border: styles.border,
+                  boxShadow: styles.glow !== "none" ? `0 0 15px ${styles.glow}` : "none",
+                  borderRadius: "14px",
+                  padding: "16px 12px",
+                  textAlign: "center",
+                  position: "relative",
+                  overflow: "hidden",
                 }}
               >
-                <ShieldCheck size={22} color="#fff" />
-              </div>
+                <div
+                  style={{
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "10px",
+                    margin: "0 auto 12px",
+                    background: stage.status === "pending" ? "rgba(255,255,255,0.015)" : styles.bg,
+                    border: stage.status === "pending" ? "1px solid rgba(255,255,255,0.03)" : styles.border,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {getStageIcon(stage.name, stage.status === "pending" ? "#475569" : styles.color)}
+                </div>
 
-              <div
-                style={{
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: "13px",
-                }}
-              >
-                {stage.name}
-              </div>
+                <div
+                  style={{
+                    color: stage.status === "pending" ? "#475569" : "#FFFFFF",
+                    fontWeight: "800",
+                    fontSize: "12.5px",
+                  }}
+                >
+                  {stage.name}
+                </div>
 
-              <div
-                style={{
-                  marginTop: "6px",
-                  color: getColor(stage.status),
-                  fontSize: "11px",
-                  fontWeight: 700,
-                }}
-              >
-                {stage.status.toUpperCase()}
+                <div
+                  style={{
+                    marginTop: "6px",
+                    color: styles.color,
+                    fontSize: "10px",
+                    fontWeight: "800",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  {stage.status}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
+
+      {/* Styled CRT/High-Tech CSS classes */}
+      <style>{`
+        .progress-ring-outer {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 110px;
+          height: 110px;
+          border-radius: 50%;
+          border: 1px solid rgba(16, 185, 129, 0.15);
+          padding: 4px;
+          box-shadow: 0 0 25px rgba(16, 185, 129, 0.08);
+        }
+
+        .progress-ring-conic {
+          width: 100%;
+          height: 100%;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .progress-ring-inner {
+          width: 82px;
+          height: 82px;
+          border-radius: 50%;
+          background: #040810;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
+        }
+
+        .progress-value-label {
+          color: #FFFFFF;
+          font-size: 20px;
+          font-weight: 900;
+          line-height: 1.1;
+        }
+
+        .progress-status-sub {
+          color: #64748B;
+          font-size: 8px;
+          font-weight: 800;
+          letter-spacing: 0.5px;
+          margin-top: 2px;
+        }
+
+        .stats-metric-box {
+          background: rgba(3, 6, 14, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          border-radius: 14px;
+          padding: 14px;
+          transition: all 0.22s ease;
+        }
+
+        .stats-metric-box:hover {
+          background: rgba(3, 6, 14, 0.6);
+          border-color: rgba(255, 255, 255, 0.08);
+          box-shadow: inset 0 0 15px rgba(255,255,255,0.01);
+        }
+
+        .pipeline-running-dot {
+          display: inline-block;
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #F97316;
+          box-shadow: 0 0 8px #F97316;
+          animation: pulseDot 1.4s infinite ease-in-out;
+        }
+
+        @keyframes pulseDot {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.3); opacity: 0.4; }
+        }
+
+        .pipeline-stage-card {
+          transition: all 0.25s ease;
+        }
+
+        .pipeline-stage-card.running-glow-pulse {
+          animation: runningBorderPulse 2s infinite ease-in-out;
+        }
+
+        @keyframes runningBorderPulse {
+          0%, 100% { border-color: rgba(249, 115, 22, 0.25); box-shadow: 0 0 12px rgba(249, 115, 22, 0.08); }
+          50% { border-color: rgba(249, 115, 22, 0.5); box-shadow: 0 0 20px rgba(249, 115, 22, 0.22); }
+        }
+      `}</style>
     </div>
   );
 }

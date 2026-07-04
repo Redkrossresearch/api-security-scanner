@@ -6,6 +6,7 @@ import {
   FileJson,
   Terminal,
   Settings,
+  Play,
 } from "lucide-react";
 
 export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScanning }) {
@@ -23,7 +24,6 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
         if (file.name.endsWith('.json')) {
           parsed = JSON.parse(text);
         } else {
-          // Simple YAML url-extractor fallback
           const urlMatch = text.match(/url:\s*(https?:\/\/[^\s'"]+)/);
           if (urlMatch) parsed.servers = [{ url: urlMatch[1] }];
         }
@@ -112,52 +112,32 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
   };
 
   return (
-    <div
-      style={{
-        background: "#071126",
-        border: "1px solid rgba(255,255,255,.08)",
-        borderRadius: "24px",
-        padding: "24px",
-      }}
-    >
+    <div className="sci-fi-config-card">
+      {/* Moving background glow effect */}
+      <div className="sci-fi-glow-overlay" />
+
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "2fr 1fr 1fr 1fr auto auto",
-          gap: "16px",
+          gridTemplateColumns: "minmax(200px, 2.2fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) auto auto",
+          gap: "18px",
           alignItems: "end",
+          position: "relative",
+          zIndex: 2,
         }}
       >
         {/* Target URL */}
-
         <div>
-          <div
-            style={{
-              color: "#94A3B8",
-              fontSize: "12px",
-              marginBottom: "8px",
-            }}
-          >
+          <div className="sci-fi-label">
             Target API URL
+            {url && <span className="active-signal-dot" />}
           </div>
 
-          <div
-            style={{
-              height: "54px",
-              background: "#0B1220",
-              border: "1px solid rgba(255,255,255,.08)",
-              borderRadius: "14px",
-              display: "flex",
-              alignItems: "center",
-              padding: "0 16px",
-              gap: "10px",
-            }}
-          >
+          <div className="sci-fi-input-wrapper">
             <Globe
-              size={18}
-              color="#94A3B8"
+              size={15}
+              className={`sci-fi-globe-icon ${url ? "pulse-globe" : ""}`}
             />
-
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -169,36 +149,20 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
                 border: "none",
                 outline: "none",
                 color: "#FFFFFF",
-                fontSize: "14px",
+                fontSize: "13.5px",
+                fontWeight: "600",
+                fontFamily: "monospace",
               }}
             />
           </div>
         </div>
 
         {/* Scan Profile */}
-
         <div>
-          <div
-            style={{
-              color: "#94A3B8",
-              fontSize: "12px",
-              marginBottom: "8px",
-            }}
-          >
-            Scan Profile
-          </div>
-
+          <div className="sci-fi-label">Scan Profile</div>
           <select
             disabled={isScanning}
-            style={{
-              width: "100%",
-              height: "54px",
-              background: "#0B1220",
-              border: "1px solid rgba(255,255,255,.08)",
-              borderRadius: "14px",
-              color: "#FFFFFF",
-              padding: "0 12px",
-            }}
+            className="sci-fi-select"
           >
             <option>Full Security Scan</option>
             <option>Quick Scan</option>
@@ -207,29 +171,11 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
         </div>
 
         {/* Auth */}
-
         <div>
-          <div
-            style={{
-              color: "#94A3B8",
-              fontSize: "12px",
-              marginBottom: "8px",
-            }}
-          >
-            Authentication
-          </div>
-
+          <div className="sci-fi-label">Authentication</div>
           <select
             disabled={isScanning}
-            style={{
-              width: "100%",
-              height: "54px",
-              background: "#0B1220",
-              border: "1px solid rgba(255,255,255,.08)",
-              borderRadius: "14px",
-              color: "#FFFFFF",
-              padding: "0 12px",
-            }}
+            className="sci-fi-select"
           >
             <option>Bearer Token</option>
             <option>API Key</option>
@@ -239,80 +185,54 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
         </div>
 
         {/* Token */}
-
         <div>
-          <div
-            style={{
-              color: "#94A3B8",
-              fontSize: "12px",
-              marginBottom: "8px",
-            }}
-          >
-            Token
-          </div>
-
+          <div className="sci-fi-label">Token</div>
           <input
             type="password"
             defaultValue="eyJhbGciOiJIUzI1Ni..."
             disabled={isScanning}
-            style={{
-              width: "100%",
-              height: "54px",
-              background: "#0B1220",
-              border: "1px solid rgba(255,255,255,.08)",
-              borderRadius: "14px",
-              color: "#FFFFFF",
-              padding: "0 12px",
-              boxSizing: "border-box",
-            }}
+            className="sci-fi-select"
+            style={{ boxSizing: "border-box", fontFamily: "monospace" }}
           />
         </div>
 
         {/* Settings */}
-
         <button
           disabled={isScanning}
-          style={{
-            height: "54px",
-            padding: "0 18px",
-            borderRadius: "14px",
-            background: "#0B1220",
-            border: "1px solid rgba(255,255,255,.08)",
-            color: "#FFFFFF",
-            cursor: isScanning ? "not-allowed" : "pointer",
-          }}
+          className="sci-fi-settings-btn"
         >
-          <Settings size={18} />
+          <Settings size={15} />
         </button>
 
         {/* Start Scan Button */}
         <button
           onClick={onStartScan}
           disabled={isScanning || !url}
-          style={{
-            height: "54px",
-            padding: "0 24px",
-            borderRadius: "14px",
-            background: isScanning || !url ? "#1E293B" : "#F97316",
-            border: "none",
-            color: isScanning || !url ? "#64748B" : "#FFFFFF",
-            fontWeight: "bold",
-            cursor: isScanning || !url ? "not-allowed" : "pointer",
-            transition: "all 0.2s",
-          }}
+          className={`sci-fi-scan-btn ${isScanning || !url ? "disabled" : ""}`}
         >
-          {isScanning ? "Scanning..." : "Start Scan"}
+          {isScanning ? (
+            <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span className="spinner-border" />
+              Scanning
+            </span>
+          ) : (
+            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <Play size={15} fill="currentColor" />
+              Start Scan
+            </span>
+          )}
         </button>
       </div>
 
-      {/* Import Buttons */}
-
+      {/* Import Action Buttons */}
       <div
         style={{
           display: "flex",
           gap: "12px",
-          marginTop: "20px",
+          marginTop: "24px",
           flexWrap: "wrap",
+          position: "relative",
+          zIndex: 2,
         }}
       >
         <input
@@ -324,9 +244,9 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
         />
         <button
           onClick={() => swaggerRef.current?.click()}
-          style={buttonStyle}
+          className="sci-fi-import-btn import-orange"
         >
-          <FileJson size={16} />
+          <FileJson size={13} />
           Import Swagger/OpenAPI
         </button>
 
@@ -339,33 +259,230 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
         />
         <button
           onClick={() => postmanRef.current?.click()}
-          style={buttonStyle}
+          className="sci-fi-import-btn import-blue"
         >
-          <Upload size={16} />
+          <Upload size={13} />
           Import Postman Collection
         </button>
 
         <button
           onClick={handleCurlImport}
-          style={buttonStyle}
+          className="sci-fi-import-btn import-green"
         >
-          <Terminal size={16} />
+          <Terminal size={13} />
           Import cURL
         </button>
       </div>
+
+      {/* Inject custom sci-fi styling */}
+      <style>{`
+        .sci-fi-config-card {
+          background: linear-gradient(180deg, #050B16 0%, #02050A 100%);
+          border: 1px solid rgba(249, 115, 22, 0.15);
+          border-radius: 20px;
+          padding: 24px;
+          box-shadow: 0 0 35px rgba(249, 115, 22, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+          position: relative;
+          overflow: hidden;
+          transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .sci-fi-config-card:hover {
+          border-color: rgba(249, 115, 22, 0.28);
+          box-shadow: 0 0 45px rgba(249, 115, 22, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.02);
+        }
+
+        .sci-fi-glow-overlay {
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: radial-gradient(circle, rgba(249, 115, 22, 0.03) 0%, transparent 60%);
+          pointer-events: none;
+          z-index: 1;
+          animation: rotateGlow 20s linear infinite;
+        }
+
+        @keyframes rotateGlow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        .sci-fi-label {
+          color: #64748B;
+          font-size: 10px;
+          font-weight: 800;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          margin-bottom: 8px;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .active-signal-dot {
+          display: inline-block;
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #F97316;
+          box-shadow: 0 0 6px #F97316;
+        }
+
+        .sci-fi-input-wrapper {
+          height: 46px;
+          background: rgba(1, 2, 5, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          padding: 0 14px;
+          gap: 10px;
+          transition: all 0.22s ease;
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .sci-fi-input-wrapper:focus-within {
+          border-color: rgba(249, 115, 22, 0.4);
+          box-shadow: 0 0 15px rgba(249, 115, 22, 0.12), inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .sci-fi-globe-icon {
+          color: #64748B;
+          transition: all 0.3s ease;
+        }
+
+        .sci-fi-globe-icon.pulse-globe {
+          color: #F97316;
+          filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.6));
+          animation: pulseGlobeSignal 2s infinite ease-in-out;
+        }
+
+        @keyframes pulseGlobeSignal {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(0.9); opacity: 0.7; }
+        }
+
+        .sci-fi-select {
+          width: 100%;
+          height: 46px;
+          background: rgba(1, 2, 5, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          border-radius: 10px;
+          color: #E2E8F0;
+          padding: 0 12px;
+          font-size: 13px;
+          font-weight: 600;
+          transition: all 0.22s ease;
+          outline: none;
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .sci-fi-select:focus {
+          border-color: rgba(249, 115, 22, 0.4);
+          box-shadow: 0 0 15px rgba(249, 115, 22, 0.12), inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .sci-fi-settings-btn {
+          height: 46px;
+          padding: 0 14px;
+          border-radius: 10px;
+          background: rgba(1, 2, 5, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.04);
+          color: #64748B;
+          cursor: pointer;
+          transition: all 0.22s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+        }
+
+        .sci-fi-settings-btn:hover {
+          color: #F8FAFC;
+          background: rgba(255, 255, 255, 0.015);
+          border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        .sci-fi-scan-btn {
+          height: 46px;
+          padding: 0 20px;
+          border-radius: 10px;
+          background: linear-gradient(135deg, #FF7A1A 0%, #EA580C 100%);
+          border: none;
+          color: #FFFFFF;
+          font-weight: 800;
+          font-size: 13.5px;
+          cursor: pointer;
+          transition: all 0.22s ease;
+          box-shadow: 0 0 20px rgba(249, 115, 22, 0.35);
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .sci-fi-scan-btn:hover:not(.disabled) {
+          box-shadow: 0 0 30px rgba(249, 115, 22, 0.6);
+          transform: translateY(-1.5px);
+        }
+
+        .sci-fi-scan-btn.disabled {
+          background: #1E293B;
+          color: #64748B;
+          cursor: not-allowed;
+          box-shadow: none;
+        }
+
+        .sci-fi-import-btn {
+          height: 36px;
+          padding: 0 14px;
+          border-radius: 8px;
+          background: rgba(1, 2, 5, 0.6);
+          border: 1px solid rgba(255, 255, 255, 0.03);
+          color: #94A3B8;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 700;
+          transition: all 0.22s ease;
+        }
+
+        .sci-fi-import-btn:hover {
+          color: #F8FAFC;
+          background: rgba(255, 255, 255, 0.015);
+        }
+
+        .sci-fi-import-btn.import-orange:hover {
+          border-color: rgba(249, 115, 22, 0.4);
+          box-shadow: 0 0 15px rgba(249, 115, 22, 0.12);
+        }
+
+        .sci-fi-import-btn.import-blue:hover {
+          border-color: rgba(59, 130, 246, 0.4);
+          box-shadow: 0 0 15px rgba(59, 130, 246, 0.12);
+        }
+
+        .sci-fi-import-btn.import-green:hover {
+          border-color: rgba(16, 185, 129, 0.4);
+          box-shadow: 0 0 15px rgba(16, 185, 129, 0.12);
+        }
+
+        .spinner-border {
+          display: inline-block;
+          width: 13px;
+          height: 13px;
+          border: 2px solid currentColor;
+          border-right-color: transparent;
+          border-radius: 50%;
+          animation: spin 0.75s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }
-
-const buttonStyle = {
-  height: "42px",
-  padding: "0 16px",
-  borderRadius: "12px",
-  background: "#0B1220",
-  border: "1px solid rgba(255,255,255,.08)",
-  color: "#FFFFFF",
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  cursor: "pointer",
-};

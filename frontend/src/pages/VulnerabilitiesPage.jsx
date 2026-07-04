@@ -1440,16 +1440,32 @@ export default function VulnerabilitiesPage() {
                         </span>
                       </td>
                       <td style={{ ...styles.td, fontWeight: "600" }}>
-                        <button 
-                          onClick={() => setSelectedVuln(v)}
-                          style={styles.vulnBtn}
-                        >
-                          {v.title}
-                        </button>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <button 
+                            onClick={() => setSelectedVuln(v)}
+                            style={styles.vulnBtn}
+                          >
+                            {v.title}
+                          </button>
+                          {v.verified && (
+                            <span style={{
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              background: "rgba(239, 68, 68, 0.15)",
+                              color: "#EF4444",
+                              border: "1px solid rgba(239, 68, 68, 0.3)",
+                              fontSize: "9px",
+                              fontWeight: "800",
+                              textTransform: "uppercase"
+                            }}>
+                              Verified
+                            </span>
+                          )}
+                        </div>
                         {v.cwe && <div style={styles.vulnCwe}>{v.cwe}</div>}
                       </td>
                       <td style={{ ...styles.td, ...styles.endpointCell }}>
-                        {v.inventory?.endpoint || "/"}
+                        {v.endpoint || v.inventory?.endpoint || "/"}
                       </td>
                       <td style={{ ...styles.td, textAlign: "center", fontWeight: "700" }}>
                         {v.cvss ? v.cvss.toFixed(1) : "5.0"}

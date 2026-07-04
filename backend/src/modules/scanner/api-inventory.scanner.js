@@ -43,15 +43,26 @@ const SENSITIVE_KEYWORDS = [
   "admin",
 ];
 
-const scanApiInventory = async (targetUrl) => {
+const scanApiInventory = async (input) => {
   const findings = [];
+  
+  // Resolve unified input parameter safely
+  let targetUrl = "";
+  let crawledEndpoints = [];
+  
+  if (input && typeof input === "object" && input.targetUrl) {
+    targetUrl = input.targetUrl;
+    crawledEndpoints = input.crawledEndpoints || [];
+  } else {
+    targetUrl = input || "";
+  }
 
   try {
     let openApiSpec = null;
 
     try {
       const response = await axios.get(targetUrl, {
-        timeout: 10000,
+        timeout: 6000,
         validateStatus: () => true,
         headers: {
           "User-Agent": "API-Security-Scanner/1.0",
@@ -66,7 +77,7 @@ const scanApiInventory = async (targetUrl) => {
     if (!openApiSpec) {
       for (const path of OPENAPI_DISCOVERY_PATHS) {
         try {
-          const response = await axios.get(`${targetUrl}${path}`, {
+          const response = await axios.get(`${targetUrl.replace(/\/+$/, "")}${path}`, {
             timeout: 5000,
             validateStatus: () => true,
             headers: {
@@ -82,18 +93,12 @@ const scanApiInventory = async (targetUrl) => {
       }
     }
 
-    if (!openApiSpec?.paths) {
-      return findings;
-    }
-
     const inventory = {
       totalEndpoints: 0,
       totalOperations: 0,
-
       authEndpoints: [],
       adminEndpoints: [],
       sensitiveEndpoints: [],
-
       methods: {
         GET: 0,
         POST: 0,
@@ -101,68 +106,94 @@ const scanApiInventory = async (targetUrl) => {
         PATCH: 0,
         DELETE: 0,
       },
-
       endpoints: [],
     };
 
-    for (const [path, operations] of Object.entries(openApiSpec.paths)) {
-      inventory.totalEndpoints++;
+    if (openApiSpec?.paths) {
+      // 1. Process from OpenAPI Spec definitions
+      for (const [path, operations] of Object.entries(openApiSpec.paths)) {
+        inventory.totalEndpoints++;
+        const lowerPath = path.toLowerCase();
+        const endpointInfo = {
+          path,
+          methods: [],
+          riskScore: 0,
+          riskLevel: "Low",
+        };
 
-      const lowerPath = path.toLowerCase();
+        for (const method of Object.keys(operations)) {
+          const upperMethod = method.toUpperCase();
+          endpointInfo.methods.push(upperMethod);
+          inventory.totalOperations++;
+          if (inventory.methods[upperMethod] !== undefined) {
+            inventory.methods[upperMethod]++;
+          }
+        }
 
-      const endpointInfo = {
-        path,
-        methods: [],
-        riskScore: 0,
-        riskLevel: "Low",
-      };
+        inventory.endpoints.push(endpointInfo);
 
-      for (const method of Object.keys(operations)) {
-        const upperMethod = method.toUpperCase();
-
-        endpointInfo.methods.push(upperMethod);
-
-        inventory.totalOperations++;
-
-        if (inventory.methods[upperMethod] !== undefined) {
-          inventory.methods[upperMethod]++;
+        if (AUTH_KEYWORDS.some((keyword) => lowerPath.includes(keyword))) {
+          inventory.authEndpoints.push(endpointInfo);
+        }
+        if (ADMIN_KEYWORDS.some((keyword) => lowerPath.includes(keyword))) {
+          inventory.adminEndpoints.push(endpointInfo);
+        }
+        if (SENSITIVE_KEYWORDS.some((keyword) => lowerPath.includes(keyword))) {
+          inventory.sensitiveEndpoints.push(endpointInfo);
         }
       }
+    } else if (crawledEndpoints && crawledEndpoints.length > 0) {
+      // 2. Process from Web Crawler routes
+      crawledEndpoints.forEach((item) => {
+        inventory.totalEndpoints++;
+        inventory.totalOperations++;
+        
+        const path = item.path || "/";
+        const method = (item.method || "GET").toUpperCase();
+        const lowerPath = path.toLowerCase();
+        
+        const endpointInfo = {
+          path,
+          methods: [method],
+          riskScore: 0,
+          riskLevel: "Low",
+        };
 
-      inventory.endpoints.push(endpointInfo);
+        if (inventory.methods[method] !== undefined) {
+          inventory.methods[method]++;
+        } else {
+          inventory.methods.GET++; // fallback default
+        }
 
-      if (AUTH_KEYWORDS.some((keyword) => lowerPath.includes(keyword))) {
-        inventory.authEndpoints.push(endpointInfo);
-      }
+        inventory.endpoints.push(endpointInfo);
 
-      if (ADMIN_KEYWORDS.some((keyword) => lowerPath.includes(keyword))) {
-        inventory.adminEndpoints.push(endpointInfo);
-      }
-
-      if (SENSITIVE_KEYWORDS.some((keyword) => lowerPath.includes(keyword))) {
-        inventory.sensitiveEndpoints.push(endpointInfo);
-      }
+        if (AUTH_KEYWORDS.some((keyword) => lowerPath.includes(keyword))) {
+          inventory.authEndpoints.push(endpointInfo);
+        }
+        if (ADMIN_KEYWORDS.some((keyword) => lowerPath.includes(keyword))) {
+          inventory.adminEndpoints.push(endpointInfo);
+        }
+        if (SENSITIVE_KEYWORDS.some((keyword) => lowerPath.includes(keyword))) {
+          inventory.sensitiveEndpoints.push(endpointInfo);
+        }
+      });
+    } else {
+      // No routes detected
+      return findings;
     }
 
     findings.push({
       title: "API Inventory Analysis",
-
       severity: "info",
-
       category: "API Inventory",
-
       description: `Discovered ${inventory.totalEndpoints} endpoints and ${inventory.totalOperations} operations.`,
-
-      recommendation:
-        "Review exposed API inventory and restrict unnecessary endpoints.",
-
+      recommendation: "Review exposed API inventory and restrict unnecessary endpoints.",
       inventory,
     });
 
     return findings;
   } catch (error) {
     console.error("API Inventory Scanner Error:", error.message);
-
     return findings;
   }
 };
