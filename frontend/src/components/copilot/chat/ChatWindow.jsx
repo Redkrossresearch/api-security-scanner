@@ -134,6 +134,71 @@ export default function ChatWindow({ messages, loading, onSelectSuggestion, acti
           50% { opacity: 1; transform: scale(1.05); }
           100% { opacity: 0.5; transform: scale(0.95); }
         }
+
+        /* 3D Holographic Orb CSS */
+        .holo-agent-orb {
+          width: 70px;
+          height: 70px;
+          position: relative;
+          perspective: 1000px;
+          transform-style: preserve-3d;
+          animation: floatingHolo 5s ease-in-out infinite;
+        }
+        @keyframes floatingHolo {
+          0% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-8px) rotate(3deg); }
+          100% { transform: translateY(0px) rotate(0deg); }
+        }
+        .holo-ring {
+          position: absolute;
+          inset: 0;
+          border: 1.5px solid var(--theme-accent, #8B5CF6);
+          border-radius: 50%;
+          box-shadow: 0 0 15px var(--theme-accent, #8B5CF6), inset 0 0 15px var(--theme-accent, #8B5CF6);
+          opacity: 0.65;
+          pointer-events: none;
+        }
+        .holo-ring-1 {
+          animation: spinRing1 7s linear infinite;
+        }
+        .holo-ring-2 {
+          animation: spinRing2 7s linear infinite;
+          border-color: #3B82F6;
+          box-shadow: 0 0 15px #3B82F6, inset 0 0 15px #3B82F6;
+        }
+        .holo-ring-3 {
+          animation: spinRing3 7s linear infinite;
+          border-color: #10B981;
+          box-shadow: 0 0 15px #10B981, inset 0 0 15px #10B981;
+        }
+        @keyframes spinRing1 {
+          0% { transform: rotateX(35deg) rotateY(45deg) rotateZ(0deg); }
+          100% { transform: rotateX(35deg) rotateY(45deg) rotateZ(360deg); }
+        }
+        @keyframes spinRing2 {
+          0% { transform: rotateX(45deg) rotateY(-45deg) rotateZ(0deg); }
+          100% { transform: rotateX(45deg) rotateY(-45deg) rotateZ(360deg); }
+        }
+        @keyframes spinRing3 {
+          0% { transform: rotateX(-35deg) rotateY(0deg) rotateZ(360deg); }
+          100% { transform: rotateX(-35deg) rotateY(0deg) rotateZ(0deg); }
+        }
+        .holo-core {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 16px;
+          height: 16px;
+          background: #FFF;
+          border-radius: 50%;
+          box-shadow: 0 0 25px #FFF, 0 0 40px var(--theme-accent, #8B5CF6);
+          animation: corePulse 2s ease-in-out infinite alternate;
+        }
+        @keyframes corePulse {
+          0% { transform: translate(-50%, -50%) scale(0.85); filter: brightness(1); }
+          100% { transform: translate(-50%, -50%) scale(1.15); filter: brightness(1.25); }
+        }
       `}</style>
 
       <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -161,32 +226,42 @@ export default function ChatWindow({ messages, loading, onSelectSuggestion, acti
               margin: "0 auto",
             }}>
               {/* Hero header */}
-              <div style={{ marginBottom: "28px", marginTop: "16px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
-                  <div style={{
-                    width: "48px",
-                    height: "48px",
-                    borderRadius: "14px",
-                    background: "linear-gradient(135deg, #7C3AED 0%, #2563EB 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    boxShadow: "0 0 24px rgba(124, 58, 237, 0.35)",
-                  }}>
-                    <Brain size={22} color="#FFF" />
+              <div style={{ marginBottom: "28px", marginTop: "16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
+                    <div style={{
+                      width: "48px",
+                      height: "48px",
+                      borderRadius: "14px",
+                      background: "linear-gradient(135deg, #7C3AED 0%, #2563EB 100%)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      boxShadow: "0 0 24px rgba(124, 58, 237, 0.35)",
+                    }}>
+                      <Brain size={22} color="#FFF" />
+                    </div>
+                    <div>
+                      <h1 style={{ fontSize: "22px", fontWeight: "800", color: "#FFF", margin: 0, letterSpacing: "-0.3px" }}>
+                        ATHX AI Copilot
+                      </h1>
+                      <p style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.4)", margin: "2px 0 0", fontWeight: "500" }}>
+                        {activeModel ? `Running on ${activeModel.split("/")[1] || activeModel}` : "Universal Security Engine"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h1 style={{ fontSize: "22px", fontWeight: "800", color: "#FFF", margin: 0, letterSpacing: "-0.3px" }}>
-                      ATHX AI Copilot
-                    </h1>
-                    <p style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.4)", margin: "2px 0 0", fontWeight: "500" }}>
-                      {activeModel ? `Running on ${activeModel.split("/")[1] || activeModel}` : "Universal Security Engine"}
-                    </p>
-                  </div>
+                  <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", fontWeight: "400", lineHeight: "1.6", marginTop: "12px", maxWidth: "580px" }}>
+                    Ask me anything about API vulnerabilities, secure middleware configuration, threat modeling, compliance checks, or incident remediation workflows.
+                  </p>
                 </div>
-                <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "14px", fontWeight: "400", lineHeight: "1.6", marginTop: "12px", maxWidth: "580px" }}>
-                  Ask me anything about API vulnerabilities, secure middleware configuration, threat modeling, compliance checks, or incident remediation workflows.
-                </p>
+
+                {/* 3D Holographic AI Agent Avatar */}
+                <div className="holo-agent-orb" style={{ marginRight: "32px", flexShrink: 0 }}>
+                  <div className="holo-ring holo-ring-1" />
+                  <div className="holo-ring holo-ring-2" />
+                  <div className="holo-ring holo-ring-3" />
+                  <div className="holo-core" />
+                </div>
               </div>
 
               {/* Badges list */}
