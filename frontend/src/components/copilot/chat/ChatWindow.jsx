@@ -135,69 +135,227 @@ export default function ChatWindow({ messages, loading, onSelectSuggestion, acti
           100% { opacity: 0.5; transform: scale(0.95); }
         }
 
-        /* 3D Holographic Orb CSS */
-        .holo-agent-orb {
-          width: 70px;
-          height: 70px;
+        /* Robot Mascot Styling */
+        .bot-3d-mascot {
+          width: 140px;
+          height: 180px;
           position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           perspective: 1000px;
           transform-style: preserve-3d;
-          animation: floatingHolo 5s ease-in-out infinite;
+          margin-right: 24px;
+          flex-shrink: 0;
         }
-        @keyframes floatingHolo {
-          0% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-8px) rotate(3deg); }
-          100% { transform: translateY(0px) rotate(0deg); }
+
+        .bot-body-wrap {
+          width: 100%;
+          height: 100%;
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          transform-style: preserve-3d;
+          animation: botHover 4s ease-in-out infinite;
         }
-        .holo-ring {
+
+        @keyframes botHover {
+          0% { transform: translateY(0px) rotateY(12deg); }
+          50% { transform: translateY(-10px) rotateY(-12deg); }
+          100% { transform: translateY(0px) rotateY(12deg); }
+        }
+
+        .bot-shadow {
           position: absolute;
-          inset: 0;
-          border: 1.5px solid var(--theme-accent, #8B5CF6);
+          bottom: -15px;
+          width: 70px;
+          height: 8px;
+          background: rgba(0, 0, 0, 0.4);
           border-radius: 50%;
-          box-shadow: 0 0 15px var(--theme-accent, #8B5CF6), inset 0 0 15px var(--theme-accent, #8B5CF6);
-          opacity: 0.65;
+          filter: blur(5px);
+          animation: shadowScale 4s ease-in-out infinite;
           pointer-events: none;
         }
-        .holo-ring-1 {
-          animation: spinRing1 7s linear infinite;
+
+        @keyframes shadowScale {
+          0% { transform: scale(1); opacity: 0.6; }
+          50% { transform: scale(0.75); opacity: 0.3; }
+          100% { transform: scale(1); opacity: 0.6; }
         }
-        .holo-ring-2 {
-          animation: spinRing2 7s linear infinite;
-          border-color: #3B82F6;
-          box-shadow: 0 0 15px #3B82F6, inset 0 0 15px #3B82F6;
+
+        /* Head */
+        .bot-head {
+          width: 110px;
+          height: 80px;
+          background: linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 50%, #CBD5E1 100%);
+          border-radius: 40px / 35px;
+          border: 2px solid #F1F5F9;
+          box-shadow: 
+            inset 4px 4px 10px rgba(255,255,255,0.8),
+            inset -4px -4px 10px rgba(148,163,184,0.3),
+            0 10px 20px rgba(0, 0, 0, 0.25);
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 10;
         }
-        .holo-ring-3 {
-          animation: spinRing3 7s linear infinite;
-          border-color: #10B981;
-          box-shadow: 0 0 15px #10B981, inset 0 0 15px #10B981;
+
+        /* Screen */
+        .bot-screen {
+          width: 82px;
+          height: 52px;
+          background: #090D16;
+          border-radius: 30px / 22px;
+          border: 1.5px solid rgba(255,255,255,0.05);
+          box-shadow: 
+            0 0 10px rgba(0,0,0,0.8),
+            inset 0 0 8px rgba(139, 92, 246, 0.15);
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          overflow: hidden;
         }
-        @keyframes spinRing1 {
-          0% { transform: rotateX(35deg) rotateY(45deg) rotateZ(0deg); }
-          100% { transform: rotateX(35deg) rotateY(45deg) rotateZ(360deg); }
+
+        /* Eyes with blink animation */
+        .bot-eye {
+          width: 22px;
+          height: 32px;
+          background: radial-gradient(circle, var(--theme-accent, #8B5CF6) 0%, rgba(139, 92, 246, 0.3) 100%);
+          border-radius: 50% / 40%;
+          box-shadow: 
+            0 0 12px var(--theme-accent, #8B5CF6),
+            0 0 4px var(--theme-accent, #8B5CF6);
+          position: relative;
+          animation: eyeBlink 5s infinite;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
-        @keyframes spinRing2 {
-          0% { transform: rotateX(45deg) rotateY(-45deg) rotateZ(0deg); }
-          100% { transform: rotateX(45deg) rotateY(-45deg) rotateZ(360deg); }
-        }
-        @keyframes spinRing3 {
-          0% { transform: rotateX(-35deg) rotateY(0deg) rotateZ(360deg); }
-          100% { transform: rotateX(-35deg) rotateY(0deg) rotateZ(0deg); }
-        }
-        .holo-core {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          width: 16px;
-          height: 16px;
-          background: #FFF;
+
+        .bot-eye-grid {
+          width: 100%;
+          height: 100%;
+          background-image: linear-gradient(0deg, rgba(255,255,255,0.1) 1px, transparent 1px);
+          background-size: 100% 4px;
           border-radius: 50%;
-          box-shadow: 0 0 25px #FFF, 0 0 40px var(--theme-accent, #8B5CF6);
-          animation: corePulse 2s ease-in-out infinite alternate;
         }
-        @keyframes corePulse {
-          0% { transform: translate(-50%, -50%) scale(0.85); filter: brightness(1); }
-          100% { transform: translate(-50%, -50%) scale(1.15); filter: brightness(1.25); }
+
+        @keyframes eyeBlink {
+          0%, 94%, 98%, 100% { transform: scaleY(1); }
+          96% { transform: scaleY(0.05); }
+        }
+
+        /* Neck */
+        .bot-neck {
+          width: 38px;
+          height: 12px;
+          background: linear-gradient(90deg, #94A3B8 0%, #475569 50%, #334155 100%);
+          border-radius: 4px;
+          margin-top: -6px;
+          box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+          z-index: 5;
+        }
+
+        /* Torso */
+        .bot-torso {
+          width: 95px;
+          height: 85px;
+          background: linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 50%, #CBD5E1 100%);
+          border-radius: 50% / 45%;
+          border: 2px solid #F1F5F9;
+          box-shadow: 
+            inset 4px 4px 10px rgba(255,255,255,0.8),
+            inset -4px -4px 10px rgba(148,163,184,0.3),
+            0 10px 20px rgba(0,0,0,0.2);
+          margin-top: -4px;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 8;
+        }
+
+        /* Arms */
+        .bot-arm-left, .bot-arm-right {
+          width: 18px;
+          height: 54px;
+          background: linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 100%);
+          position: absolute;
+          top: 15px;
+          border-radius: 10px;
+          border: 1.5px solid #F1F5F9;
+          box-shadow: 
+            0 4px 8px rgba(0,0,0,0.15),
+            inset 2px 2px 4px rgba(255,255,255,0.6);
+        }
+        .bot-arm-left {
+          left: -12px;
+          transform: rotateZ(10deg);
+          transform-origin: top center;
+          animation: waveLeft 6s ease-in-out infinite alternate;
+        }
+        .bot-arm-right {
+          right: -12px;
+          transform: rotateZ(-10deg);
+          transform-origin: top center;
+          animation: waveRight 6s ease-in-out infinite alternate;
+        }
+
+        @keyframes waveLeft {
+          0% { transform: rotateZ(10deg); }
+          100% { transform: rotateZ(16deg); }
+        }
+        @keyframes waveRight {
+          0% { transform: rotateZ(-10deg); }
+          100% { transform: rotateZ(-16deg); }
+        }
+
+        /* Chest emblem screen with AI text */
+        .bot-chest-plate {
+          width: 44px;
+          height: 44px;
+          background: #090D16;
+          border: 2.5px solid #CBD5E1;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 
+            inset 0 0 8px rgba(0,0,0,0.8),
+            0 0 14px var(--theme-accent, #8B5CF6);
+          position: relative;
+        }
+
+        .bot-ai-badge {
+          font-size: 11px;
+          font-weight: 900;
+          color: #FFF;
+          text-shadow: 0 0 6px var(--theme-accent, #8B5CF6);
+          font-family: 'Outfit', 'Inter', sans-serif;
+          letter-spacing: 0.5px;
+          animation: glowCycle 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glowCycle {
+          0% { opacity: 0.7; }
+          100% { opacity: 1; }
+        }
+
+        /* Base */
+        .bot-base {
+          width: 50px;
+          height: 18px;
+          background: linear-gradient(90deg, #CBD5E1 0%, #94A3B8 50%, #475569 100%);
+          border-radius: 50%;
+          margin-top: -8px;
+          border: 1.5px solid #E2E8F0;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+          z-index: 6;
         }
       `}</style>
 
@@ -255,12 +413,26 @@ export default function ChatWindow({ messages, loading, onSelectSuggestion, acti
                   </p>
                 </div>
 
-                {/* 3D Holographic AI Agent Avatar */}
-                <div className="holo-agent-orb" style={{ marginRight: "32px", flexShrink: 0 }}>
-                  <div className="holo-ring holo-ring-1" />
-                  <div className="holo-ring holo-ring-2" />
-                  <div className="holo-ring holo-ring-3" />
-                  <div className="holo-core" />
+                {/* 3D Robot Mascot (Eyes Blink and Hover Animations) */}
+                <div className="bot-3d-mascot">
+                  <div className="bot-shadow"></div>
+                  <div className="bot-body-wrap">
+                    <div className="bot-head">
+                      <div className="bot-screen">
+                        <div className="bot-eye"><div className="bot-eye-grid"></div></div>
+                        <div className="bot-eye"><div className="bot-eye-grid"></div></div>
+                      </div>
+                    </div>
+                    <div className="bot-neck"></div>
+                    <div className="bot-torso">
+                      <div className="bot-arm-left"></div>
+                      <div className="bot-chest-plate">
+                        <div className="bot-ai-badge">AI</div>
+                      </div>
+                      <div className="bot-arm-right"></div>
+                    </div>
+                    <div className="bot-base"></div>
+                  </div>
                 </div>
               </div>
 
