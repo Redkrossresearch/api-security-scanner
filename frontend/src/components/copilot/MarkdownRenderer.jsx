@@ -54,7 +54,7 @@ export default function MarkdownRenderer({ text }) {
 
   const parseInlineMarkdown = (rawText) => {
     if (!rawText) return "";
-    const regex = /(\*\*.*?\*\*|`.*?`)/g;
+    const regex = /(\*\*.*?\*\*|`.*?`|\[[^\]]+\]\([^)]+\))/g;
     const parts = rawText.split(regex);
     return parts.map((part, idx) => {
       if (part.startsWith("**") && part.endsWith("**")) {
@@ -82,6 +82,41 @@ export default function MarkdownRenderer({ text }) {
             {part.slice(1, -1)}
           </code>
         );
+      }
+      if (part.startsWith("[") && part.includes("](")) {
+        const linkMatch = part.match(/\[([^\]]+)\]\(([^)]+)\)/);
+        if (linkMatch) {
+          const linkText = linkMatch[1];
+          const linkUrl = linkMatch[2];
+          return (
+            <a
+              key={idx}
+              href={linkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: "#A78BFA",
+                textDecoration: "none",
+                borderBottom: "1px dashed rgba(167, 139, 250, 0.6)",
+                fontWeight: "600",
+                cursor: "pointer",
+                padding: "0 2px",
+                transition: "all 0.2s",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "#FFF";
+                e.currentTarget.style.background = "rgba(139, 92, 246, 0.15)";
+                e.currentTarget.style.borderRadius = "3px";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "#A78BFA";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              {linkText}
+            </a>
+          );
+        }
       }
       return part;
     });
