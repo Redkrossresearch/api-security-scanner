@@ -12,6 +12,44 @@ import { GlobalSettingsModal, CommandPalette } from "../components/copilot/modal
 const DEFAULT_MODEL = "google/gemma-4-31b-it:free";
 const DEFAULT_TEMPERATURE = 0.7;
 
+const THEMES = {
+  void: {
+    name: "🌌 Void Neon (Default)",
+    bg: "radial-gradient(circle at 50% 50%, #0b0f1e 0%, #030712 100%)",
+    grid: "rgba(139, 92, 246, 0.035)",
+    glow: "rgba(139, 92, 246, 0.06)",
+    accent: "#8B5CF6",
+  },
+  matrix: {
+    name: "📟 Matrix Code",
+    bg: "radial-gradient(circle at 50% 50%, #051408 0%, #010502 100%)",
+    grid: "rgba(16, 185, 129, 0.04)",
+    glow: "rgba(16, 185, 129, 0.08)",
+    accent: "#10B981",
+  },
+  synthwave: {
+    name: "🌇 Synthwave Sunset",
+    bg: "radial-gradient(circle at 50% 50%, #1a0b2e 0%, #05010a 100%)",
+    grid: "rgba(236, 72, 153, 0.04)",
+    glow: "rgba(249, 115, 22, 0.07)",
+    accent: "#EC4899",
+  },
+  abyssal: {
+    name: "🐙 Abyssal Deep",
+    bg: "radial-gradient(circle at 50% 50%, #051624 0%, #02090f 100%)",
+    grid: "rgba(6, 182, 212, 0.045)",
+    glow: "rgba(6, 182, 212, 0.08)",
+    accent: "#06B6D4",
+  },
+  ghost: {
+    name: "💀 Ghost Protocol",
+    bg: "radial-gradient(circle at 50% 50%, #18181b 0%, #09090b 100%)",
+    grid: "rgba(255, 255, 255, 0.02)",
+    glow: "rgba(255, 255, 255, 0.04)",
+    accent: "#E4E4E7",
+  }
+};
+
 export default function CopilotPage() {
   const [conversations, setConversations] = useState([]);
   const [activeConversationId, setActiveConversationId] = useState(null);
@@ -21,6 +59,7 @@ export default function CopilotPage() {
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const [temperature, setTemperature] = useState(DEFAULT_TEMPERATURE);
   const [webSearch, setWebSearch] = useState(false);
+  const [theme, setTheme] = useState("void");
 
   // Layout Panels State
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -312,8 +351,9 @@ export default function CopilotPage() {
           height: 100%;
           width: 100%;
           overflow: hidden;
-          background: radial-gradient(circle at 50% 50%, #0b0f1e 0%, #030712 100%);
+          background: var(--theme-bg);
           position: relative;
+          transition: background 0.5s ease;
         }
         .copilot-container::after {
           content: "";
@@ -322,7 +362,7 @@ export default function CopilotPage() {
           left: 15%;
           width: 700px;
           height: 700px;
-          background: radial-gradient(circle, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
+          background: radial-gradient(circle, var(--theme-glow) 0%, transparent 70%);
           filter: blur(100px);
           pointer-events: none;
           z-index: 0;
@@ -350,8 +390,8 @@ export default function CopilotPage() {
           width: 220%;
           height: 220%;
           background-image: 
-            linear-gradient(rgba(139, 92, 246, 0.035) 2px, transparent 2px),
-            linear-gradient(90deg, rgba(139, 92, 246, 0.035) 2px, transparent 2px);
+            linear-gradient(var(--theme-grid) 2px, transparent 2px),
+            linear-gradient(90deg, var(--theme-grid) 2px, transparent 2px);
           background-size: 64px 64px;
           transform: rotateX(78deg);
           transform-origin: top center;
@@ -382,7 +422,15 @@ export default function CopilotPage() {
         }
       `}</style>
 
-      <div className="copilot-container">
+      <div 
+        className="copilot-container"
+        style={{
+          "--theme-bg": THEMES[theme].bg,
+          "--theme-glow": THEMES[theme].glow,
+          "--theme-grid": THEMES[theme].grid,
+          "--theme-accent": THEMES[theme].accent,
+        }}
+      >
         {/* 3D Moving Space Grid */}
         <div className="grid-3d-bg">
           <div className="grid-3d-plane" />
@@ -394,6 +442,8 @@ export default function CopilotPage() {
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           isScanning={loading}
           activeModel={selectedModel}
+          theme={theme}
+          setTheme={setTheme}
         />
 
         {/* Modular Workspace grid layout */}

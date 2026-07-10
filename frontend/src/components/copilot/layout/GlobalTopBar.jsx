@@ -3,7 +3,7 @@ import { Shield, Sparkles, Bell, Settings, Search, LogOut, ChevronDown, User, Gl
 import { useAuth } from "../../../contexts/AuthContext";
 import toast from "react-hot-toast";
 
-export default function GlobalTopBar({ onOpenSettings, onOpenCommandPalette, isScanning, activeModel }) {
+export default function GlobalTopBar({ onOpenSettings, onOpenCommandPalette, isScanning, activeModel, theme, setTheme }) {
   const { currentUser, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
@@ -177,6 +177,38 @@ export default function GlobalTopBar({ onOpenSettings, onOpenCommandPalette, isS
           }}>
             {activeModel ? activeModel.split("/")[1]?.split(":")[0]?.toUpperCase() || "GPT-OSS" : "GPT-OSS"}
           </div>
+
+          {/* Cyberpunk Theme Switcher Selector */}
+          {theme && setTheme && (
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", fontWeight: "700" }}>Theme:</span>
+              <select
+                value={theme}
+                onChange={(e) => {
+                  setTheme(e.target.value);
+                  toast.success(`Theme loaded: ${e.target.value.toUpperCase()}`);
+                }}
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: "8px",
+                  color: "#FFF",
+                  fontSize: "11.5px",
+                  fontWeight: "600",
+                  padding: "0 8px",
+                  outline: "none",
+                  cursor: "pointer",
+                  height: "36px",
+                }}
+              >
+                <option value="void" style={{ background: "#0b0f1e", color: "#FFF" }}>🌌 Void Neon</option>
+                <option value="matrix" style={{ background: "#051408", color: "#FFF" }}>📟 Matrix Green</option>
+                <option value="synthwave" style={{ background: "#1a0b2e", color: "#FFF" }}>🌇 Synthwave Sunset</option>
+                <option value="abyssal" style={{ background: "#051624", color: "#FFF" }}>🐙 Abyssal Deep</option>
+                <option value="ghost" style={{ background: "#18181b", color: "#FFF" }}>💀 Ghost Protocol</option>
+              </select>
+            </div>
+          )}
 
           {/* Notification bell */}
           <button className="topbar-btn" style={{ width: "36px", padding: 0, justifyContent: "center" }} onClick={() => toast.success("No new security alerts")}>
