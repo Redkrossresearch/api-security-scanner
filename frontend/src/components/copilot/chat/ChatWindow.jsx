@@ -465,56 +465,6 @@ export default function ChatWindow({ messages, loading, onSelectSuggestion, acti
                   </p>
                 </div>
 
-                {/* 3D Robot Mascot (Eyes Blink and Hover Animations) */}
-                <div className="bot-3d-mascot">
-                  {/* Hologram Stand Platform */}
-                  <div className="bot-platform">
-                    <div className="bot-platform-ring bot-platform-ring-1"></div>
-                    <div className="bot-platform-ring bot-platform-ring-2"></div>
-                  </div>
-                  <div className="bot-shadow"></div>
-                  <div className="bot-body-wrap">
-                    <div className="bot-head">
-                      {/* High-end glossy reflection sheet overlay */}
-                      <div style={{
-                        position: "absolute",
-                        inset: 0,
-                        borderRadius: "inherit",
-                        background: "linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%)",
-                        pointerEvents: "none",
-                        zIndex: 11
-                      }} />
-                      <div className="bot-screen">
-                        <div style={{
-                          position: "absolute",
-                          inset: 0,
-                          background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%)",
-                          pointerEvents: "none",
-                          zIndex: 5
-                        }} />
-                        <div className="bot-eye"><div className="bot-eye-grid"></div></div>
-                        <div className="bot-eye"><div className="bot-eye-grid"></div></div>
-                      </div>
-                    </div>
-                    <div className="bot-neck"></div>
-                    <div className="bot-torso">
-                      <div style={{
-                        position: "absolute",
-                        inset: 0,
-                        borderRadius: "inherit",
-                        background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 60%)",
-                        pointerEvents: "none",
-                        zIndex: 9
-                      }} />
-                      <div className="bot-arm-left"></div>
-                      <div className="bot-chest-plate">
-                        <div className="bot-ai-badge">AI</div>
-                      </div>
-                      <div className="bot-arm-right"></div>
-                    </div>
-                    <div className="bot-base"></div>
-                  </div>
-                </div>
               </div>
 
               {/* Badges list */}
