@@ -162,27 +162,79 @@ export default function ChatWindow({ messages, loading, onSelectSuggestion, acti
         }
 
         @keyframes botHover {
-          0% { transform: translateY(0px) rotateY(12deg); }
-          50% { transform: translateY(-10px) rotateY(-12deg); }
-          100% { transform: translateY(0px) rotateY(12deg); }
+          0% { transform: translate(0px, 0px) rotateY(12deg); }
+          25% { transform: translate(8px, -14px) rotateY(2deg); }
+          50% { transform: translate(16px, -4px) rotateY(-12deg); }
+          75% { transform: translate(-8px, -16px) rotateY(-2deg); }
+          100% { transform: translate(0px, 0px) rotateY(12deg); }
         }
 
         .bot-shadow {
           position: absolute;
-          bottom: -15px;
-          width: 70px;
-          height: 8px;
-          background: rgba(0, 0, 0, 0.4);
+          bottom: -22px;
+          width: 80px;
+          height: 10px;
+          background: rgba(0, 0, 0, 0.45);
           border-radius: 50%;
-          filter: blur(5px);
+          filter: blur(6px);
           animation: shadowScale 4s ease-in-out infinite;
           pointer-events: none;
         }
 
         @keyframes shadowScale {
-          0% { transform: scale(1); opacity: 0.6; }
-          50% { transform: scale(0.75); opacity: 0.3; }
-          100% { transform: scale(1); opacity: 0.6; }
+          0% { transform: scale(1) translate(0px, 0px); opacity: 0.65; }
+          25% { transform: scale(0.8) translate(8px, 0px); opacity: 0.4; }
+          50% { transform: scale(0.9) translate(16px, 0px); opacity: 0.55; }
+          75% { transform: scale(0.75) translate(-8px, 0px); opacity: 0.35; }
+          100% { transform: scale(1) translate(0px, 0px); opacity: 0.65; }
+        }
+
+        /* 3D Hologram Projection Base Platform */
+        .bot-platform {
+          position: absolute;
+          bottom: -20px;
+          width: 90px;
+          height: 24px;
+          perspective: 500px;
+          transform-style: preserve-3d;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .bot-platform-ring {
+          position: absolute;
+          border-radius: 50%;
+          border: 1.5px solid var(--theme-accent, #8B5CF6);
+          opacity: 0.45;
+          filter: drop-shadow(0 0 8px var(--theme-accent, #8B5CF6));
+          transform: rotateX(75deg);
+        }
+
+        .bot-platform-ring-1 {
+          width: 90px;
+          height: 90px;
+          animation: spinPlatform1 12s linear infinite;
+        }
+
+        .bot-platform-ring-2 {
+          width: 62px;
+          height: 62px;
+          border-color: #3B82F6;
+          border-style: dashed;
+          animation: spinPlatform2 7s linear infinite reverse;
+        }
+
+        @keyframes spinPlatform1 {
+          0% { transform: rotateX(75deg) rotateZ(0deg); }
+          100% { transform: rotateX(75deg) rotateZ(360deg); }
+        }
+
+        @keyframes spinPlatform2 {
+          0% { transform: rotateX(75deg) rotateZ(0deg); }
+          100% { transform: rotateX(75deg) rotateZ(360deg); }
         }
 
         /* Head */
@@ -415,16 +467,45 @@ export default function ChatWindow({ messages, loading, onSelectSuggestion, acti
 
                 {/* 3D Robot Mascot (Eyes Blink and Hover Animations) */}
                 <div className="bot-3d-mascot">
+                  {/* Hologram Stand Platform */}
+                  <div className="bot-platform">
+                    <div className="bot-platform-ring bot-platform-ring-1"></div>
+                    <div className="bot-platform-ring bot-platform-ring-2"></div>
+                  </div>
                   <div className="bot-shadow"></div>
                   <div className="bot-body-wrap">
                     <div className="bot-head">
+                      {/* High-end glossy reflection sheet overlay */}
+                      <div style={{
+                        position: "absolute",
+                        inset: 0,
+                        borderRadius: "inherit",
+                        background: "linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%)",
+                        pointerEvents: "none",
+                        zIndex: 11
+                      }} />
                       <div className="bot-screen">
+                        <div style={{
+                          position: "absolute",
+                          inset: 0,
+                          background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%)",
+                          pointerEvents: "none",
+                          zIndex: 5
+                        }} />
                         <div className="bot-eye"><div className="bot-eye-grid"></div></div>
                         <div className="bot-eye"><div className="bot-eye-grid"></div></div>
                       </div>
                     </div>
                     <div className="bot-neck"></div>
                     <div className="bot-torso">
+                      <div style={{
+                        position: "absolute",
+                        inset: 0,
+                        borderRadius: "inherit",
+                        background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 60%)",
+                        pointerEvents: "none",
+                        zIndex: 9
+                      }} />
                       <div className="bot-arm-left"></div>
                       <div className="bot-chest-plate">
                         <div className="bot-ai-badge">AI</div>
