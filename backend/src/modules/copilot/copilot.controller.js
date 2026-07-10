@@ -709,8 +709,9 @@ ${searchResults.map((res, i) => `[${i + 1}] "${res.title}"
    Excerpt: ${res.snippet}`).join("\n\n")}
 
 Formatting Instructions:
-- Synthesize this information if relevant to ground your responses in latest facts.
-- Cite the sources as clickable markdown links (e.g. [Title](url)) when citing facts.
+- Rely strictly on the search results for web facts. Do not invent details.
+- Enforce INLINE CITATIONS: For every sentence, paragraph, or fact extracted from these sources, immediately append a clickable inline citation next to it referencing its source name and URL (e.g. "...according to the spec [OWASP](https://en.wikipedia.org/wiki/OWASP)..." or "...which exposes data [Code Injection](https://en.wikipedia.org/wiki/Code%20injection)...").
+- Never summarize general concepts without citing their corresponding resource links inline.
 ================================================================================
 `;
         }
