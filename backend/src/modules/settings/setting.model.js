@@ -41,6 +41,11 @@ const settingSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Custom System Prompt for AI Copilot
+    customSystemPrompt: {
+      type: String,
+      default: "",
+    },
     // Tracking cron runs
     lastCronRun: {
       type: Date,

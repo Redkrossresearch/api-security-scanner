@@ -142,6 +142,18 @@ const scanSchema = new mongoose.Schema(
                     default: "open",
                 },
 
+                classification: {
+                    type: String,
+                    enum: [
+                        "true_positive",
+                        "false_positive",
+                        "true_negative",
+                        "false_negative",
+                        "unclassified"
+                    ],
+                    default: "unclassified",
+                },
+
                 resolvedAt: Date,
 
                 description: String,

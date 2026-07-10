@@ -1,0 +1,51 @@
+// Output schema for ATHX AI Assistant responses
+// This JSON schema defines the required structure for all AI-generated outputs.
+// It can be expanded or refined as needed.
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ATHXResponse",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "description": "Overall status of the response (e.g., 'success', 'partial', 'error')"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO‑8601 timestamp when the response was generated"
+    },
+    "thoughts": {
+      "type": "object",
+      "description": "Internal reasoning steps (optional, for debugging or transparency)",
+      "properties": {
+        "analysis": { "type": "string", "description": "Detailed analysis and reasoning" },
+        "plan": { "type": "string", "description": "Proposed plan of action, if any" },
+        "issues": { "type": "array", "items": { "type": "string" }, "description": "List of identified issues or open questions" }
+      },
+      "required": ["analysis"]
+    },
+    "output": {
+      "type": "object",
+      "description": "The main user‑facing result",
+      "properties": {
+        "summary": { "type": "string", "description": "Brief human‑readable summary" },
+        "details": { "type": "string", "description": "Full explanation, markdown formatted" },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string", "description": "Artifact filename" },
+              "path": { "type": "string", "description": "Absolute file URI" }
+            },
+            "required": ["name", "path"]
+          },
+          "description": "List of generated artifact references"
+        }
+      },
+      "required": ["summary"]
+    }
+  },
+  "required": ["status", "timestamp", "output"]
+}

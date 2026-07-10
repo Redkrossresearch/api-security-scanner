@@ -13,6 +13,7 @@ const vulnerabilityRoutes = require("./modules/vulnerabilities/vulnerability.rou
 const aiRoutes = require("./modules/ai/ai.routes");
 const reportRoutes = require("./modules/reports/report.routes"); // ✅ Moved to top
 const settingRoutes = require("./modules/settings/setting.routes");
+const copilotRoutes = require("./modules/copilot/copilot.routes");
 
 const app = express();
 
@@ -90,6 +91,7 @@ app.use("/api/vulnerabilities", vulnerabilityRoutes);
 app.use("/api/ai", aiRoutes);
 
 app.use("/api/settings", settingRoutes);
+app.use("/api/copilot", copilotRoutes);
 
 // 🟡 Recommended 2 — 404 Handler (Express 5 compatible - no "*" wildcard)
 app.use((req, res) => {

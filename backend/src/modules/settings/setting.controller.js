@@ -16,6 +16,7 @@ const getSettings = async (req, res) => {
         slackWebhook: "",
         jiraWebhook: "",
         discordWebhook: "",
+        customSystemPrompt: "",
       });
     }
 

@@ -50,7 +50,6 @@ const menuItems = [
     name: "AI Copilot",
     path: "/copilot",
     icon: <Bot size={17} />,
-    comingSoon: true,
   },
   {
     name: "Compliance",
@@ -87,7 +86,8 @@ function Sidebar() {
         flexShrink: 0,
         background: "linear-gradient(180deg, #070D19 0%, #030710 100%)",
         borderRight: "1px solid rgba(255, 255, 255, 0.05)",
-        minHeight: "100vh",
+        minHeight: "100%",
+        height: "100%",
         padding: "26px 20px",
         boxSizing: "border-box",
         display: "flex",
