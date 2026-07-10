@@ -1,6 +1,36 @@
-import React from "react";
+import React, { useState } from "react";
 
 export default function ChatWorkspace({ chatWindow, promptInput }) {
+  const [showSpeech, setShowSpeech] = useState(false);
+  const [speechText, setSpeechText] = useState("");
+  const [speechTimeout, setSpeechTimeout] = useState(null);
+
+  const greetings = [
+    "Hii, I am ATHX Copilot. Systems normalized. Zero-Trust policy fully active.",
+    "System Status: OPTIMAL. All scanner nodes responding on port 5000.",
+    "Security Integrity: 99.2%. Let's find some vulnerabilities today!",
+    "Ready to scan! Type '/' to search for pre-defined audit directives.",
+    "Hii auditor! Remember: Authentication is NOT authorization. Check your BOLA guards!"
+  ];
+
+  const handleMascotClick = () => {
+    // Clear existing timeout if active
+    if (speechTimeout) {
+      clearTimeout(speechTimeout);
+    }
+
+    // Pick a random greeting
+    const randomGreet = greetings[Math.floor(Math.random() * greetings.length)];
+    setSpeechText(randomGreet);
+    setShowSpeech(true);
+
+    // Auto fadeout after 5 seconds
+    const timeout = setTimeout(() => {
+      setShowSpeech(false);
+    }, 5000);
+    setSpeechTimeout(timeout);
+  };
+
   return (
     <div style={{
       display: "flex",
@@ -49,14 +79,15 @@ export default function ChatWorkspace({ chatWindow, promptInput }) {
           flex-direction: column;
           align-items: center;
           transform-style: preserve-3d;
-          animation: botHover 5s ease-in-out infinite;
+          animation: botHover 6s ease-in-out infinite;
         }
 
+        /* Expanded orbital floating/patrolling path keyframes */
         @keyframes botHover {
           0% { transform: translate(0px, 0px) rotateY(8deg) rotateX(2deg); }
-          25% { transform: translate(12px, -15px) rotateY(-4deg) rotateX(-2deg); }
-          50% { transform: translate(4px, -5px) rotateY(12deg) rotateX(4deg); }
-          75% { transform: translate(-10px, -18px) rotateY(-8deg) rotateX(-4deg); }
+          25% { transform: translate(-30px, -40px) rotateY(-10deg) rotateX(-4deg); }
+          50% { transform: translate(-80px, -15px) rotateY(12deg) rotateX(3deg); }
+          75% { transform: translate(-45px, 20px) rotateY(-12deg) rotateX(-2deg); }
           100% { transform: translate(0px, 0px) rotateY(8deg) rotateX(2deg); }
         }
 
@@ -68,15 +99,15 @@ export default function ChatWorkspace({ chatWindow, promptInput }) {
           background: rgba(0, 0, 0, 0.5);
           border-radius: 50%;
           filter: blur(5px);
-          animation: shadowScale 5s ease-in-out infinite;
+          animation: shadowScale 6s ease-in-out infinite;
           pointer-events: none;
         }
 
         @keyframes shadowScale {
           0% { transform: scale(1) translate(0px, 0px); opacity: 0.7; }
-          25% { transform: scale(0.8) translate(12px, 0px); opacity: 0.45; }
-          50% { transform: scale(0.95) translate(4px, 0px); opacity: 0.6; }
-          75% { transform: scale(0.75) translate(-10px, 0px); opacity: 0.35; }
+          25% { transform: scale(0.8) translate(-30px, 0px); opacity: 0.45; }
+          50% { transform: scale(0.95) translate(-80px, 0px); opacity: 0.6; }
+          75% { transform: scale(1.1) translate(-45px, 0px); opacity: 0.75; }
           100% { transform: scale(1) translate(0px, 0px); opacity: 0.7; }
         }
 
@@ -178,6 +209,23 @@ export default function ChatWorkspace({ chatWindow, promptInput }) {
           overflow: hidden;
         }
 
+        /* 3D Visor Scanning Laser Line */
+        .bot-scan-laser {
+          position: absolute;
+          left: 0;
+          right: 0;
+          height: 1.5px;
+          background: var(--theme-accent, #8B5CF6);
+          box-shadow: 0 0 8px var(--theme-accent, #8B5CF6);
+          animation: scanMove 2.5s ease-in-out infinite alternate;
+          z-index: 6;
+          opacity: 0.8;
+        }
+        @keyframes scanMove {
+          0% { top: 5%; }
+          100% { top: 95%; }
+        }
+
         /* Eyes with blink animation */
         .bot-eye {
           width: 20px;
@@ -192,6 +240,7 @@ export default function ChatWorkspace({ chatWindow, promptInput }) {
           display: flex;
           align-items: center;
           justify-content: center;
+          z-index: 5;
         }
 
         .bot-eye-grid {
@@ -311,16 +360,10 @@ export default function ChatWorkspace({ chatWindow, promptInput }) {
           animation: glowCycle 2s ease-in-out infinite alternate;
         }
 
-        /* Base */
-        .bot-base {
-          width: 44px;
-          height: 14px;
-          background: linear-gradient(90deg, #CBD5E1 0%, #94A3B8 50%, #475569 100%);
-          border-radius: 50%;
-          margin-top: -7px;
-          border: 1.2px solid #E2E8F0;
-          box-shadow: 0 4px 6px rgba(0,0,0,0.25);
-          z-index: 6;
+        /* Speech bubble typing popup animation */
+        @keyframes speechFadeIn {
+          0% { opacity: 0; transform: translateY(12px) scale(0.9); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
         }
       `}</style>
 
@@ -382,7 +425,48 @@ export default function ChatWorkspace({ chatWindow, promptInput }) {
 
       {/* Global 3D Floating Robot Mascot companion overlaid on entire chat workspace */}
       <div className="global-mascot-container">
-        <div className="bot-3d-mascot">
+        {/* Interactive Speech Bubble */}
+        {showSpeech && (
+          <div style={{
+            position: "absolute",
+            bottom: "165px",
+            right: "20px",
+            background: "rgba(10, 15, 30, 0.95)",
+            border: "1.5px solid var(--theme-accent, #8B5CF6)",
+            boxShadow: "0 0 20px rgba(139, 92, 246, 0.25)",
+            borderRadius: "12px",
+            padding: "10px 14px",
+            color: "#FFF",
+            fontSize: "11px",
+            fontWeight: "600",
+            width: "190px",
+            backdropFilter: "blur(10px)",
+            animation: "speechFadeIn 0.3s cubic-bezier(0.25, 1, 0.5, 1)",
+            zIndex: 110,
+            pointerEvents: "auto",
+          }}>
+            {/* Arrow pointing down */}
+            <div style={{
+              position: "absolute",
+              bottom: "-8px",
+              right: "40px",
+              width: "12px",
+              height: "12px",
+              background: "rgba(10, 15, 30, 0.95)",
+              borderRight: "1.5px solid var(--theme-accent, #8B5CF6)",
+              borderBottom: "1.5px solid var(--theme-accent, #8B5CF6)",
+              transform: "rotate(45deg)",
+            }} />
+            <span style={{ color: "var(--theme-accent, #8B5CF6)", fontWeight: "800", display: "block", marginBottom: "4px" }}>
+              🤖 ATHX AUDITOR
+            </span>
+            <p style={{ margin: 0, lineHeight: "1.4", color: "rgba(255,255,255,0.85)" }}>
+              {speechText}
+            </p>
+          </div>
+        )}
+
+        <div className="bot-3d-mascot" onClick={handleMascotClick}>
           {/* Hologram Stand Platform */}
           <div className="bot-platform">
             <div className="bot-platform-ring bot-platform-ring-1"></div>
@@ -411,6 +495,8 @@ export default function ChatWorkspace({ chatWindow, promptInput }) {
                   pointerEvents: "none",
                   zIndex: 5
                 }} />
+                {/* 3D Visor Scanning Laser Line */}
+                <div className="bot-scan-laser" />
                 <div className="bot-eye"><div className="bot-eye-grid"></div></div>
                 <div className="bot-eye"><div className="bot-eye-grid"></div></div>
               </div>
