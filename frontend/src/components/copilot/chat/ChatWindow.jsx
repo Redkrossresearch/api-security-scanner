@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Shield, Lightbulb, Code, BookOpen, Cpu, Globe, ChevronDown, Brain } from "lucide-react";
 import MessageBubble from "./MessageBubble";
 import ThinkingIndicator from "./ThinkingIndicator";
+import CyberCanvasBg from "./CyberCanvasBg";
 
 const SUGGESTIONS = [
   {
@@ -412,6 +413,8 @@ export default function ChatWindow({ messages, loading, onSelectSuggestion, acti
       `}</style>
 
       <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+        {/* Real-time 3D Cyber Mesh Wave Background */}
+        <CyberCanvasBg />
         <div
           ref={containerRef}
           onScroll={handleScroll}
