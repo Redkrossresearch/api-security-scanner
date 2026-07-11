@@ -9,7 +9,7 @@ import { ChatWindow, PromptInput } from "../components/copilot/chat";
 import { ContextPanel } from "../components/copilot/panels";
 import { GlobalSettingsModal, CommandPalette } from "../components/copilot/modals";
 
-const DEFAULT_MODEL = "google/gemma-4-31b-it:free";
+const DEFAULT_MODEL = "openai";
 const DEFAULT_TEMPERATURE = 0.7;
 
 const THEMES = {
@@ -89,6 +89,22 @@ export default function CopilotPage() {
     const randomGreet = greetings[Math.floor(Math.random() * greetings.length)];
     setSpeechText(randomGreet);
     setShowSpeech(true);
+
+    // Dynamic Speech Synthesis (Robotic Voice Output)
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(randomGreet);
+      const voices = window.speechSynthesis.getVoices();
+      // Try to acquire Google US English or standard US/GB English voice
+      const preferredVoice = voices.find(v => v.lang.includes("en-US") || v.lang.includes("en-GB"));
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      utterance.pitch = 0.80; // Low robotic tone
+      utterance.rate = 1.05;  // Slightly faster pace
+      utterance.volume = 0.90; // Balanced output volume
+      window.speechSynthesis.speak(utterance);
+    }
 
     const timeout = setTimeout(() => {
       setShowSpeech(false);
@@ -188,9 +204,10 @@ export default function CopilotPage() {
   };
 
   // ─── Send Message ─────────────────────────────────────────────────────────
-  const handleSend = async (customText = "") => {
+  const handleSend = async (customText = "", attachedFiles = []) => {
     const text = (customText || inputValue).trim();
-    if (!text || loading) return;
+    if (!text && (!attachedFiles || attachedFiles.length === 0)) return;
+    if (loading) return;
 
     setLoading(true);
     if (!customText) setInputValue("");
@@ -201,7 +218,7 @@ export default function CopilotPage() {
       // Auto-create conversation if needed
       if (!convId) {
         const convRes = await api.post("/copilot/conversations", {
-          title: text.length > 40 ? text.slice(0, 40) + "..." : text,
+          title: text ? (text.length > 40 ? text.slice(0, 40) + "..." : text) : `Attached ${attachedFiles.length} file(s)`,
         });
         if (!convRes.data?.success) {
           toast.error("Failed to create conversation");
@@ -214,12 +231,20 @@ export default function CopilotPage() {
         setActiveConversationId(newConv._id);
       }
 
-      // Optimistically add user message
+      // Optimistically add user message with attachments metadata
       const optimisticMsg = {
         _id: `temp-${Date.now()}`,
         sender: "user",
-        text,
+        text: text || `[Attached ${attachedFiles.length} file(s)]`,
         timestamp: new Date(),
+        metadata: {
+          attachments: (attachedFiles || []).map(att => ({
+            name: att.name,
+            type: att.type,
+            size: att.size,
+            isImage: att.isImage || false
+          }))
+        }
       };
       setMessages((prev) => [...prev, optimisticMsg]);
 
@@ -229,6 +254,7 @@ export default function CopilotPage() {
         model: selectedModel,
         temperature,
         webSearch,
+        attachments: attachedFiles
       });
 
       if (msgRes.data?.success) {
@@ -247,6 +273,7 @@ export default function CopilotPage() {
           },
         ]);
         fetchConversations();
+
       } else {
         setMessages((prev) => prev.slice(0, -1));
         toast.error("AI engine returned an error");
@@ -455,6 +482,17 @@ export default function CopilotPage() {
           right: 32px;
           z-index: 10000; /* Overlays absolutely everything, even context panel and sidebars */
           pointer-events: none;
+          animation: botTravel 24s ease-in-out infinite;
+        }
+
+        /* Viewport-wide patrolling path - moves across context panel, workspace, sidebar! */
+        @keyframes botTravel {
+          0% { transform: translate(0px, 0px); }
+          20% { transform: translate(-25vw, -12vh); }
+          40% { transform: translate(-58vw, 15vh); }
+          60% { transform: translate(-78vw, -22vh); }
+          80% { transform: translate(-42vw, -45vh); }
+          100% { transform: translate(0px, 0px); }
         }
 
         .bot-3d-mascot {
@@ -468,13 +506,13 @@ export default function CopilotPage() {
           justify-content: center;
           perspective: 1000px;
           transform-style: preserve-3d;
-          transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+          transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
           cursor: pointer;
         }
 
         .bot-3d-mascot:hover {
-          transform: scale(1.12) rotateX(12deg) rotateY(-12deg);
-          filter: drop-shadow(0 15px 30px rgba(139, 92, 246, 0.3));
+          transform: scale(1.15) rotateX(12deg) rotateY(-12deg);
+          filter: drop-shadow(0 15px 35px rgba(139, 92, 246, 0.35));
         }
 
         .bot-body-wrap {
@@ -485,17 +523,13 @@ export default function CopilotPage() {
           flex-direction: column;
           align-items: center;
           transform-style: preserve-3d;
-          animation: botHover 16s ease-in-out infinite; /* slow organic patrol drift */
+          animation: botLocalHover 4s ease-in-out infinite; /* local breathing float */
         }
 
-        /* Viewport-wide patrolling path - moves across context panel, workspace, sidebar! */
-        @keyframes botHover {
-          0% { transform: translate(0px, 0px) rotateY(15deg) rotateX(2deg); }
-          20% { transform: translate(-30vw, -12vh) rotateY(-15deg) rotateX(-4deg); }
-          40% { transform: translate(-65vw, 15vh) rotateY(10deg) rotateX(4deg); }
-          60% { transform: translate(-80vw, -25vh) rotateY(-10deg) rotateX(-2deg); }
-          80% { transform: translate(-42vw, -45vh) rotateY(15deg) rotateX(2deg); }
-          100% { transform: translate(0px, 0px) rotateY(15deg) rotateX(2deg); }
+        @keyframes botLocalHover {
+          0% { transform: translateY(0px) rotateY(12deg); }
+          50% { transform: translateY(-10px) rotateY(-12deg); }
+          100% { transform: translateY(0px) rotateY(12deg); }
         }
 
         .bot-shadow {
@@ -506,7 +540,7 @@ export default function CopilotPage() {
           background: rgba(0, 0, 0, 0.5);
           border-radius: 50%;
           filter: blur(5px);
-          animation: shadowScale 16s ease-in-out infinite;
+          animation: shadowScale 4s ease-in-out infinite;
           pointer-events: none;
         }
 
@@ -517,6 +551,80 @@ export default function CopilotPage() {
           60% { transform: scale(0.75) translate(-80vw, 0px); opacity: 0.35; }
           80% { transform: scale(1.1) translate(-42vw, 0px); opacity: 0.75; }
           100% { transform: scale(1) translate(0px, 0px); opacity: 0.7; }
+        }
+
+        /* Spinning 3D Orbit Ring around Mascot Head */
+        .bot-hud-ring {
+          position: absolute;
+          width: 140px;
+          height: 140px;
+          border: 1px dashed rgba(139, 92, 246, 0.28);
+          border-radius: 50%;
+          transform: rotateX(75deg) rotateY(15deg);
+          animation: spinHUD 16s linear infinite;
+          pointer-events: none;
+          z-index: 4;
+        }
+
+        @keyframes spinHUD {
+          0% { transform: rotateX(75deg) rotateY(15deg) rotateZ(0deg); }
+          100% { transform: rotateX(75deg) rotateY(15deg) rotateZ(360deg); }
+        }
+
+        /* Pulsing LEDs on top of ears */
+        .bot-ear-led {
+          width: 3.5px;
+          height: 3.5px;
+          background: var(--theme-accent, #8B5CF6);
+          border-radius: 50%;
+          position: absolute;
+          top: -2.5px;
+          left: 1px;
+          box-shadow: 0 0 6px var(--theme-accent, #8B5CF6);
+          animation: ledPulse 1.2s infinite alternate;
+        }
+
+        @keyframes ledPulse {
+          0% { opacity: 0.35; }
+          100% { opacity: 1; filter: brightness(1.3); }
+        }
+
+        /* High-tech honeycomb matrix background pattern for visor screen */
+        .bot-screen-grid {
+          position: absolute;
+          inset: 0;
+          background-image: 
+            linear-gradient(30deg, rgba(139,92,246,0.06) 12%, transparent 12.5%, transparent 87%, rgba(139,92,246,0.06) 87.5%, rgba(139,92,246,0.06)),
+            linear-gradient(150deg, rgba(139,92,246,0.06) 12%, transparent 12.5%, transparent 87%, rgba(139,92,246,0.06) 87.5%, rgba(139,92,246,0.06)),
+            linear-gradient(30deg, rgba(139,92,246,0.06) 12%, transparent 12.5%, transparent 87%, rgba(139,92,246,0.06) 87.5%, rgba(139,92,246,0.06)),
+            linear-gradient(150deg, rgba(139,92,246,0.06) 12%, transparent 12.5%, transparent 87%, rgba(139,92,246,0.06) 87.5%, rgba(139,92,246,0.06)),
+            linear-gradient(60deg, rgba(139,92,246,0.08) 25%, transparent 25.5%, transparent 75%, rgba(139,92,246,0.08) 75.5%, rgba(139,92,246,0.08)),
+            linear-gradient(60deg, rgba(139,92,246,0.08) 25%, transparent 25.5%, transparent 75%, rgba(139,92,246,0.08) 75.5%, rgba(139,92,246,0.08));
+          background-size: 8px 14px;
+          opacity: 0.75;
+          z-index: 2;
+          pointer-events: none;
+        }
+
+        /* Dynamic Engine Hover thruster fire cone under base */
+        .bot-thruster-glow {
+          position: absolute;
+          bottom: -15px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 22px;
+          height: 18px;
+          background: radial-gradient(ellipse at top, var(--theme-accent, #8B5CF6) 0%, rgba(139, 92, 246, 0.4) 50%, transparent 100%);
+          filter: blur(2px);
+          animation: thrusterPulse 0.4s ease-in-out infinite alternate;
+          z-index: 5;
+          border-radius: 50% 50% 0 0;
+          pointer-events: none;
+        }
+
+        @keyframes thrusterPulse {
+          0% { height: 12px; opacity: 0.65; }
+          100% { height: 20px; opacity: 0.95; filter: blur(3px) brightness(1.2); }
         }
 
         /* 3D Hologram Projection Base Platform */
@@ -759,7 +867,7 @@ export default function CopilotPage() {
         }
 
         .bot-ai-badge {
-          font-size: 10px;
+          font-size: 8.5px;
           font-weight: 900;
           color: #FFF;
           text-shadow: 0 0 6px var(--theme-accent, #8B5CF6);
@@ -844,7 +952,7 @@ export default function CopilotPage() {
                 <PromptInput
                   value={inputValue}
                   onChange={setInputValue}
-                  onSend={() => handleSend()}
+                  onSend={(payload) => handleSend(typeof payload === "string" ? payload : payload?.text, typeof payload === "string" ? [] : payload?.attachments)}
                   disabled={loading}
                   selectedModel={selectedModel}
                   onModelChange={setSelectedModel}
@@ -919,6 +1027,8 @@ export default function CopilotPage() {
               <div className="bot-platform-ring bot-platform-ring-1"></div>
               <div className="bot-platform-ring bot-platform-ring-2"></div>
             </div>
+            {/* Spinning Coordinate HUD Ring */}
+            <div className="bot-hud-ring"></div>
             <div className="bot-shadow"></div>
             <div className="bot-body-wrap">
               <div className="bot-head">
@@ -931,10 +1041,16 @@ export default function CopilotPage() {
                   pointerEvents: "none",
                   zIndex: 11
                 }} />
-                {/* Side ears nodes */}
-                <div className="bot-ear-left"></div>
-                <div className="bot-ear-right"></div>
+                {/* Side ears nodes with blinking LEDs */}
+                <div className="bot-ear-left">
+                  <div className="bot-ear-led"></div>
+                </div>
+                <div className="bot-ear-right">
+                  <div className="bot-ear-led"></div>
+                </div>
                 <div className="bot-screen">
+                  {/* Visor honeycomb matrix grid lines */}
+                  <div className="bot-screen-grid"></div>
                   <div style={{
                     position: "absolute",
                     inset: 0,
@@ -964,11 +1080,14 @@ export default function CopilotPage() {
                 <div className="bot-shoulder-right"></div>
                 <div className="bot-arm-left"></div>
                 <div className="bot-chest-plate">
-                  <div className="bot-ai-badge">AI</div>
+                  <div className="bot-ai-badge">ATHX</div>
                 </div>
                 <div className="bot-arm-right"></div>
               </div>
-              <div className="bot-base"></div>
+              <div className="bot-base">
+                {/* Thruster Pulse engine flare */}
+                <div className="bot-thruster-glow"></div>
+              </div>
             </div>
           </div>
         </div>

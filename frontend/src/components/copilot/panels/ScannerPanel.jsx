@@ -91,6 +91,33 @@ export default function ScannerPanel() {
     toast.success(`Classified as ${value.toUpperCase().replace("_", " ")}`);
   };
 
+  const handleUpdatePatchStatus = (idx, value) => {
+    setFindings((prev) => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], patchStatus: value };
+      return updated;
+    });
+    toast.success(`Patch Strategy set to: ${value.toUpperCase()}`);
+  };
+
+  // Compute Confusion Matrix metrics dynamically from findings list state
+  const metrics = (() => {
+    let tp = 0;
+    let fp = 0;
+    let tn = 0;
+    let fn = 0;
+    findings.forEach((f) => {
+      const cls = f.classification || "true_positive";
+      if (cls === "true_positive") tp++;
+      else if (cls === "false_positive") fp++;
+      else if (cls === "true_negative") tn++;
+      else if (cls === "false_negative") fn++;
+    });
+    const total = tp + fp + tn + fn;
+    const accuracy = total > 0 ? ((tp + tn) / total) * 100 : 100;
+    return { tp, fp, tn, fn, accuracy: accuracy.toFixed(1) };
+  })();
+
   useEffect(() => {
     return () => {
       if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
@@ -136,7 +163,60 @@ export default function ScannerPanel() {
         }
       `}</style>
 
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "16px", boxSizing: "border-box" }}>
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "16px", boxSizing: "border-box", overflowY: "auto" }}>
+        
+        {/* Dynamic Accuracy & Confusion Matrix HUD Dashboard */}
+        <div style={{
+          background: "rgba(255, 255, 255, 0.02)",
+          border: "1px solid rgba(255, 255, 255, 0.06)",
+          borderRadius: "8px",
+          padding: "10px",
+          marginBottom: "16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          flexShrink: 0
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.45)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>Model Accuracy Matrix</span>
+            <span style={{ 
+              fontSize: "11px", 
+              color: parseFloat(metrics.accuracy) >= 80 ? "#10B981" : parseFloat(metrics.accuracy) >= 50 ? "#F59E0B" : "#EF4444", 
+              fontWeight: "900",
+              background: parseFloat(metrics.accuracy) >= 80 ? "rgba(16,185,129,0.1)" : parseFloat(metrics.accuracy) >= 50 ? "rgba(245,158,11,0.1)" : "rgba(239,68,68,0.1)",
+              padding: "2px 6px",
+              borderRadius: "4px",
+              border: `1px solid ${parseFloat(metrics.accuracy) >= 80 ? "rgba(16,185,129,0.2)" : parseFloat(metrics.accuracy) >= 50 ? "rgba(245,158,11,0.2)" : "rgba(239,68,68,0.2)"}`
+            }}>
+              Acc: {metrics.accuracy}%
+            </span>
+          </div>
+
+          {/* 2x2 Confusion Matrix Grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+            {/* TP */}
+            <div style={{ background: "rgba(16, 185, 129, 0.03)", border: "1px solid rgba(16, 185, 129, 0.12)", borderRadius: "6px", padding: "6px", textAlign: "center" }}>
+              <div style={{ fontSize: "8px", color: "rgba(16, 185, 129, 0.7)", fontWeight: "800", textTransform: "uppercase" }}>True Positive (TP)</div>
+              <div style={{ fontSize: "16px", color: "#10B981", fontWeight: "900", marginTop: "2px" }}>{metrics.tp}</div>
+            </div>
+            {/* FP */}
+            <div style={{ background: "rgba(239, 68, 68, 0.03)", border: "1px solid rgba(239, 68, 68, 0.12)", borderRadius: "6px", padding: "6px", textAlign: "center" }}>
+              <div style={{ fontSize: "8px", color: "rgba(239, 68, 68, 0.7)", fontWeight: "800", textTransform: "uppercase" }}>False Positive (FP)</div>
+              <div style={{ fontSize: "16px", color: "#EF4444", fontWeight: "900", marginTop: "2px" }}>{metrics.fp}</div>
+            </div>
+            {/* TN */}
+            <div style={{ background: "rgba(59, 130, 246, 0.03)", border: "1px solid rgba(59, 130, 246, 0.12)", borderRadius: "6px", padding: "6px", textAlign: "center" }}>
+              <div style={{ fontSize: "8px", color: "rgba(59, 130, 246, 0.7)", fontWeight: "800", textTransform: "uppercase" }}>True Negative (TN)</div>
+              <div style={{ fontSize: "16px", color: "#3B82F6", fontWeight: "900", marginTop: "2px" }}>{metrics.tn}</div>
+            </div>
+            {/* FN */}
+            <div style={{ background: "rgba(245, 158, 11, 0.03)", border: "1px solid rgba(245, 158, 11, 0.12)", borderRadius: "6px", padding: "6px", textAlign: "center" }}>
+              <div style={{ fontSize: "8px", color: "rgba(245, 158, 11, 0.7)", fontWeight: "800", textTransform: "uppercase" }}>False Negative (FN)</div>
+              <div style={{ fontSize: "16px", color: "#F59E0B", fontWeight: "900", marginTop: "2px" }}>{metrics.fn}</div>
+            </div>
+          </div>
+        </div>
+
         {/* URL scan inputs bar */}
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px", flexShrink: 0 }}>
           <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", fontWeight: "700" }}>Start Vulnerability Scan</span>
@@ -227,35 +307,61 @@ export default function ScannerPanel() {
                   <h4 style={{ margin: 0, fontSize: "12.5px", color: "#FFF", fontWeight: "600" }}>{finding.title}</h4>
                   <p style={{ margin: 0, fontSize: "11px", color: "rgba(255,255,255,0.45)", wordBreak: "break-all" }}>{finding.endpoint}</p>
                   
-                  {/* Accuracy Tuning Select */}
+                  {/* Accuracy Tuning & Patch Strategy Selectors */}
                   <div style={{ 
                     display: "flex", 
-                    alignItems: "center", 
-                    justifyContent: "space-between",
+                    flexDirection: "column",
+                    gap: "6px",
                     marginTop: "6px",
                     paddingTop: "6px",
                     borderTop: "1px dashed rgba(255,255,255,0.06)"
                   }}>
-                    <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", fontWeight: "600" }}>Tuning:</span>
-                    <select
-                      value={finding.classification || "true_positive"}
-                      onChange={(e) => handleUpdateClassification(idx, e.target.value)}
-                      style={{
-                        background: "#080D1A",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: "4px",
-                        color: "rgba(255,255,255,0.75)",
-                        fontSize: "9px",
-                        padding: "2px 4px",
-                        outline: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <option value="true_positive">🟢 True Positive (TP)</option>
-                      <option value="false_positive">🔴 False Positive (FP)</option>
-                      <option value="true_negative">🔵 True Negative (TN)</option>
-                      <option value="false_negative">🟡 False Negative (FN)</option>
-                    </select>
+                    {/* Classification Selector */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", fontWeight: "600" }}>Classification:</span>
+                      <select
+                        value={finding.classification || "true_positive"}
+                        onChange={(e) => handleUpdateClassification(idx, e.target.value)}
+                        style={{
+                          background: "#080D1A",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "4px",
+                          color: "rgba(255,255,255,0.75)",
+                          fontSize: "9px",
+                          padding: "2px 4px",
+                          outline: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <option value="true_positive">🟢 True Positive (TP)</option>
+                        <option value="false_positive">🔴 False Positive (FP)</option>
+                        <option value="true_negative">🔵 True Negative (TN)</option>
+                        <option value="false_negative">🟡 False Negative (FN)</option>
+                      </select>
+                    </div>
+
+                    {/* Patch Strategy Selector */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", fontWeight: "600" }}>Patch Option:</span>
+                      <select
+                        value={finding.patchStatus || "none"}
+                        onChange={(e) => handleUpdatePatchStatus(idx, e.target.value)}
+                        style={{
+                          background: "#080D1A",
+                          border: "1px solid rgba(255,255,255,0.1)",
+                          borderRadius: "4px",
+                          color: "rgba(255,255,255,0.75)",
+                          fontSize: "9px",
+                          padding: "2px 4px",
+                          outline: "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <option value="none">⚠️ Unpatched</option>
+                        <option value="temp">⏳ Temporary Patch</option>
+                        <option value="permanent">🛡️ Permanent Patch</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               );

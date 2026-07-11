@@ -11,6 +11,7 @@ const {
   archiveConversation,
   getConversationMessages,
   handleChatRequest,
+  saveAssistantMessage,
   getMemories,
   createMemory,
   deleteMemory,
@@ -33,6 +34,8 @@ router.put("/conversations/:id/archive", authenticate, archiveConversation);
 // Messages
 router.get("/conversations/:id/messages", authenticate, getConversationMessages);
 router.post("/conversations/:id/messages", authenticate, handleChatRequest);
+router.post("/conversations/:id/messages/save", authenticate, saveAssistantMessage);
+
 
 // Context memories CRUD
 router.get("/memories", authenticate, getMemories);

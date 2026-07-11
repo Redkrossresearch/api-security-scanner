@@ -110,16 +110,40 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
         {isBot ? (
           <MarkdownRenderer text={displayText} />
         ) : (
-          <p style={{
-            color: "rgba(255,255,255,0.9)",
-            fontSize: "13.5px",
-            margin: 0,
-            lineHeight: "1.6",
-            fontWeight: "400",
-            whiteSpace: "pre-wrap",
-          }}>
-            {displayText}
-          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <p style={{
+              color: "rgba(255,255,255,0.9)",
+              fontSize: "13.5px",
+              margin: 0,
+              lineHeight: "1.6",
+              fontWeight: "400",
+              whiteSpace: "pre-wrap",
+            }}>
+              {displayText}
+            </p>
+            {msg.metadata?.attachments && msg.metadata.attachments.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                {msg.metadata.attachments.map((att, idx) => (
+                  <div key={idx} style={{
+                    display: "flex", alignItems: "center", gap: "6px", padding: "4px 10px",
+                    background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+                    borderRadius: "8px", fontSize: "11px", color: "rgba(255,255,255,0.8)",
+                    fontWeight: "500"
+                  }}>
+                    <span style={{ fontSize: "8px", fontWeight: "800", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.3)", borderRadius: "3px", padding: "1px 3px", background: "rgba(139,92,246,0.08)" }}>
+                      {att.name.split('.').pop().toUpperCase()}
+                    </span>
+                    <span style={{ maxWidth: "100px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {att.name}
+                    </span>
+                    <span style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.3)" }}>
+                      ({(att.size / 1024).toFixed(1)} KB)
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Web Search Sources and References */}

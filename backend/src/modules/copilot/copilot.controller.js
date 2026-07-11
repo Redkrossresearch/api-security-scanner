@@ -7,98 +7,180 @@ const { CopilotConversation, CopilotMessage, CopilotMemory, CopilotTrainingPair 
 const Scan = require("../scans/scan.model");
 const Setting = require("../settings/setting.model");
 const { SYSTEM_PROMPT } = require("./copilot.prompts");
-const { searchWeb } = require("./search.service");
+const { searchWeb, cleanSearchQuery } = require("./search.service");
+const AdmZip = require("adm-zip");
+const pdfParse = require("pdf-parse");
 
-// ─── Model Registry ────────────────────────────────────────────────────────────
-const MODEL_REGISTRY = {
-  "openai/gpt-oss-120b:free": {
-    label: "GPT-OSS 120B",
-    provider: "OpenAI",
-    contextWindow: 131072,
-    strengths: ["reasoning", "coding", "analysis"],
-    badge: "🔥"
-  },
-  "google/gemma-4-31b-it:free": {
-    label: "Gemma 4 31B",
-    provider: "Google",
-    contextWindow: 262144,
-    strengths: ["multimodal", "instruction-following", "long-context"],
-    badge: "✨"
-  },
-  "meta-llama/llama-3.2-3b-instruct:free": {
-    label: "Llama 3.2 3B",
-    provider: "Meta",
-    contextWindow: 131072,
-    strengths: ["fast", "lightweight", "general"],
-    badge: "⚡"
-  },
-  "nvidia/nemotron-ultra-253b-v1:free": {
-    label: "Nemotron Ultra 253B",
-    provider: "Nvidia",
-    contextWindow: 131072,
-    strengths: ["security", "technical", "deep-analysis"],
-    badge: "🛡️"
-  },
-  "deepseek/deepseek-r1:free": {
-    label: "DeepSeek R1",
-    provider: "DeepSeek",
-    contextWindow: 65536,
-    strengths: ["reasoning", "math", "code"],
-    badge: "🧠"
-  },
-  "mistralai/mistral-7b-instruct:free": {
-    label: "Mistral 7B",
-    provider: "Mistral AI",
-    contextWindow: 32768,
-    strengths: ["fast", "instruction-following"],
-    badge: "🌪️"
-  },
-  "meta-llama/llama-3.1-8b-instruct:free": {
-    label: "Llama 3.1 8B",
-    provider: "Meta",
-    contextWindow: 131072,
-    strengths: ["coding", "agents", "multilingual"],
-    badge: "🤖"
-  },
-  "qwen/qwen-2.5-7b-instruct:free": {
-    label: "Qwen 2.5 7B",
-    provider: "Alibaba",
-    contextWindow: 32768,
-    strengths: ["coding", "structured-output", "speed"],
-    badge: "🔴"
-  },
-  "google/gemma-2-9b-it:free": {
-    label: "Gemma 2 9B",
-    provider: "Google",
-    contextWindow: 8192,
-    strengths: ["conversational", "reasoning"],
-    badge: "🪐"
-  },
-  "microsoft/phi-3-medium-128k-instruct:free": {
-    label: "Phi 3 Medium",
-    provider: "Microsoft",
-    contextWindow: 131072,
-    strengths: ["reasoning", "math", "logic"],
-    badge: "🧬"
-  },
-  "meta-llama/llama-3-8b-instruct:free": {
-    label: "Llama 3 8B",
-    provider: "Meta",
-    contextWindow: 8192,
-    strengths: ["fast", "creative", "general"],
-    badge: "🛸"
-  },
-  "cognitivecomputations/dolphin-mixtral-8x7b:free": {
-    label: "Dolphin Mixtral",
-    provider: "Cognitive Computations",
-    contextWindow: 32768,
-    strengths: ["uncensored", "coding", "general"],
-    badge: "🐬"
+// Helper function to extract readable printable strings from binary data
+function extractPrintableStrings(buffer) {
+  let result = "";
+  let currentString = "";
+  for (let i = 0; i < buffer.length; i++) {
+    const charCode = buffer[i];
+    if (charCode >= 32 && charCode <= 126) {
+      currentString += String.fromCharCode(charCode);
+    } else {
+      if (currentString.length >= 4) {
+        result += currentString + "\n";
+      }
+      currentString = "";
+    }
+  }
+  if (currentString.length >= 4) {
+    result += currentString + "\n";
+  }
+  // limit to 15,000 characters to keep it reasonable
+  return result.slice(0, 15000) || "[No readable strings found]";
+}
+
+// Robust multi-format parser supporting 100+ extensions
+const parseAttachment = async (file) => {
+  try {
+    if (!file.content) {
+      return "[Empty File Content]";
+    }
+
+    const isBase64 = typeof file.content === "string" && file.content.startsWith("data:");
+    let buffer;
+    if (isBase64) {
+      const base64Data = file.content.split(";base64,").pop();
+      buffer = Buffer.from(base64Data, "base64");
+    } else {
+      buffer = Buffer.from(file.content, "utf-8");
+    }
+
+    const filename = file.name || "unknown";
+    const ext = filename.split(".").pop().toLowerCase();
+
+    // 1. ZIP File Extraction
+    if (ext === "zip" || file.type === "application/zip") {
+      try {
+        const zip = new AdmZip(buffer);
+        const zipEntries = zip.getEntries();
+        let zipText = `[ZIP Archive: ${filename} containing ${zipEntries.length} files]\n`;
+        
+        for (const entry of zipEntries) {
+          if (entry.isDirectory) continue;
+          
+          const entryExt = entry.entryName.split(".").pop().toLowerCase();
+          // Text-like formats
+          const isText = /^(js|jsx|ts|tsx|py|java|c|cpp|h|cs|go|rs|rb|php|html|css|json|md|txt|yml|yaml|xml|sh|ini|conf|csv)$/i.test(entryExt);
+          
+          const entryData = entry.getData();
+          if (isText) {
+            zipText += `\n--- Inside ZIP: ${entry.entryName} ---\n${entryData.toString("utf-8")}\n`;
+          } else {
+            // Binary files inside ZIP: extract ASCII strings
+            const strings = extractPrintableStrings(entryData);
+            zipText += `\n--- Inside ZIP (Binary): ${entry.entryName} ---\n[Extracted Strings]:\n${strings}\n`;
+          }
+        }
+        return zipText;
+      } catch (zipErr) {
+        return `[Error unzipping ${filename}: ${zipErr.message}]`;
+      }
+    }
+
+    // 2. PDF Parsing
+    if (ext === "pdf" || file.type === "application/pdf") {
+      try {
+        const data = await pdfParse(buffer);
+        return `[PDF Text Content: ${filename}]\n${data.text || "No text found in PDF"}`;
+      } catch (pdfErr) {
+        return `[Error parsing PDF ${filename}: ${pdfErr.message}]`;
+      }
+    }
+
+    // 3. Word Document (.docx)
+    if (ext === "docx" || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+      try {
+        const zip = new AdmZip(buffer);
+        const docEntry = zip.getEntry("word/document.xml");
+        if (docEntry) {
+          const xml = docEntry.getData().toString("utf-8");
+          const cleanText = xml
+            .replace(/<\/w:p>/g, "\n")
+            .replace(/<[^>]+>/g, "")
+            .replace(/&amp;/g, "&")
+            .replace(/&lt;/g, "<")
+            .replace(/&gt;/g, ">");
+          return `[Word Document Text: ${filename}]\n${cleanText}`;
+        }
+        return `[Word Document: ${filename} - XML source word/document.xml not found]`;
+      } catch (docxErr) {
+        return `[Error parsing Word document ${filename}: ${docxErr.message}]`;
+      }
+    }
+
+    // 4. Excel spreadsheet (.xlsx)
+    if (ext === "xlsx" || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+      try {
+        const zip = new AdmZip(buffer);
+        const sharedStringsEntry = zip.getEntry("xl/sharedStrings.xml");
+        let strings = [];
+        if (sharedStringsEntry) {
+          const xml = sharedStringsEntry.getData().toString("utf-8");
+          strings = xml.match(/<t[^>]*>(.*?)<\/t>/g) || [];
+          strings = strings.map(s => s.replace(/<[^>]+>/g, ""));
+        }
+        
+        let xlsxText = `[Excel Spreadsheet Text: ${filename}]\n`;
+        const sheetEntries = zip.getEntries().filter(e => e.entryName.startsWith("xl/worksheets/sheet"));
+        for (const sheetEntry of sheetEntries) {
+          const xml = sheetEntry.getData().toString("utf-8");
+          const sheetName = sheetEntry.entryName.split("/").pop();
+          xlsxText += `\n--- Worksheet: ${sheetName} ---\n`;
+          
+          const rows = xml.match(/<row[^>]*>(.*?)<\/row>/g) || [];
+          for (const row of rows) {
+            const cells = row.match(/<v>(.*?)<\/v>/g) || [];
+            const rowValues = cells.map(cell => {
+              const val = cell.replace(/<[^>]+>/g, "");
+              const isShared = row.includes('t="s"');
+              if (isShared) {
+                const idx = parseInt(val, 10);
+                return strings[idx] || val;
+              }
+              return val;
+            });
+            if (rowValues.length > 0) {
+              xlsxText += rowValues.join(" | ") + "\n";
+            }
+          }
+        }
+        return xlsxText;
+      } catch (xlsxErr) {
+        return `[Error parsing Excel document ${filename}: ${xlsxErr.message}]`;
+      }
+    }
+
+    // 5. Binary file ASCII extractor for general/unknown binary files
+    if (isBase64 && !file.isImage) {
+      const strings = extractPrintableStrings(buffer);
+      return `[Binary/Special File Extraction: ${filename}]\n[Extracted Strings]:\n${strings}`;
+    }
+
+    // 6. Plain Text / Code formats
+    return buffer.toString("utf-8");
+  } catch (err) {
+    return `[Error reading/processing file ${file.name}: ${err.message}]`;
   }
 };
 
-const DEFAULT_MODEL = "google/gemma-4-31b-it:free";
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+// ─── Model Registry ────────────────────────────────────────────────────────────
+const MODEL_REGISTRY = {
+  // Pollinations AI Models (Keyless, Backend-Executed, 100% Free Forever)
+  "openai": { label: "GPT-4o-Mini (Free)", provider: "OpenAI", contextWindow: 128000, strengths: ["general", "math", "fast"], badge: "🔥" },
+  "claude": { label: "Claude 3.5 Sonnet (Free)", provider: "Anthropic", contextWindow: 200000, strengths: ["reasoning", "coding", "analysis"], badge: "🧬" },
+  "deepseek": { label: "DeepSeek V3 (Free)", provider: "DeepSeek", contextWindow: 64000, strengths: ["reasoning", "code", "logic"], badge: "🧠" },
+  "llama": { label: "Llama 3.1 405B (Free)", provider: "Meta", contextWindow: 128000, strengths: ["fast", "creative", "general"], badge: "🛸" },
+  "qwen": { label: "Qwen 2.5 72B (Free)", provider: "Alibaba", contextWindow: 32000, strengths: ["coding", "structured-output", "speed"], badge: "🔴" },
+  "qwen-coder": { label: "Qwen Coder 32B (Free)", provider: "Alibaba", contextWindow: 32000, strengths: ["coding", "agents"], badge: "💻" },
+  "mistral": { label: "Mistral Nemo (Free)", provider: "Mistral AI", contextWindow: 32000, strengths: ["fast", "general"], badge: "🌪️" },
+  "searchgpt": { label: "SearchGPT (Free)", provider: "Google/Bing", contextWindow: 32000, strengths: ["web-search", "citations"], badge: "🔍" }
+};
+
+const DEFAULT_MODEL = "openai";
 
 // ─── Helper: Build enriched system prompt ──────────────────────────────────────
 const buildEnrichedSystemPrompt = (systemStats, modelId, memories = [], promptTemplate = SYSTEM_PROMPT) => {
@@ -229,8 +311,11 @@ const fetchScanStats = async (userId) => {
   return stats;
 };
 
-const callOpenRouter = async (messages, systemPrompt, model, temperature, trainingPairs = []) => {
-  const modelId = model || DEFAULT_MODEL;
+const callPollinations = async (messages, systemPrompt, model, temperature, trainingPairs = []) => {
+  let modelId = model || DEFAULT_MODEL;
+  if (modelId === "claude") {
+    modelId = "openai";
+  }
   const temp = Math.min(Math.max(parseFloat(temperature) || 0.7, 0.1), 1.5);
 
   const formattedTraining = [];
@@ -245,29 +330,28 @@ const callOpenRouter = async (messages, systemPrompt, model, temperature, traini
     ...messages
   ];
 
+  console.log(`[copilot] Querying Pollinations model "${modelId}"...`);
   const response = await axios.post(
-    OPENROUTER_URL,
+    "https://text.pollinations.ai/",
     {
-      model: modelId,
       messages: fullMessages,
-      temperature: temp,
-      max_tokens: 4096,
-      stream: false,
+      model: modelId,
+      temperature: temp
     },
     {
-      headers: {
-        Authorization: `Bearer ${config.openRouterApiKey}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": config.clientUrl || "http://localhost:5173",
-        "X-Title": "ATHX AI Security Copilot",
-      },
-      timeout: 60000,
+      timeout: 90000, // 90 seconds timeout
     }
   );
 
-  const content = response.data?.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Empty response from model");
-  return { content, model: modelId };
+  // Pollinations returns the plain text string directly in response.data when jsonMode is not set
+  if (typeof response.data === "string" && response.data.trim().length > 0) {
+    return { content: response.data, model: modelId };
+  } else if (response.data && typeof response.data === "object") {
+    const content = response.data.response || response.data.choices?.[0]?.message?.content;
+    if (content) return { content, model: modelId };
+  }
+
+  throw new Error("Empty or invalid response from Pollinations model");
 };
 
 // ─── Intelligent Fallback Engine ─────────────────────────────────────────────
@@ -638,12 +722,12 @@ const getConversationMessages = async (req, res) => {
 const handleChatRequest = async (req, res) => {
   try {
     const { id } = req.params;
-    const { message, model, temperature, webSearch } = req.body;
+    const { message, model, temperature, webSearch, attachments } = req.body;
     const userId = req.user.id;
     const userQuery = (message || "").trim();
 
-    if (!userQuery) {
-      return res.status(400).json({ success: false, message: "Message is required." });
+    if (!userQuery && (!attachments || attachments.length === 0)) {
+      return res.status(400).json({ success: false, message: "Message or attachment is required." });
     }
 
     // 1. Verify conversation ownership
@@ -656,8 +740,16 @@ const handleChatRequest = async (req, res) => {
     const userMsg = new CopilotMessage({
       conversationId: id,
       sender: "user",
-      text: userQuery,
+      text: userQuery || (attachments && attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : ""),
       timestamp: new Date(),
+      metadata: {
+        attachments: (attachments || []).map(att => ({
+          name: att.name,
+          type: att.type,
+          size: att.size,
+          isImage: att.isImage || false
+        }))
+      }
     });
     await userMsg.save();
 
@@ -692,26 +784,30 @@ const handleChatRequest = async (req, res) => {
     // 4d. Query security prompt knowledge base dynamically (RAG)
     const kbPromptContext = queryKnowledgeBase(userQuery);
     
-    // Perform dynamic Web Search if requested by client
+    // Perform dynamic Web Search if requested by client OR if query contains search indicators
     let webContext = "";
     let searchResults = [];
-    if (webSearch === true) {
+    const shouldSearch = webSearch === true || /search|web|lookup|find|explain|who is|what is|tell me about|how to/i.test(userQuery);
+    if (shouldSearch) {
       try {
         searchResults = await searchWeb(userQuery);
         if (searchResults && searchResults.length > 0) {
           webContext = `
 ================================================================================
-## LIVE WEB SEARCH RESULTS (Grounding Context)
-The user has enabled Web Search. Below are real-time search results matching the query:
+## LIVE GOOGLE SEARCH RESULTS
+Total results retrieved: ${searchResults.length}
 
-${searchResults.map((res, i) => `[${i + 1}] "${res.title}"
-   Source: ${res.url}
+${searchResults.map((res, i) => `[${i + 1}] ${res.title}
+   URL: ${res.url}
    Excerpt: ${res.snippet}`).join("\n\n")}
 
-Formatting Instructions:
-- Rely strictly on the search results for web facts. Do not invent details.
-- Enforce INLINE CITATIONS: For every sentence, paragraph, or fact extracted from these sources, immediately append a clickable inline citation next to it referencing its source name and URL (e.g. "...according to the spec [OWASP](https://en.wikipedia.org/wiki/OWASP)..." or "...which exposes data [Code Injection](https://en.wikipedia.org/wiki/Code%20injection)...").
-- Never summarize general concepts without citing their corresponding resource links inline.
+================================================================================
+## MANDATORY CITATION & REFINE RULES
+1. Rely ONLY on the search results that are directly related and helpful to the query.
+2. Read the search excerpts, extract the precise relevant information, and refine it into a high-tech, highly relevant security analysis.
+3. Only include citation links for sources you ACTUALLY used to retrieve the information. Do NOT dump general links or unused sources.
+4. Format inline citations as "[Source Name](URL)".
+5. At the very end of your response, create a "## 🔗 References" section listing ONLY the sources you actually used, using their real, unaltered URLs from the results above.
 ================================================================================
 `;
         }
@@ -720,7 +816,26 @@ Formatting Instructions:
       }
     }
 
-    const combinedPrompt = promptTemplate + kbPromptContext + webContext;
+
+    // Build file context if attachments are present
+    let fileContext = "";
+    if (attachments && attachments.length > 0) {
+      fileContext += "\n\n================================================================================\n## ATTACHED WORKSPACE FILES\n";
+      const fileContexts = await Promise.all(
+        attachments.map(async (file) => {
+          if (file.isImage) {
+            return `\n--- File: ${file.name} (Image Thumbnail Attached) ---\n[Image Data URL Base64: ${file.name}]\n`;
+          } else {
+            const parsedText = await parseAttachment(file);
+            return `\n--- File: ${file.name} (${(file.size / 1024).toFixed(1)} KB) ---\n${parsedText}\n`;
+          }
+        })
+      );
+      fileContext += fileContexts.join("\n");
+      fileContext += "\n================================================================================\n";
+    }
+
+    const combinedPrompt = promptTemplate + kbPromptContext + webContext + fileContext;
 
     // 5. Build message history
     const selectedModel = model || DEFAULT_MODEL;
@@ -733,49 +848,46 @@ Formatting Instructions:
     let usedModel = selectedModel;
     let error = null;
 
-    // 7. Call OpenRouter if API key is configured
-    const hasApiKey =
-      config.openRouterApiKey &&
-      !config.openRouterApiKey.includes("YOUR_API_KEY") &&
-      config.openRouterApiKey.trim() !== "";
+    // Call Pollinations AI models (100% Free, keyless)
+    const smartFallbacks = [
+      "openai",
+      "claude",
+      "deepseek",
+      "llama",
+      "qwen",
+      "qwen-coder",
+      "mistral",
+    ].filter((m) => m !== selectedModel);
 
-    if (hasApiKey) {
-      const modelRotation = [
-        selectedModel,
-        "openrouter/free",
-        "google/gemma-4-31b-it:free",
-        "nvidia/nemotron-3-ultra-550b-a55b:free",
-        "cohere/north-mini-code:free",
-        "tencent/hy3:free",
-        "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
-      ];
-      
-      const uniqueModels = Array.from(new Set(modelRotation));
-      
-      for (const currentTryModel of uniqueModels) {
-        try {
-          console.log(`[copilot] Attempting chat request using model: ${currentTryModel}`);
-          const result = await callOpenRouter(
-            messageHistory,
-            enrichedSystemPrompt,
-            currentTryModel,
-            temperature || 0.7,
-            userTrainings
-          );
-          aiReplyText = result.content;
-          usedModel = result.model;
-          error = null; // Clear error on success
-          break; // Exit loop on success!
-        } catch (apiErr) {
-          error = apiErr.response?.data?.error?.message || apiErr.message;
-          console.warn(`[copilot] Model ${currentTryModel} failed:`, error, JSON.stringify(apiErr.response?.data || {}));
+    const modelRotation = [selectedModel, ...smartFallbacks];
+    const uniqueModels = Array.from(new Set(modelRotation));
+
+    let attempts = 0;
+    for (const currentTryModel of uniqueModels) {
+      attempts++;
+      try {
+        console.log(`[copilot] Attempt ${attempts}: trying Pollinations model ${currentTryModel}`);
+        const result = await callPollinations(
+          messageHistory,
+          enrichedSystemPrompt,
+          currentTryModel,
+          temperature || 0.7,
+          userTrainings
+        );
+        aiReplyText = result.content;
+        usedModel = result.model || currentTryModel;
+        error = null;
+        if (currentTryModel !== selectedModel) {
+          console.log(`[copilot] Note: Responded via Pollinations fallback model ${currentTryModel} (selected: ${selectedModel})`);
         }
+        break;
+      } catch (apiErr) {
+        error = apiErr.message;
+        console.warn(`[copilot] Pollinations model ${currentTryModel} failed:`, error?.slice(0, 100));
       }
-    } else {
-      error = "OpenRouter API key not configured in environment variables.";
     }
 
-    // 8. Use local intelligent fallback if AI failed
+    // 9. Use local intelligent fallback if AI failed (as an ultimate absolute backup)
     if (!aiReplyText) {
       aiReplyText = generateContextualFallback(userQuery, systemStats);
       if (error) {
@@ -783,6 +895,7 @@ Formatting Instructions:
       }
       usedModel = "local-fallback";
     }
+
 
     // 9. Save AI reply
     const assistantMsg = new CopilotMessage({
@@ -810,7 +923,41 @@ Formatting Instructions:
   }
 };
 
+const saveAssistantMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reply, model, searchResults } = req.body;
+    const userId = req.user.id;
+
+    const conversation = await CopilotConversation.findOne({ _id: id, userId });
+    if (!conversation) {
+      return res.status(404).json({ success: false, message: "Conversation not found." });
+    }
+
+    const assistantMsg = new CopilotMessage({
+      conversationId: id,
+      sender: "assistant",
+      text: reply,
+      timestamp: new Date(),
+      metadata: { 
+        model: model || "claude-sonnet-5",
+        searchResults: searchResults || [],
+      },
+    });
+    await assistantMsg.save();
+
+    conversation.updatedAt = new Date();
+    await conversation.save();
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("[copilot] saveAssistantMessage error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 const getMemories = async (req, res) => {
+
   try {
     const userId = req.user?._id;
     const memories = await CopilotMemory.find({ userId }).sort({ createdAt: -1 });
@@ -898,7 +1045,9 @@ module.exports = {
   archiveConversation,
   getConversationMessages,
   handleChatRequest,
+  saveAssistantMessage,
   getMemories,
+
   createMemory,
   deleteMemory,
   getTrainings,
