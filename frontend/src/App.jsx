@@ -12,6 +12,7 @@ import ScanHistoryPage from "./pages/ScanHistoryPage";
 import VulnerabilitiesPage from "./pages/VulnerabilitiesPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
+import CopilotPage from "./pages/CopilotPage";
 
 function App() {
   return (
@@ -57,6 +58,7 @@ function App() {
           <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/copilot" element={<CopilotPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

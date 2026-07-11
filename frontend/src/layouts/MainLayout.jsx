@@ -1,11 +1,48 @@
+import { useEffect, useRef } from "react";
 import Sidebar from "../components/layouts/Sidebar";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 
 export default function MainLayout() {
+  const location = useLocation();
+  const mainRef = useRef(null);
+  const layoutRef = useRef(null);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const root = document.getElementById("root");
+    if (root) root.scrollTop = 0;
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+    if (layoutRef.current) layoutRef.current.scrollTop = 0;
+  }, [location.pathname]);
+
+  const getPageTitle = (path) => {
+    switch (path) {
+      case "/":
+        return "Dashboard Console";
+      case "/scans":
+        return "Vulnerability Scanner";
+      case "/history":
+        return "Scan History Ledger";
+      case "/vulnerabilities":
+        return "Threat Intelligence Center";
+      case "/reports":
+        return "Compliance & Audit Reports";
+      case "/settings":
+        return "System Settings";
+      case "/copilot":
+        return "AI Security Copilot";
+      default:
+        return "API Security Console";
+    }
+  };
+
   return (
     <div
+      ref={layoutRef}
       style={{
-        height: "100vh",
+        height: "100%",
         display: "flex",
         background: "#030712",
         overflow: "hidden",
@@ -15,7 +52,7 @@ export default function MainLayout() {
       {/* Premium glowing background mesh spots */}
       <div
         style={{
-          position: "absolute",
+          position: "fixed",
           top: "-15%",
           left: "15%",
           width: "45vw",
@@ -29,7 +66,7 @@ export default function MainLayout() {
       />
       <div
         style={{
-          position: "absolute",
+          position: "fixed",
           bottom: "-10%",
           right: "5%",
           width: "40vw",
@@ -44,20 +81,122 @@ export default function MainLayout() {
 
       <Sidebar />
 
-      <main
+      {/* Right Column Container */}
+      <div
         style={{
           flex: 1,
-          overflowY: "auto",
-          overflowX: "hidden",
-          padding: "16px 20px",
-          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+          overflow: "hidden",
           position: "relative",
           zIndex: 1,
-          background: "transparent",
         }}
       >
-        <Outlet />
-      </main>
+        {/* Top Navigation Bar Header */}
+        <header
+          style={{
+            height: "70px",
+            minHeight: "70px",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+            background: "linear-gradient(90deg, #070d19 0%, #030710 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "0 24px",
+            boxSizing: "border-box",
+            position: "relative",
+            zIndex: 10,
+          }}
+        >
+          {/* Left: Dynamic Title */}
+          <div>
+            <h2
+              style={{
+                fontSize: "18px",
+                fontWeight: "900",
+                margin: 0,
+                color: "#FFF",
+                letterSpacing: "0.5px",
+                textTransform: "uppercase",
+              }}
+            >
+              {getPageTitle(location.pathname)}
+            </h2>
+          </div>
+
+          {/* Right: Security Status Info */}
+          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            {/* Status Indicator */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "rgba(16, 185, 129, 0.05)",
+                border: "1px solid rgba(16, 185, 129, 0.15)",
+                padding: "6px 12px",
+                borderRadius: "8px",
+              }}
+            >
+              <span
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: "#10B981",
+                  boxShadow: "0 0 8px #10B981",
+                  display: "inline-block",
+                  animation: "pulse 2s infinite",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: "800",
+                  color: "#10B981",
+                  fontFamily: "monospace",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                SHIELD://SECURE_MODE
+              </span>
+            </div>
+
+            {/* Engine version */}
+            <div
+              style={{
+                fontSize: "11px",
+                color: "#64748B",
+                fontFamily: "monospace",
+                fontWeight: "700",
+              }}
+            >
+              ENGINE: v2.4.8_ACTIVE
+            </div>
+          </div>
+        </header>
+
+        {/* Scrollable Main Content Container */}
+        <main
+          ref={mainRef}
+          style={{
+            flex: 1,
+            boxSizing: "border-box",
+            overflowY: location.pathname === "/copilot" ? "hidden" : "auto",
+            overflowX: "hidden",
+            padding: location.pathname === "/copilot" ? "0" : "16px 20px",
+            minWidth: 0,
+            position: "relative",
+            background: "transparent",
+            height: location.pathname === "/copilot" ? "calc(100vh - 70px)" : "auto",
+            display: location.pathname === "/copilot" ? "flex" : "block",
+            flexDirection: "column",
+          }}
+        >
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

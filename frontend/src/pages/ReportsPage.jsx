@@ -35,7 +35,7 @@ const styles = {
   container: {
     padding: "24px",
     background: COLORS.background,
-    minHeight: "100vh",
+    minHeight: "100%",
     color: COLORS.white,
     fontFamily: "Inter, sans-serif",
   },
@@ -275,7 +275,7 @@ export default function ReportsPage() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", itemsCenter: "center", justifyContent: "center", minHeight: "100vh", background: COLORS.background, color: COLORS.white }}>
+      <div style={{ display: "flex", flexDirection: "column", itemsCenter: "center", justifyContent: "center", minHeight: "100%", background: COLORS.background, color: COLORS.white }}>
         <RefreshCw style={{ width: "48px", height: "48px", color: COLORS.purple, margin: "0 auto 16px auto", animation: "spin 1s linear infinite" }} />
         <p style={{ textAlign: "center", color: COLORS.muted, fontWeight: "500" }}>Loading compliance reports library...</p>
       </div>

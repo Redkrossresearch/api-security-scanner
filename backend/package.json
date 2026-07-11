@@ -16,6 +16,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "adm-zip": "^0.6.0",
     "axios": "^1.17.0",
     "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
@@ -30,6 +31,7 @@
     "marked": "^18.0.5",
     "mongoose": "^9.6.3",
     "morgan": "^1.11.0",
+    "pdf-parse": "^2.4.5",
     "pdfkit": "^0.19.1",
     "puppeteer": "^25.3.0"
   },
