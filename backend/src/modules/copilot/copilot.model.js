@@ -117,6 +117,21 @@ const copilotTrainingSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true
+    },
+    category: {
+      type: String,
+      default: "General",
+      trim: true
+    },
+    source: {
+      type: String,
+      default: "manual",  // "manual" | "conversation" (auto-learned)
+      trim: true
+    },
+    model: {
+      type: String,
+      default: "openai",
+      trim: true
     }
   },
   {
