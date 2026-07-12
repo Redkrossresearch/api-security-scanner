@@ -8,8 +8,9 @@ const getDashboardStats = async (req, res) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 5;
     const range = req.query.range || "7D";
+    const userId = req.user._id;
 
-    const stats = await dashboardService.getDashboardStats(page, limit, range);
+    const stats = await dashboardService.getDashboardStats(userId, page, limit, range);
 
     const duration = Date.now() - start;
 
@@ -34,8 +35,9 @@ const getDashboardStats = async (req, res) => {
 const getScanDetails = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user._id;
 
-    const scan = await dashboardService.getScanDetails(id);
+    const scan = await dashboardService.getScanDetails(userId, id);
 
     res.json({
       success: true,
@@ -51,7 +53,8 @@ const getScanDetails = async (req, res) => {
 
 const getDashboardActivityLogs = async (req, res) => {
   try {
-    const logs = await dashboardService.getDashboardActivityLogs();
+    const userId = req.user._id;
+    const logs = await dashboardService.getDashboardActivityLogs(userId);
     res.json({
       success: true,
       logs,

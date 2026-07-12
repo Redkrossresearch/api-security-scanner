@@ -14,8 +14,12 @@ const aiRoutes = require("./modules/ai/ai.routes");
 const reportRoutes = require("./modules/reports/report.routes"); // ✅ Moved to top
 const settingRoutes = require("./modules/settings/setting.routes");
 const copilotRoutes = require("./modules/copilot/copilot.routes");
+const historyRoutes = require("./modules/history/history.routes");
 
 const app = express();
+
+// Disable ETag to prevent HTTP 304 Not Modified responses and force HTTP 200 OK
+app.disable("etag");
 
 // 🔴 Critical 1 — Trust Proxy (Required for Render/reverse proxy)
 app.set("trust proxy", 1);
@@ -92,6 +96,8 @@ app.use("/api/ai", aiRoutes);
 
 app.use("/api/settings", settingRoutes);
 app.use("/api/copilot", copilotRoutes);
+app.use("/api/history", historyRoutes);
+app.use("/api/history", historyRoutes);
 
 // 🟡 Recommended 2 — 404 Handler (Express 5 compatible - no "*" wildcard)
 app.use((req, res) => {

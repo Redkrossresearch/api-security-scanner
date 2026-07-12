@@ -10,45 +10,55 @@ An elite, enterprise-style API security assessment platform. Users submit a targ
 
 ---
 
-## ⚡ Current Real Working Features
+## ⚡ Real Working vs. Simulated Features
 
-### 📡 1. Real-Time Scanners & Web Crawler
-* **Axios HTML Web Crawler:** Dynamically scrapes HTML anchors, form elements, and parameters from any input target URL to auto-discover active paths.
-* **Active Scanning Suite (23 Parallel Modules):**
-  * **Passive Config Probes:** Security headers, SSL/TLS validation, CORS policies, cookies flags, server information disclosure, and technology fingerprinting.
-  * **API & Attack Surface:** OpenAPI specification discovery, custom dynamic API inventory, and endpoint risk assessment.
-  * **Active Attack Probes:** Dynamic payloads checking for SQLi, XSS, Path Traversal, OS Command Injection, SSTI, basic/OAuth auth vulnerabilities, and exposed configuration files.
-* **Vulnerability Intelligence Factory:** Maps discoveries against a **369-entry vulnerability catalog** (CWE/OWASP/CVSS-mapped), auto-generates severities, cvss scores, and remediation guides.
+To facilitate zero-configuration local runs and investor pitches, ATHX incorporates smart dual-modes: **Production (Live)** and **Demo (Simulated)**. Below is a detailed breakdown of codebase states:
 
-### 📊 2. High-Tech Cybersecurity Dashboard
-* **Dynamic Attack Surface Map:** Dynamically parses crawled target routes, groups them on-the-fly into microservices (e.g., `watch`, `search`, `login` based on target site), maps connectors, and color-codes nodes based on live scanner risk outputs (Red = Vulnerable, Orange = Warning, Green = Protected).
-* **Retro CRT Terminal Scanner Logs:** Displays real-time scan event logs inside an animated hacker-terminal screen with scanlines and a blinking green terminal cursor.
-* **Scan Status Tracker:** Visualizes live scan pipelines (Recon → Discovery → Authentication → Testing → Reporting) with glowing rings, progress percentages, and status alerts.
-* **Unified Metrics KPI widgets:** Displays total findings, critical threat levels, vulnerability trends, heatmaps, and security grades (A+ to F).
-
-### 🤖 3. AI Security Copilot (Vulnerability Analyst)
-* **LLM Vulnerability Analysis:** Sends any discovered threat to OpenRouter models to produce structured executive summaries, technical impact lists, realistic attack scenarios, and remediation blueprints.
-* **PDF Report Compilation:** Puppeteer-rendered PDF narrative compiler for instant vulnerability report downloads.
+| Feature Area | Actual Working Status | Simulated / Fallback State | Production Ready? |
+| :--- | :--- | :--- | :--- |
+| **🤖 AI Code Patches** | Generates dynamic code fixes in `diff` blocks via OpenRouter LLMs. | None (All AI output is live via LLM). | **Yes** ✅ |
+| **🗂️ OpenAPI Spec Exporter** | Maps crawled routes and endpoints to standard OpenAPI v3.0 specs. | None (Generates live from inventory schema). | **Yes** ✅ |
+| **🔒 PDF Audit Report** | Compiles full scan summaries and compliance charts into a PDF. | None (Consolidated Puppeteer PDF writes live). | **Yes** ✅ |
+| **📦 WAF Patching** | Dynamic rule generation matching vulnerability categories. | None (Generates ModSec, AWS, CF rules dynamically). | **Yes** ✅ |
+| **⚡ GitHub Sync (Live)** | Centered Popup OAuth flow, lists repositories/branches, pushes workflows. | Falls back to Local Mock Auth server if keys are missing in `.env`. | **Yes** ✅ (With real keys) |
+| **✨ GitHub Sync (Demo)** | Mock Auth Modal, pre-populated repositories, branch options, mock commits. | Mocks external API calls to show direct UI/UX flow. | **For Demos** 🎨 |
+| **📡 Crawler Scanner** | Axios crawler scraping HTML anchors, forms, parameters. | Runs 23 active scanner checks. | **Yes** ✅ |
 
 ---
 
-## 🚧 Ongoing Work (In Progress)
-* **Scheduled Background Scanning:** Implementing recurring cron schedules (daily, weekly, monthly) for automated passive assessments.
-* **CSV Export:** Mapping CSV parser stubs in the reports controller to allow raw spreadsheet exports.
-* **Full-Scan PDF Report:** Consolidating all scan vulnerabilities into a unified PDF report template.
+## 🚀 Current Working Features (Detail)
+
+### 🤖 1. Stack-Specific AI Code Patches (Interactive Diffs)
+* **LLM Prompts:** Instructs OpenRouter AI agents to deliver code-level remediations wrapped in raw `diff` code blocks.
+* **Diff Renderer:** Frontend splits the diff files and styles line additions (green backdrop) and line removals (red backdrop) with clear borders for high-readability code fixes.
+
+### 🏗️ 2. CI/CD Security Gate Wizard & GitHub OAuth Integration
+* **Centered Popup Login:** Clicking connect opens a centered popup window. Once authorized on GitHub, the popup uses same-origin message protocol to pass credentials to the parent window and close itself.
+* **Zero-Config Mock Bypass:** If `GITHUB_CLIENT_ID` is missing in the `.env`, the server loads a gorgeous local mock authorization page in the popup, enabling a working OAuth flow mockup.
+* **Dropdown Sync:** Automatically pulls the user's active repositories list from GitHub and populates a dropdown.
+* **Dynamic Branch Selection:** Automatically retrieves the list of branches (e.g., `main`, `dev`, `master`) for the selected repository and renders them in a dropdown menu.
+* **1-Click Workflow Sync:** Instantly commits the custom gate workflow file `.github/workflows/athx-security-scan.yml` to the target branch.
+* **PAT Manual Fallback:** Always allows users to connect manually using their own Personal Access Token (PAT).
+
+### 🗂️ 3. Reverse-Engineered OpenAPI Spec Exporter
+* **Spec Generation:** Maps crawled target URLs and active endpoint parameters into standard OpenAPI v3.0 specs.
+* **Export Center:** Exposes a download button in the dashboard to download the generated spec as a JSON file.
+
+### 📊 4. Consolidated PDF Audit Reports
+* **Pipeline Safety:** Handled Puppeteer PDF write stream synchronization in backend routes to ensure server stability.
+* **PDF Exporter:** Compiles executive summaries, scanner metrics, WAF patch configurations, and security grades into a PDF.
 
 ---
 
-## 🔭 Future Work & Roadmap
-* **Multi-Tenant Teams:** Shared workspaces, role-based resource scopes, and audit logging for organizations.
-* **Alert Integrations:** Direct vulnerability webhook reporting to Slack, Discord, and Jira.
-* **Stripe Billing:** Subscription tiers, metered usage plans, and trial bounds.
-* **Job Queues:** Offloading scanning workloads to BullMQ/Redis background processes.
+## 🔭 Future Development Roadmap
+* **👥 Multi-Tenant Teams:** Shared team workspaces, role-based access control, and user audit logging.
+* **💳 Stripe Billing Integration:** Subscription plan tiers, usage meters, and checkout gateways.
+* **⏳ Redis/BullMQ Task Queues:** Moving scanning operations to background worker queues.
+* **🦊 GitLab CI Support:** Adding templates and auto-sync support for GitLab CI/CD files.
 
 ---
 
 ## 📐 Architecture Overview
-
 ```
 backend/
   src/
@@ -58,9 +68,10 @@ backend/
       scanner/        → Scanners implementations (headers, ssl, command, exposed files, web-crawler)
       engines/        → Security score calculation engine (CVSS, grading rules)
       vulnerabilities/  → 369-entry vulnerability catalog schema and normalizer
-      reports/        → PDF/JSON reporting utilities
+      reports/        → PDF/JSON reporting utilities & OpenAPI spec generator
       dashboard/      → Stats aggregation query handlers
       ai/             → AI narrative generator backed by OpenRouter LLMs
+      settings/       → Webhook configs, GitHub OAuth connection, mock auth servers
 
 frontend/
   src/
@@ -75,11 +86,6 @@ frontend/
 ---
 
 ## 🚀 Setup & Execution
-
-### Prerequisites
-* Node.js (v18+)
-* MongoDB (Local or Atlas URI)
-* OpenRouter API Key (For AI Copilot)
 
 ### Installation
 
@@ -99,6 +105,10 @@ frontend/
      JWT_REFRESH_SECRET=your_jwt_refresh_secret
      CLIENT_URL=http://localhost:5173
      OPENROUTER_API_KEY=your_openrouter_api_key
+     
+     # Optional: For Live GitHub OAuth connection
+     GITHUB_CLIENT_ID=your_github_client_id
+     GITHUB_CLIENT_SECRET=your_github_client_secret
      ```
 
 3. **Start the Backend Server:**
@@ -115,8 +125,3 @@ frontend/
    npm run dev
    ```
    Open [http://localhost:5173](http://localhost:5173) in your browser.
-
----
-
-## 🛡️ Git Hygiene Note
-All components have been verified locally. Run `npm run build` inside `frontend/` to build the production build. Make sure to commit the current work to your `dev` branch prior to deployment staging.

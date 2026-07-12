@@ -1,7 +1,6 @@
 const Scan = require("./scan.model");
 
 const Vulnerability = require("../vulnerabilities/vulnerability.model");
-const { getDynamicFindingsForTarget } = require("../vulnerabilities/vulnerability.factory");
 const { createReport } = require("../reports/report.service");
 const { scanSecurityHeaders } = require("../scanner/security-header.scanner");
 const { scanSSL } = require("../scanner/ssl.scanner");
@@ -159,8 +158,6 @@ const createScan = async (userId, targetUrl) => {
         runScanner("exposed-files", scanExposedFiles, targetUrl),
       ]);
 
-      const targetFindings = getDynamicFindingsForTarget(targetUrl);
-
       const allFindings = [
         ...headerFindings,
         ...sslFindings,
@@ -179,7 +176,6 @@ const createScan = async (userId, targetUrl) => {
         ...traversalFindings,
         ...commandFindings,
         ...exposedFileFindings,
-        ...targetFindings,
       ];
 
       // Deduplicate findings by Title (no repetition)

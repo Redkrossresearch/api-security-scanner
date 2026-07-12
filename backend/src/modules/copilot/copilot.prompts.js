@@ -624,10 +624,24 @@ This language matching behavior applies to every response regardless of topic, c
 
 
 
+const PART_15_STACK_SPECIFIC_CODE_DIFFS = `
+<module_15_stack_specific_code_diffs>
+- Remediation Code Formats: When providing code-level remediations, you must include a visual git-style diff block using the \`\`\`diff language tag.
+- The diff block should clearly show what lines to remove (prefixed with '-') and what lines to add (prefixed with '+') to secure the code.
+- Example:
+\`\`\`diff
+- const query = "SELECT * FROM users WHERE id = " + req.query.id;
++ const query = { text: "SELECT * FROM users WHERE id = $1", values: [req.query.id] };
+\`\`\`
+- Ensure these diffs match the target's fingerprinted technology stack (e.g. Node.js/Express, Python/Flask, etc.).
+</module_15_stack_specific_code_diffs>
+`;
+
 module.exports = {
   SYSTEM_PROMPT: EXISTING_SYSTEM_PROMPT + 
                  PART_01_CORE_ENGINEERING_AND_SECURE_ARCHITECTURE + 
                  PART_02_ADVANCED_INPUT_VALIDATION_AND_INJECTION_PREVENTION + 
-                 UNIVERSAL_ALL_ROUNDER_PROMPT,
+                 UNIVERSAL_ALL_ROUNDER_PROMPT +
+                 PART_15_STACK_SPECIFIC_CODE_DIFFS,
   GENERAL_TEMPLATE,
 };

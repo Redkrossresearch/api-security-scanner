@@ -228,10 +228,15 @@ const getDashboardSummary = async (req, res) => {
     ]);
     const criticalFindings = criticalResult[0]?.total || 0;
 
+    const userScanIds = await Scan.find({ userId }).distinct("_id");
     const totalVulns = await Vulnerability.countDocuments({
-      scanId: { $in: await Scan.find({ userId }).distinct("_id") },
+      scanId: { $in: userScanIds },
     });
-    const remediatedRate = 0; // Vulnerability model has no status field yet
+    const resolvedVulns = await Vulnerability.countDocuments({
+      scanId: { $in: userScanIds },
+      status: "resolved",
+    });
+    const remediatedRate = totalVulns > 0 ? Math.round((resolvedVulns / totalVulns) * 100) : 0;
 
     return res.json({
       success: true,
@@ -525,7 +530,34 @@ const getAIInsights = async (req, res) => {
   try {
     const userId = req.user?._id; // 🔧 FIX 7
 
-    const mttr = "N/A"; // Vulnerability model has no status/resolvedAt fields yet
+    const userScanIds = await Scan.find({ userId }).distinct("_id");
+
+    const totalVulns = await Vulnerability.countDocuments({
+      scanId: { $in: userScanIds },
+    });
+    const resolvedVulns = await Vulnerability.countDocuments({
+      scanId: { $in: userScanIds },
+      status: "resolved",
+    });
+    const remediationRate = totalVulns > 0 ? `${Math.round((resolvedVulns / totalVulns) * 100)}%` : "0%";
+
+    const resolvedList = await Vulnerability.find({
+      scanId: { $in: userScanIds },
+      status: "resolved",
+    });
+
+    let mttr = "N/A";
+    if (resolvedList.length > 0) {
+      let totalDiff = 0;
+      resolvedList.forEach(v => {
+        const diff = new Date(v.updatedAt) - new Date(v.createdAt);
+        totalDiff += diff;
+      });
+      const avgDiffHours = totalDiff / resolvedList.length / (1000 * 60 * 60);
+      mttr = avgDiffHours < 24
+        ? `${Math.round(avgDiffHours)}h`
+        : `${Math.round(avgDiffHours / 24)}d`;
+    }
 
     const firstScan = await Scan.findOne({ userId, status: "completed" }).sort({
       createdAt: 1,
@@ -549,8 +581,6 @@ const getAIInsights = async (req, res) => {
       riskReduction = `${Math.round(reduction)}%`;
     }
 
-    const userScanIds = await Scan.find({ userId }).distinct("_id");
-
     const commonResult = await Vulnerability.aggregate([
       { $match: { scanId: { $in: userScanIds } } },
       {
@@ -564,8 +594,6 @@ const getAIInsights = async (req, res) => {
     ]);
 
     const commonIssue = commonResult[0]?._id || "N/A";
-
-    const remediationRate = "N/A"; // Vulnerability model has no status field yet
 
     return res.json({
       success: true,

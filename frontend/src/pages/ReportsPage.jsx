@@ -252,17 +252,18 @@ export default function ReportsPage() {
     try {
       const data = await downloadReport(selectedScanId, format);
       const file = new Blob([data], {
-        type: format === "pdf" ? "application/pdf" : format === "json" ? "application/json" : "text/csv",
+        type: format === "pdf" ? "application/pdf" : (format === "json" || format === "openapi") ? "application/json" : "text/csv",
       });
       const fileURL = URL.createObjectURL(file);
       const link = document.createElement("a");
       link.href = fileURL;
-      link.setAttribute("download", `API_Security_Report_${selectedScanId}.${format}`);
+      const downloadName = format === "openapi" ? `API_Specification_${selectedScanId}.json` : `API_Security_Report_${selectedScanId}.${format}`;
+      link.setAttribute("download", downloadName);
       document.body.appendChild(link);
       link.click();
       link.remove();
       toast.dismiss(toastId);
-      toast.success(`${format.toUpperCase()} compliance report downloaded successfully!`);
+      toast.success(`${format.toUpperCase()} downloaded successfully!`);
     } catch (err) {
       toast.dismiss(toastId);
       toast.error(`Failed to export ${format.toUpperCase()} report.`);
@@ -526,6 +527,14 @@ export default function ReportsPage() {
             >
               <Code style={{ width: "16px", height: "16px" }} />
               Export JSON Raw Logs
+            </button>
+
+            <button 
+              onClick={() => handleExport("openapi")}
+              style={{ ...styles.exportBtn, border: "1px solid rgba(56,189,248,0.25)", background: "rgba(56,189,248,0.06)", color: "#38BDF8" }}
+            >
+              <Code style={{ width: "16px", height: "16px" }} />
+              Export OpenAPI Schema
             </button>
           </div>
         </div>

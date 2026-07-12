@@ -1,5 +1,6 @@
 const Scan = require("../scans/scan.model");
 const Vulnerability = require("../vulnerabilities/vulnerability.model");
+const mongoose = require("mongoose");
 
 // ✅ Fix 2 & 3: Updated imports
 const {
@@ -84,13 +85,14 @@ const fillSecurityTrendSpikes = (aggregatedTrend, days) => {
 };
 
 const getDashboardStats = async (
+  userId,
   page = 1,
   limit = 5,
   range = "7D",
 ) => {
   const serviceStart = Date.now();
 
-  const cacheKey = `dashboard-${page}-${limit}-${range}`;
+  const cacheKey = `dashboard-${userId}-${page}-${limit}-${range}`;
   const cached = dashboardCache.get(cacheKey);
 
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -123,6 +125,8 @@ const getDashboardStats = async (
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
 
+  const userScanIds = await Scan.find({ userId }).distinct("_id");
+
   const [
     scans,
     scanAnalytics,
@@ -131,10 +135,10 @@ const getDashboardStats = async (
     securityTrend,
     activityTimeline,
   ] = await Promise.all([
-    // ✅ Fix 3: Using SCAN_FIELDS constant
-    Scan.find().select(SCAN_FIELDS).lean(),
+    Scan.find({ userId }).select(SCAN_FIELDS).lean(),
 
     Scan.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       {
         $facet: {
           averageScore: [
@@ -155,7 +159,7 @@ const getDashboardStats = async (
       },
     ]),
 
-    Scan.find()
+    Scan.find({ userId })
       .select(LATEST_SCAN_FIELDS)
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -163,6 +167,7 @@ const getDashboardStats = async (
       .lean(),
 
     Vulnerability.aggregate([
+      { $match: { scanId: { $in: userScanIds } } },
       {
         $facet: {
           severityDistribution: [
@@ -192,6 +197,7 @@ const getDashboardStats = async (
     Scan.aggregate([
       {
         $match: {
+          userId: new mongoose.Types.ObjectId(userId),
           createdAt: {
             $gte: startDate,
           },
@@ -227,6 +233,7 @@ const getDashboardStats = async (
     ]),
 
     Scan.aggregate([
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       {
         $sort: {
           createdAt: -1,
@@ -414,7 +421,7 @@ const getDashboardStats = async (
     { subject: "A10", value: 100 },
   ];
 
-  const allVulnerabilities = await Vulnerability.find().lean();
+  const allVulnerabilities = await Vulnerability.find({ scanId: { $in: userScanIds } }).lean();
   allVulnerabilities.forEach((v) => {
     const owaspStr = String(v.owasp || "").toUpperCase();
     let index = -1;
@@ -496,9 +503,9 @@ const getDashboardStats = async (
   return response;
 };
 
-// ✅ Fix: Added getScanDetails function
-const getScanDetails = async (id) => {
-  const scan = await Scan.findById(id).lean();
+// ✅ Fix: Added getScanDetails function with userId check
+const getScanDetails = async (userId, id) => {
+  const scan = await Scan.findOne({ _id: id, userId }).lean();
 
   if (!scan) {
     throw new Error("Scan not found");
@@ -526,10 +533,11 @@ const extractHostname = (urlStr) => {
 };
 
 // Compile real-time activity logs from scans and vulnerabilities database
-const getDashboardActivityLogs = async () => {
+const getDashboardActivityLogs = async (userId) => {
+  const userScanIds = await Scan.find({ userId }).distinct("_id");
   const [scans, vulnerabilities] = await Promise.all([
-    Scan.find().sort({ createdAt: -1 }).limit(10).lean(),
-    Vulnerability.find().sort({ createdAt: -1 }).limit(30).lean()
+    Scan.find({ userId }).sort({ createdAt: -1 }).limit(10).lean(),
+    Vulnerability.find({ scanId: { $in: userScanIds } }).sort({ createdAt: -1 }).limit(30).lean()
   ]);
 
   const compiledLogs = [];

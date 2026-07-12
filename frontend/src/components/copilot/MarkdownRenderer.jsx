@@ -394,7 +394,7 @@ export default function MarkdownRenderer({ text }) {
                     style={{
                       margin: 0,
                       flex: 1,
-                      padding: "14px",
+                      padding: part.lang === "diff" ? "8px 0" : "14px",
                       fontFamily: "monospace",
                       fontSize: "12px",
                       color: isMermaidOrText ? "#38BDF8" : "#E2E8F0",
@@ -405,7 +405,30 @@ export default function MarkdownRenderer({ text }) {
                       boxShadow: isMermaidOrText ? "inset 0 0 10px rgba(139,92,246,0.1)" : "none"
                     }}
                   >
-                    <code>{part.content}</code>
+                    <code>
+                      {part.lang === "diff" ? (
+                        part.content.split("\n").map((line, idx) => {
+                          const isAdd = line.startsWith("+");
+                          const isSub = line.startsWith("-");
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                background: isAdd ? "rgba(16, 185, 129, 0.12)" : isSub ? "rgba(239, 68, 68, 0.12)" : "transparent",
+                                color: isAdd ? "#34D399" : isSub ? "#F87171" : "#E2E8F0",
+                                display: "block",
+                                padding: "0 14px",
+                                borderLeft: isAdd ? "3px solid #10B981" : isSub ? "3px solid #EF4444" : "none",
+                              }}
+                            >
+                              {line}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        part.content
+                      )}
+                    </code>
                   </pre>
                 </div>
               )}

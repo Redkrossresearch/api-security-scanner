@@ -46,6 +46,19 @@ const settingSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // GitHub Integration Configs
+    githubToken: {
+      type: String,
+      default: "",
+    },
+    githubRepo: {
+      type: String,
+      default: "",
+    },
+    githubBranch: {
+      type: String,
+      default: "main",
+    },
     // Tracking cron runs
     lastCronRun: {
       type: Date,

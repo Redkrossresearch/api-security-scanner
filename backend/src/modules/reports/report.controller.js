@@ -1,12 +1,29 @@
 const Report = require("./report.model");
 const Vulnerability = require("../vulnerabilities/vulnerability.model");
+const Scan = require("../scans/scan.model");
 
 const { generateJsonReport } = require("./report.service");
-
 const { generatePdfReport } = require("./pdfReport.service");
+const { generateOpenApiSpec } = require("./openapi.generator");
+
+const checkReportOwnership = async (scanId, userId) => {
+  const scan = await Scan.findOne({
+    _id: scanId,
+    userId: userId,
+  });
+  return !!scan;
+};
 
 const getReport = async (req, res) => {
   try {
+    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
+    if (!isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have access to this report.",
+      });
+    }
+
     const report = await Report.findOne({
       scanId: req.params.scanId,
     });
@@ -32,6 +49,14 @@ const getReport = async (req, res) => {
 
 const exportJsonReport = async (req, res) => {
   try {
+    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
+    if (!isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have access to this report.",
+      });
+    }
+
     const report = await Report.findOne({
       scanId: req.params.scanId,
     });
@@ -63,6 +88,14 @@ const exportJsonReport = async (req, res) => {
 
 const exportCsvReport = async (req, res) => {
   try {
+    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
+    if (!isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have access to this report.",
+      });
+    }
+
     const report = await Report.findOne({
       scanId: req.params.scanId,
     });
@@ -137,6 +170,14 @@ const exportCsvReport = async (req, res) => {
 
 const exportPdfReport = async (req, res) => {
   try {
+    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
+    if (!isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have access to this report.",
+      });
+    }
+
     const report = await Report.findOne({
       scanId: req.params.scanId,
     });
@@ -155,7 +196,7 @@ const exportPdfReport = async (req, res) => {
       `attachment; filename=athx-report-${req.params.scanId}.pdf`,
     );
 
-    generatePdfReport(report, res);
+    await generatePdfReport(report, res);
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -163,9 +204,52 @@ const exportPdfReport = async (req, res) => {
     });
   }
 };
+
+const exportOpenApiReport = async (req, res) => {
+  try {
+    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
+    if (!isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have access to this report.",
+      });
+    }
+
+    const scan = await Scan.findOne({
+      _id: req.params.scanId,
+      userId: req.user._id
+    });
+
+    if (!scan) {
+      return res.status(404).json({
+        success: false,
+        message: "Scan not found",
+      });
+    }
+
+    const vulnerabilities = await Vulnerability.find({ scanId: scan._id });
+
+    const openApiSpec = generateOpenApiSpec(scan, vulnerabilities);
+
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=athx-openapi-${req.params.scanId}.json`
+    );
+
+    res.send(JSON.stringify(openApiSpec, null, 2));
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getReport,
   exportJsonReport,
   exportCsvReport,
   exportPdfReport,
+  exportOpenApiReport,
 };

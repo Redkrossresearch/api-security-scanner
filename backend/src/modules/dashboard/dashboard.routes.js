@@ -1,6 +1,7 @@
 const express = require("express");
 
 const router = express.Router();
+const authenticate = require("../../middleware/auth.middleware");
 
 const {
   getDashboardStats,
@@ -8,10 +9,10 @@ const {
   getDashboardActivityLogs,
 } = require("./dashboard.controller");
 
-router.get("/stats", getDashboardStats);
-router.get("/activity-logs", getDashboardActivityLogs);
+router.get("/stats", authenticate, getDashboardStats);
+router.get("/activity-logs", authenticate, getDashboardActivityLogs);
 
 // NEW
-router.get("/scans/:id", getScanDetails);
+router.get("/scans/:id", authenticate, getScanDetails);
 
 module.exports = router;
