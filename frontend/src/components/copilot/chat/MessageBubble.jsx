@@ -245,8 +245,8 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
           borderTopRightRadius: isBot ? "14px" : "3px",
           padding: isBot ? "16px 18px" : "12px 16px",
           position: "relative",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.15)"
         }}
+      >
         {isBot ? (
           displayText ? (
             <div>
