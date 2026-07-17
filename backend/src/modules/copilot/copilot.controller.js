@@ -1652,6 +1652,41 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
       console.error("[copilot-learning] Extraction error:", learnErr.message),
     );
 
+    // 10. AUTO-TRAINING: Automatically save every conversation as a training pair
+    // This lets the AI continuously learn from all user interactions
+    try {
+      const isWorthyTraining = (
+        usedModel !== "local-fallback" &&         // don't train from fallback responses
+        userQuery.trim().length > 15 &&           // skip very short inputs
+        aiReplyText.trim().length > 50 &&         // skip very short replies
+        !/^(hi|hello|hey|ok|yes|no|thanks|bye)$/i.test(userQuery.trim()) // skip greetings
+      );
+
+      if (isWorthyTraining) {
+        // Check if a very similar training pair already exists to avoid duplicates
+        const similarExists = await CopilotTrainingPair.findOne({
+          userId,
+          prompt: { $regex: userQuery.trim().slice(0, 40), $options: "i" },
+        });
+
+        if (!similarExists) {
+          await CopilotTrainingPair.create({
+            userId,
+            prompt: userQuery.trim(),
+            response: aiReplyText.trim(),
+            category: "auto-learned",
+            source: "conversation",
+            model: usedModel,
+            createdAt: new Date(),
+          });
+          console.log(`[copilot] 🧠 Auto-trained from conversation (model: ${usedModel})`);
+        }
+      }
+    } catch (trainErr) {
+      // Non-fatal: auto-training errors should not block the response
+      console.warn("[copilot] Auto-training skipped:", trainErr.message);
+    }
+
     return res.json({
       success: true,
       reply: aiReplyText,

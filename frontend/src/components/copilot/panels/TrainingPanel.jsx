@@ -261,8 +261,25 @@ export default function TrainingPanel() {
           {!loading && filtered.map((item) => (
             <div key={item._id} className="train-card">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.35)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>Training Example Alignment</span>
-                <Trash2 size={12} color="rgba(239,68,68,0.5)" style={{ cursor: "pointer" }} onClick={() => handleDelete(item._id)} />
+                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.35)", fontWeight: "700", textTransform: "uppercase" }}>
+                    TRAINING EXAMPLE
+                  </span>
+                  {item.source === "conversation" ? (
+                    <span style={{
+                      fontSize: "8px", fontWeight: "700", padding: "1px 5px",
+                      background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.25)",
+                      borderRadius: "4px", color: "#10B981"
+                    }}>🧠 AUTO-LEARNED</span>
+                  ) : (
+                    <span style={{
+                      fontSize: "8px", fontWeight: "700", padding: "1px 5px",
+                      background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.25)",
+                      borderRadius: "4px", color: "#A78BFA"
+                    }}>✋ MANUAL</span>
+                  )}
+                </div>
+                <Trash2 size={11} color="rgba(239,68,68,0.5)" style={{ cursor: "pointer" }} onClick={() => handleDelete(item._id)} />
               </div>
               <div>
                 <span style={{ fontSize: "8.5px", color: "#A78BFA", display: "block", marginBottom: "3px", fontWeight: "700" }}>PROMPT:</span>
@@ -272,10 +289,15 @@ export default function TrainingPanel() {
               </div>
               <div>
                 <span style={{ fontSize: "8.5px", color: "#10B981", display: "block", marginBottom: "3px", fontWeight: "700" }}>RESPONSE PATTERN:</span>
-                <div className="train-bubble" style={{ background: "rgba(16, 185, 129, 0.06)", border: "1px solid rgba(16, 185, 129, 0.1)", color: "rgba(255,255,255,0.75)" }}>
-                  {item.response}
+                <div className="train-bubble" style={{ background: "rgba(16, 185, 129, 0.06)", border: "1px solid rgba(16, 185, 129, 0.1)", color: "rgba(255,255,255,0.75)", maxHeight: "80px", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {item.response?.slice(0, 200)}{item.response?.length > 200 ? "..." : ""}
                 </div>
               </div>
+              {item.model && (
+                <span style={{ fontSize: "8px", color: "rgba(255,255,255,0.2)", fontFamily: "monospace" }}>
+                  via {item.model} • {new Date(item.createdAt).toLocaleDateString()}
+                </span>
+              )}
             </div>
           ))}
         </div>

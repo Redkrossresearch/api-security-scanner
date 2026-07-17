@@ -1,8 +1,134 @@
-import React from "react";
-import { Bot, User, Copy, ThumbsUp, ThumbsDown, RefreshCw, Edit2 } from "lucide-react";
+import React, { Suspense, lazy } from "react";
+import { Bot, User, Copy, ThumbsUp, ThumbsDown, RefreshCw, Edit2, Download, ExternalLink } from "lucide-react";
 import { motion } from "framer-motion";
 import MarkdownRenderer from "../MarkdownRenderer";
 import toast from "react-hot-toast";
+
+const MermaidDiagram = lazy(() => import("./MermaidDiagram"));
+
+// Extract ```mermaid ... ``` blocks and ```image-gen ... ``` blocks from text
+function parseBlocks(text) {
+  if (!text) return [{ type: "text", content: "" }];
+
+  const blocks = [];
+  // Matches ```mermaid, ```image-gen, ```diagram
+  const regex = /```(mermaid|image-gen|diagram)\n?([\s\S]*?)```/gi;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      const before = text.slice(lastIndex, match.index);
+      if (before.trim()) blocks.push({ type: "text", content: before });
+    }
+    const lang = match[1].toLowerCase();
+    const code = match[2].trim();
+    if (lang === "image-gen") {
+      blocks.push({ type: "image-gen", content: code });
+    } else {
+      blocks.push({ type: "mermaid", content: code });
+    }
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    const remaining = text.slice(lastIndex);
+    if (remaining.trim()) blocks.push({ type: "text", content: remaining });
+  }
+
+  return blocks.length > 0 ? blocks : [{ type: "text", content: text }];
+}
+
+// Renders an AI-generated image via Pollinations
+function GeneratedImage({ prompt }) {
+  const [loaded, setLoaded] = React.useState(false);
+  const [errored, setErrored] = React.useState(false);
+  const encoded = encodeURIComponent(prompt);
+  const seed = Math.floor(Math.random() * 100000);
+  const url = `https://image.pollinations.ai/prompt/${encoded}?width=800&height=500&seed=${seed}&model=flux&enhance=true&nologo=true`;
+
+  const handleDownload = () => {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "generated-image.png";
+    a.target = "_blank";
+    a.click();
+  };
+
+  return (
+    <div style={{
+      background: "rgba(13,13,26,0.8)",
+      border: "1px solid rgba(236,72,153,0.2)",
+      borderRadius: "12px",
+      overflow: "hidden",
+      margin: "8px 0",
+    }}>
+      {/* Header */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 14px",
+        background: "rgba(236,72,153,0.06)",
+        borderBottom: "1px solid rgba(236,72,153,0.12)",
+      }}>
+        <span style={{ fontSize: "11px", fontWeight: "700", color: "rgba(236,72,153,0.9)", letterSpacing: "0.5px", textTransform: "uppercase" }}>
+          🎨 Generated Image
+        </span>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <button onClick={handleDownload} title="Download image"
+            style={{ background: "rgba(236,72,153,0.15)", border: "1px solid rgba(236,72,153,0.3)", borderRadius: "6px", color: "#f9a8d4", cursor: "pointer", padding: "3px 8px", display: "flex", alignItems: "center", gap: "4px", fontSize: "10px" }}>
+            <Download size={11} /> Download
+          </button>
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "6px", color: "rgba(255,255,255,0.6)", cursor: "pointer", padding: "3px 7px", display: "flex", alignItems: "center" }}>
+            <ExternalLink size={11} />
+          </a>
+        </div>
+      </div>
+
+      <div style={{ padding: "12px", position: "relative", minHeight: "120px", display: "flex", flexDirection: "column", gap: "8px" }}>
+        {/* Prompt label */}
+        <p style={{ margin: 0, fontSize: "11px", color: "rgba(255,255,255,0.3)", fontStyle: "italic", wordBreak: "break-word" }}>
+          Prompt: {prompt}
+        </p>
+
+        {/* Loading skeleton */}
+        {!loaded && !errored && (
+          <div style={{
+            width: "100%", height: "240px", borderRadius: "8px",
+            background: "linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.03) 75%)",
+            backgroundSize: "200% 100%",
+            animation: "shimmer 1.5s infinite",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.25)" }}>⏳ Generating image via Pollinations AI...</span>
+          </div>
+        )}
+
+        {errored && (
+          <div style={{ padding: "12px 16px", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: "8px", color: "#fca5a5", fontSize: "12px" }}>
+            ⚠️ Image generation failed. Try rephrasing the prompt.
+          </div>
+        )}
+
+        <img
+          src={url}
+          alt={prompt}
+          onLoad={() => setLoaded(true)}
+          onError={() => setErrored(true)}
+          style={{
+            display: loaded ? "block" : "none",
+            width: "100%", borderRadius: "8px",
+            border: "1px solid rgba(255,255,255,0.06)",
+            objectFit: "cover",
+          }}
+        />
+      </div>
+      <style>{`
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+      `}</style>
+    </div>
+  );
+}
 
 export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
   const isBot = msg.sender === "assistant";
@@ -23,7 +149,7 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
 
       let currentIndex = 0;
       const fullText = msg.text;
-      
+
       const interval = setInterval(() => {
         if (currentIndex < fullText.length) {
           currentIndex += 12; // Speed parameter
@@ -33,7 +159,7 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
           clearInterval(interval);
         }
       }, 15);
-      
+
       return () => clearInterval(interval);
     } else {
       setDisplayText(msg.text);
@@ -48,6 +174,9 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
   const timeStr = msg.timestamp
     ? new Date(msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
+
+  // Parse display text into blocks (text, mermaid, image-gen)
+  const blocks = isBot ? parseBlocks(displayText) : null;
 
   return (
     <motion.div
@@ -106,6 +235,7 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
       <div
         style={{
           maxWidth: isBot ? "90%" : "75%",
+          width: isBot ? "90%" : "auto",
           background: isBot
             ? "rgba(255, 255, 255, 0.02)"
             : "rgba(139, 92, 246, 0.1)",
@@ -117,10 +247,33 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
           position: "relative",
           boxShadow: "0 4px 16px rgba(0,0,0,0.15)"
         }}
-      >
         {isBot ? (
           displayText ? (
-            <MarkdownRenderer text={displayText} />
+            <div>
+              {/* Render blocks: text, mermaid diagrams, generated images */}
+              {parseBlocks(displayText).map((block, idx) => {
+                if (block.type === "mermaid") {
+                  return (
+                    <Suspense key={idx} fallback={
+                      <div style={{ padding: "16px", color: "rgba(139,92,246,0.6)", fontSize: "12px" }}>Loading diagram...</div>
+                    }>
+                      <MermaidDiagram code={block.content} />
+                    </Suspense>
+                  );
+                }
+                if (block.type === "image-gen") {
+                  return <GeneratedImage key={idx} prompt={block.content} />;
+                }
+                return (
+                  <MarkdownRenderer key={idx} text={block.content} />
+                );
+              })}
+
+              {/* Inline image rendering from msg.metadata.imageUrl */}
+              {msg.metadata?.imageUrl && (
+                <GeneratedImage prompt={msg.metadata.imagePrompt || "Generated image"} />
+              )}
+            </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <style>{`
@@ -206,7 +359,7 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
           </div>
         )}
 
-        {/* Web Search Sources and References */}
+        {/* Web Search Sources */}
         {isBot && msg.metadata?.searchResults && msg.metadata.searchResults.length > 0 && (
           <div style={{
             marginTop: "16px",
@@ -226,24 +379,14 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
             }}>
               🔍 Search Sources ({msg.metadata.searchResults.length})
             </p>
-            <div style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "8px",
-            }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
               {msg.metadata.searchResults.map((source, sIdx) => {
                 let iconUrl = "https://www.google.com/s2/favicons?sz=64&domain=wikipedia.org";
-                if (source.url.includes("wikipedia.org")) {
-                  iconUrl = "https://en.wikipedia.org/favicon.ico";
-                } else if (source.url.includes("duckduckgo.com")) {
+                try {
+                  const domain = new URL(source.url).hostname;
+                  iconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+                } catch (e) {
                   iconUrl = "https://duckduckgo.com/favicon.ico";
-                } else {
-                  try {
-                    const domain = new URL(source.url).hostname;
-                    iconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
-                  } catch (e) {
-                    iconUrl = "https://duckduckgo.com/favicon.ico";
-                  }
                 }
 
                 return (
@@ -281,22 +424,10 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
                     <img
                       src={iconUrl}
                       alt=""
-                      style={{
-                        width: "12px",
-                        height: "12px",
-                        borderRadius: "2px",
-                        flexShrink: 0,
-                      }}
-                      onError={(e) => {
-                        e.target.src = "https://duckduckgo.com/favicon.ico";
-                      }}
+                      style={{ width: "12px", height: "12px", borderRadius: "2px", flexShrink: 0 }}
+                      onError={(e) => { e.target.src = "https://duckduckgo.com/favicon.ico"; }}
                     />
-                    <span style={{
-                      maxWidth: "130px",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}>
+                    <span style={{ maxWidth: "130px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {source.title}
                     </span>
                   </a>
@@ -327,7 +458,6 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
           )}
 
           <div style={{ display: "flex", gap: "10px", marginLeft: "auto" }}>
-            {/* Copy button */}
             <button
               onClick={handleCopy}
               title="Copy text"
@@ -336,7 +466,6 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
               <Copy size={12} />
             </button>
 
-            {/* User Edit option */}
             {!isBot && onEdit && (
               <button
                 onClick={() => onEdit(msg.text)}
@@ -347,7 +476,6 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
               </button>
             )}
 
-            {/* Regenerate option for Bot */}
             {isBot && onRegenerate && (
               <button
                 onClick={() => onRegenerate(msg.text)}
@@ -358,7 +486,6 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
               </button>
             )}
 
-            {/* Feedback likes */}
             {isBot && (
               <>
                 <button

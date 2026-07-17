@@ -156,7 +156,8 @@ const SLASH_COMMANDS = [
   { cmd: "/jwt", desc: "Decode and analyze a JWT token", icon: Key, color: "#8B5CF6", category: "Explain" },
   // Reports & Docs
   { cmd: "/report", desc: "Generate a full security report summary", icon: MessageSquare, color: "#10B981", category: "Report" },
-  { cmd: "/diagram", desc: "Create an ASCII architecture diagram", icon: Layers, color: "#06B6D4", category: "Report" },
+  { cmd: "/diagram", desc: "Create a visual Mermaid flowchart diagram", icon: Layers, color: "#06B6D4", category: "Report" },
+  { cmd: "/flowchart", desc: "Generate a Mermaid flowchart for a process", icon: GitBranch, color: "#8B5CF6", category: "Report" },
   { cmd: "/checklist", desc: "Generate a security hardening checklist", icon: List, color: "#10B981", category: "Report" },
   { cmd: "/executive", desc: "Write an executive risk summary", icon: FileText, color: "#3B82F6", category: "Report" },
   { cmd: "/timeline", desc: "Create an incident response timeline", icon: Activity, color: "#F59E0B", category: "Report" },
@@ -170,6 +171,9 @@ const SLASH_COMMANDS = [
   { cmd: "/regex", desc: "Generate input validation regex patterns", icon: Code, color: "#3B82F6", category: "Action" },
   { cmd: "/curl", desc: "Build a curl command for API testing", icon: Terminal, color: "#10B981", category: "Action" },
   { cmd: "/docker", desc: "Harden Docker / container configuration", icon: Server, color: "#3B82F6", category: "Action" },
+  // Image Generation
+  { cmd: "/imagine", desc: "Generate an AI image from a text description", icon: ImageIcon, color: "#EC4899", category: "Generate" },
+  { cmd: "/visualize", desc: "Visualize attack surface or network topology", icon: Eye, color: "#EC4899", category: "Generate" },
 ];
 
 // ─── AI Quick Suggestions ──────────────────────────────────────────────────────
@@ -229,6 +233,8 @@ export default function PromptInput({
   const [scannerContext, setScannerContext] = useState(true);
   const [attachments, setAttachments] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [voiceAutoSend, setVoiceAutoSend] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
   const [slashFilter, setSlashFilter] = useState("");
   const [activeSuggestionIdx, setActiveSuggestionIdx] = useState(null);
   const [modelSearch, setModelSearch] = useState("");
@@ -355,42 +361,68 @@ export default function PromptInput({
     e.target.value = ""; // reset file input
   };
 
-  const startSpeechRecognition = () => {
+  const startSpeechRecognition = (autoSend = false) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      toast.error("Web Speech API is not supported in this browser.");
+      toast.error("Web Speech API is not supported in this browser. Use Chrome.");
       return;
     }
 
     try {
       const rec = new SpeechRecognition();
-      rec.continuous = false;
-      rec.interimResults = false;
+      rec.continuous = true;       // Keep listening
+      rec.interimResults = true;   // Show live transcript
       rec.lang = "en-US";
+      rec.maxAlternatives = 1;
 
       rec.onstart = () => {
         setIsRecording(true);
-        toast.success("Voice listening active...");
+        setVoiceTranscript("");
+        toast.success(autoSend ? "🎙️ Voice listening — speak, then pause to auto-send" : "🎙️ Voice listening active...", { duration: 2500 });
       };
 
       rec.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        if (transcript) {
-          onChange((prev) => (prev ? prev + " " + transcript : transcript));
-          toast.success("Speech captured!");
+        let interimText = "";
+        let finalText = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const t = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalText += t + " ";
+          } else {
+            interimText += t;
+          }
+        }
+        if (finalText.trim()) {
+          onChange((prev) => (prev ? prev + " " + finalText.trim() : finalText.trim()));
+          setVoiceTranscript("");
+          if (autoSend) {
+            // auto-send after a brief pause — delayed to allow batching
+            setTimeout(() => {
+              if (finalText.trim().length > 2) {
+                onSend({ text: finalText.trim(), model: selectedModel, temperature, webSearch, useMemory, scannerContext, attachments: [] });
+                onChange("");
+              }
+            }, 800);
+          }
+        } else {
+          setVoiceTranscript(interimText);
         }
       };
 
       rec.onerror = (e) => {
         console.error("Speech error:", e);
-        if (e.error !== "no-speech") {
+        if (e.error === "not-allowed") {
+          toast.error("Microphone access denied. Please allow mic in browser settings.");
+        } else if (e.error !== "no-speech" && e.error !== "aborted") {
           toast.error(`Voice error: ${e.error}`);
         }
         setIsRecording(false);
+        setVoiceTranscript("");
       };
 
       rec.onend = () => {
         setIsRecording(false);
+        setVoiceTranscript("");
       };
 
       recognitionRef.current = rec;
@@ -406,13 +438,14 @@ export default function PromptInput({
       recognitionRef.current.stop();
     }
     setIsRecording(false);
+    setVoiceTranscript("");
   };
 
   const toggleRecording = () => {
     if (isRecording) {
       stopSpeechRecognition();
     } else {
-      startSpeechRecognition();
+      startSpeechRecognition(voiceAutoSend);
     }
   };
 
@@ -446,6 +479,9 @@ export default function PromptInput({
         @keyframes pulse-glow { 0%,100%{box-shadow:0 0 20px rgba(139,92,246,0.3)} 50%{box-shadow:0 0 40px rgba(139,92,246,0.6)} }
         @keyframes slide-up { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin { to{transform:rotate(360deg)} }
+        @keyframes voicePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.4)} }
+        @keyframes recording-ring { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)} 50%{box-shadow:0 0 0 6px rgba(239,68,68,0)} }
+        .recording-anim{animation:recording-ring 1.2s ease-in-out infinite!important}
         .prompt-container{transition:all 0.3s cubic-bezier(0.4,0,0.2,1)}
         .prompt-container.focused{transform:translateY(-2px)}
         .model-item,.slash-item{transition:all 0.15s ease}
@@ -741,6 +777,26 @@ export default function PromptInput({
           }}
         />
 
+        {/* Live voice transcript preview */}
+        {isRecording && voiceTranscript && (
+          <div style={{
+            margin: "0 14px 6px",
+            padding: "8px 14px",
+            background: "rgba(239,68,68,0.06)",
+            border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: "8px",
+            fontSize: "13px",
+            color: "rgba(255,255,255,0.5)",
+            fontStyle: "italic",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}>
+            <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#EF4444", animation: "voicePulse 0.8s ease-in-out infinite" }} />
+            {voiceTranscript}
+          </div>
+        )}
+
         {/* Bottom Row */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 14px 12px", borderTop: `1px solid ${THEME.colors.border}` }}>
           <div style={{ display: "flex", gap: "6px" }}>
@@ -757,9 +813,19 @@ export default function PromptInput({
             <button
               onClick={toggleRecording}
               className={isRecording ? "recording-anim" : ""}
+              title={isRecording ? "Stop recording" : voiceAutoSend ? "Voice mode: auto-send ON" : "Voice mode: dictate only"}
               style={{ background: isRecording ? "rgba(239,68,68,0.18)" : THEME.colors.surface, border: `1px solid ${isRecording ? "#EF444440" : THEME.colors.border}`, borderRadius: "20px", color: isRecording ? "#EF4444" : THEME.colors.textMuted, cursor: "pointer", padding: "6px 12px", display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "500", transition: "all 0.2s" }}
             >
               <Mic size={13} /> {isRecording ? "Stop" : "Voice"}
+            </button>
+
+            {/* Auto-send toggle */}
+            <button
+              onClick={() => setVoiceAutoSend(v => !v)}
+              title={voiceAutoSend ? "Voice auto-send: ON (click to toggle off)" : "Voice auto-send: OFF (click to enable)"}
+              style={{ background: voiceAutoSend ? "rgba(16,185,129,0.15)" : THEME.colors.surface, border: `1px solid ${voiceAutoSend ? "rgba(16,185,129,0.35)" : THEME.colors.border}`, borderRadius: "20px", color: voiceAutoSend ? "#10B981" : THEME.colors.textSubtle, cursor: "pointer", padding: "6px 12px", display: "flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: "500", transition: "all 0.2s" }}
+            >
+              <Radio size={13} /> {voiceAutoSend ? "Auto-send ON" : "Auto-send"}
             </button>
           </div>
 
