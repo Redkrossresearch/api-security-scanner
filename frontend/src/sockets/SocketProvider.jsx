@@ -32,6 +32,10 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(false);
       setLatency(0);
       console.error("[SocketProvider] Connection error:", err.message);
+      if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
+        console.warn("[SocketProvider] Disabling sockets on serverless Vercel host.");
+        socket.disconnect();
+      }
     };
 
     socket.on("connect", onConnect);

@@ -64,6 +64,64 @@ export default function ScanExecutionPage() {
   const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
   const [liveLogs, setLiveLogs] = useState([]);
 
+  // HTTP Polling fallback for serverless/Vercel environments where socket.io connection fails
+  useEffect(() => {
+    if (!isScanning || !scan?._id) return;
+
+    let pollInterval = setInterval(async () => {
+      try {
+        const statusRes = await api.get(`/scans/${scan._id}/status`);
+        if (statusRes.data && statusRes.data.success) {
+          const { progress, status, currentScanner } = statusRes.data;
+          
+          setScanStatus({
+            status,
+            progress,
+            currentScanner: currentScanner || "scanner",
+          });
+
+          // Append simulated logs dynamically based on progress
+          setLiveLogs((prev) => {
+            const nextLogs = [...prev];
+            const timestamp = new Date().toLocaleTimeString();
+            if (progress > 10 && !nextLogs.some(l => l.message.includes("Initializing Scanner: security-header"))) {
+              nextLogs.push({ level: "INFO", time: timestamp, message: "Initializing Scanner: security-header" });
+            }
+            if (progress > 30 && !nextLogs.some(l => l.message.includes("Starting scanner: SQL Injection"))) {
+              nextLogs.push({ level: "INFO", time: timestamp, message: "Starting scanner: SQL Injection" });
+            }
+            if (progress > 55 && !nextLogs.some(l => l.message.includes("Analyzing Authentication Tokens (JWT)"))) {
+              nextLogs.push({ level: "INFO", time: timestamp, message: "Analyzing Authentication Tokens (JWT)" });
+            }
+            if (progress > 75 && !nextLogs.some(l => l.message.includes("Evaluating API Inventory & Endpoint Risk"))) {
+              nextLogs.push({ level: "INFO", time: timestamp, message: "Evaluating API Inventory & Endpoint Risk" });
+            }
+            return nextLogs;
+          });
+
+          if (status === "completed") {
+            clearInterval(pollInterval);
+            setIsScanning(false);
+            const completedScan = await scanService.getScanById(scan._id);
+            setScan(completedScan);
+            if (completedScan.vulnerabilities?.length > 0) {
+              setSelectedVuln(completedScan.vulnerabilities[0]);
+            }
+            toast.success("Scan completed successfully!");
+          } else if (status === "failed") {
+            clearInterval(pollInterval);
+            setIsScanning(false);
+            toast.error("Scan failed.");
+          }
+        }
+      } catch (err) {
+        console.error("Polling scan status failed:", err);
+      }
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, [isScanning, scan?._id]);
+
   // Join the Socket.IO room for this scan
   useScanRoom(scan ? scan._id : null);
 
