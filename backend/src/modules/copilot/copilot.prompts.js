@@ -622,8 +622,6 @@ This language matching behavior applies to every response regardless of topic, c
 </module_14_language_preference_and_response_matching>
 `;
 
-
-
 const PART_15_STACK_SPECIFIC_CODE_DIFFS = `
 <module_15_stack_specific_code_diffs>
 - Remediation Code Formats: When providing code-level remediations, you must include a visual git-style diff block using the \`\`\`diff language tag.
@@ -638,10 +636,11 @@ const PART_15_STACK_SPECIFIC_CODE_DIFFS = `
 `;
 
 module.exports = {
-  SYSTEM_PROMPT: EXISTING_SYSTEM_PROMPT + 
-                 PART_01_CORE_ENGINEERING_AND_SECURE_ARCHITECTURE + 
-                 PART_02_ADVANCED_INPUT_VALIDATION_AND_INJECTION_PREVENTION + 
-                 UNIVERSAL_ALL_ROUNDER_PROMPT +
-                 PART_15_STACK_SPECIFIC_CODE_DIFFS,
+  SYSTEM_PROMPT:
+    EXISTING_SYSTEM_PROMPT +
+    PART_01_CORE_ENGINEERING_AND_SECURE_ARCHITECTURE +
+    PART_02_ADVANCED_INPUT_VALIDATION_AND_INJECTION_PREVENTION +
+    UNIVERSAL_ALL_ROUNDER_PROMPT +
+    PART_15_STACK_SPECIFIC_CODE_DIFFS,
   GENERAL_TEMPLATE,
 };

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { scanService } from "../services/scanService";
 import api from "../services/api";
+import useScanRoom from "../sockets/useScanRoom";
+import useSocketEvent from "../sockets/useSocketEvent";
 import ScanHeader from "../components/scans/ScanHeader";
 import ScanConfigurationCard from "../components/scans/ScanConfigurationCard";
 import ScanStatusCard from "../components/scans/ScanStatusCard";
@@ -60,7 +62,84 @@ export default function ScanExecutionPage() {
   const [selectedVuln, setSelectedVuln] = useState(null);
   const [isFixModalOpen, setIsFixModalOpen] = useState(false);
   const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
-  const pollingRef = useRef(null);
+  const [liveLogs, setLiveLogs] = useState([]);
+
+  // Join the Socket.IO room for this scan
+  useScanRoom(scan ? scan._id : null);
+
+  // Bind Real-Time Event Listeners
+  useSocketEvent("scan:progress", (data) => {
+    if (scan && (data.scanId === scan._id || data.scanId === scan.scanId)) {
+      setScanStatus((prev) => ({
+        ...prev,
+        status: "running",
+        progress: data.percent,
+        currentScanner: data.currentScanner,
+      }));
+    }
+  });
+
+  useSocketEvent("scan:log", (data) => {
+    if (scan && (data.scanId === scan._id || data.scanId === scan.scanId)) {
+      setLiveLogs((prev) => [
+        ...prev,
+        {
+          level: data.level.toUpperCase(),
+          time: new Date(data.ts).toLocaleTimeString(),
+          message: data.message,
+        },
+      ]);
+    }
+  });
+
+  useSocketEvent("scan:vulnerability", (data) => {
+    if (scan && (data.scanId === scan._id || data.scanId === scan.scanId)) {
+      setLiveLogs((prev) => [
+        ...prev,
+        {
+          level: "CRITICAL",
+          time: new Date().toLocaleTimeString(),
+          message: `[VULN DETECTED] ${data.finding.title} (${data.finding.severity.toUpperCase()})`,
+        },
+      ]);
+      setScan((prev) => {
+        if (!prev) return prev;
+        const list = prev.vulnerabilities || [];
+        if (list.some((v) => v.title === data.finding.title)) return prev;
+        return {
+          ...prev,
+          vulnerabilities: [...list, data.finding],
+        };
+      });
+    }
+  });
+
+  useSocketEvent("scan:completed", async (data) => {
+    if (scan && (data.scanId === scan._id || data.scanId === scan.scanId)) {
+      setIsScanning(false);
+      toast.success("Scan completed successfully!");
+      const completedScan = await scanService.getScanById(scan._id);
+      setScan(completedScan);
+      setScanStatus({
+        status: "completed",
+        progress: 100,
+      });
+      if (completedScan.vulnerabilities?.length > 0) {
+        setSelectedVuln(completedScan.vulnerabilities[0]);
+      }
+    }
+  });
+
+  useSocketEvent("scan:failed", (data) => {
+    if (scan && (data.scanId === scan._id || data.scanId === scan.scanId)) {
+      setIsScanning(false);
+      toast.error(`Scan failed: ${data.reason}`);
+      setScanStatus({
+        status: "failed",
+        progress: 0,
+      });
+    }
+  });
 
   const handleStartScan = async () => {
     if (!url) return;
@@ -68,39 +147,16 @@ export default function ScanExecutionPage() {
     setScan(null);
     setScanStatus(null);
     setSelectedVuln(null);
+    setLiveLogs([]);
 
     try {
       const initialScan = await scanService.createScan(url);
       setScan(initialScan);
-
-      const scanId = initialScan._id;
-
-      if (pollingRef.current) clearInterval(pollingRef.current);
-
-      pollingRef.current = setInterval(async () => {
-        try {
-          const statusData = await scanService.getScanStatus(scanId);
-          setScanStatus(statusData);
-
-          if (statusData.status === "completed") {
-            clearInterval(pollingRef.current);
-            setIsScanning(false);
-            toast.success("Scan completed successfully!");
-            const completedScan = await scanService.getScanById(scanId);
-            setScan(completedScan);
-            if (completedScan.vulnerabilities?.length > 0) {
-              setSelectedVuln(completedScan.vulnerabilities[0]);
-            }
-          } else if (statusData.status === "failed") {
-            clearInterval(pollingRef.current);
-            setIsScanning(false);
-            toast.error("Scan failed.");
-          }
-        } catch (err) {
-          console.error("Error polling scan status:", err);
-        }
-      }, 1500);
-
+      setScanStatus({
+        status: "running",
+        progress: 0,
+        currentScanner: "crawler",
+      });
     } catch (err) {
       toast.error(err.message || "Failed to start scan");
       setIsScanning(false);
@@ -133,11 +189,7 @@ export default function ScanExecutionPage() {
     }
   };
 
-  useEffect(() => {
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, []);
+
 
   return (
     <div
@@ -178,7 +230,7 @@ export default function ScanExecutionPage() {
       >
         <EndpointDiscoveryTable scan={scan} scanStatus={scanStatus} />
 
-        <LiveScannerLogs scan={scan} scanStatus={scanStatus} />
+        <LiveScannerLogs scan={scan} scanStatus={scanStatus} liveLogs={liveLogs} />
 
         <AttackSurfaceMap scan={scan} scanStatus={scanStatus} />
       </div>

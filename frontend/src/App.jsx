@@ -13,6 +13,8 @@ import VulnerabilitiesPage from "./pages/VulnerabilitiesPage";
 import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import CopilotPage from "./pages/CopilotPage";
+import QueueMonitorPage from "./pages/QueueMonitorPage";
+import WorkflowBuilderPage from "./pages/WorkflowBuilderPage";
 
 function App() {
   return (
@@ -59,6 +61,8 @@ function App() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/copilot" element={<CopilotPage />} />
+          <Route path="/queue" element={<QueueMonitorPage />} />
+          <Route path="/workflows" element={<WorkflowBuilderPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

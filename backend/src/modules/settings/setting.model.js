@@ -6,12 +6,17 @@ const settingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    teamId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Team",
+      index: true,
+    },
     // API Authorization Configs
     targetHeaders: [
       {
         name: { type: String, required: true },
         value: { type: String, required: true },
-      }
+      },
     ],
     authType: {
       type: String,
@@ -27,6 +32,10 @@ const settingSchema = new mongoose.Schema(
       type: String,
       enum: ["disabled", "daily", "weekly", "monthly"],
       default: "disabled",
+    },
+    scheduledUrls: {
+      type: String,
+      default: "",
     },
     // Webhook Integrations
     slackWebhook: {
@@ -59,6 +68,19 @@ const settingSchema = new mongoose.Schema(
       type: String,
       default: "main",
     },
+    // GitLab Integration Configs
+    gitlabToken: {
+      type: String,
+      default: "",
+    },
+    gitlabRepo: {
+      type: String,
+      default: "",
+    },
+    gitlabBranch: {
+      type: String,
+      default: "main",
+    },
     // Tracking cron runs
     lastCronRun: {
       type: Date,
@@ -67,7 +89,7 @@ const settingSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model("Setting", settingSchema);

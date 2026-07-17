@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import toast from "react-hot-toast";
 import api from "../services/api";
+import useSocketEvent from "../sockets/useSocketEvent";
 
 import { GlobalTopBar, WorkspaceLayout } from "../components/copilot/layout";
 import { ChatSidebar } from "../components/copilot/sidebar";
@@ -73,6 +74,75 @@ export default function CopilotPage() {
   const [showSpeech, setShowSpeech] = useState(false);
   const [speechText, setSpeechText] = useState("");
   const [speechTimeout, setSpeechTimeout] = useState(null);
+  const [isThinking, setIsThinking] = useState(false);
+
+  // Bind AI Stream Sockets
+  useSocketEvent("ai:thinking", (data) => {
+    if (data.conversationId === activeConversationId) {
+      setIsThinking(true);
+    }
+  });
+
+  useSocketEvent("ai:stream:start", (data) => {
+    if (data.conversationId === activeConversationId) {
+      setIsThinking(false);
+      setMessages((prev) => {
+        const filtered = prev.filter(m => m.isStreaming !== true);
+        return [
+          ...filtered,
+          {
+            _id: `streaming-${Date.now()}`,
+            sender: "assistant",
+            text: "",
+            timestamp: new Date(),
+            isStreaming: true,
+            metadata: { model: selectedModel }
+          }
+        ];
+      });
+    }
+  });
+
+  useSocketEvent("ai:stream", (data) => {
+    if (data.conversationId === activeConversationId) {
+      setIsThinking(false);
+      setMessages((prev) => {
+        return prev.map((m) => {
+          if (m.isStreaming) {
+            return {
+              ...m,
+              text: m.text + data.text
+            };
+          }
+          return m;
+        });
+      });
+    }
+  });
+
+  useSocketEvent("ai:stream:end", (data) => {
+    if (data.conversationId === activeConversationId) {
+      setIsThinking(false);
+      setMessages((prev) => {
+        return prev.map((m) => {
+          if (m.isStreaming) {
+            return {
+              ...m,
+              _id: undefined,
+              isStreaming: false,
+              text: data.text,
+              metadata: {
+                model: data.model,
+                searchResults: data.searchResults || []
+              }
+            };
+          }
+          return m;
+        });
+      });
+      fetchConversations();
+    }
+  });
 
   const greetings = [
     "Hii, I am ATHX Copilot. Systems normalized. Zero-Trust policy fully active.",
@@ -248,17 +318,22 @@ export default function CopilotPage() {
       };
       setMessages((prev) => [...prev, optimisticMsg]);
 
-      // Send to backend
+      // Send to backend with stream: true
       const msgRes = await api.post(`/copilot/conversations/${convId}/messages`, {
         message: text,
         model: selectedModel,
         temperature,
         webSearch,
-        attachments: attachedFiles
+        attachments: attachedFiles,
+        stream: true
       });
 
-      if (msgRes.data?.success) {
-        // Replace optimistic msg + add AI reply
+      if (msgRes.data?.success && msgRes.data?.stream) {
+        setMessages((prev) =>
+          prev.map((m) => (m._id === optimisticMsg._id ? { ...m, _id: undefined } : m))
+        );
+        fetchConversations();
+      } else if (msgRes.data?.success) {
         setMessages((prev) => [
           ...prev.slice(0, -1),
           { ...optimisticMsg, _id: undefined },
@@ -273,7 +348,6 @@ export default function CopilotPage() {
           },
         ]);
         fetchConversations();
-
       } else {
         setMessages((prev) => prev.slice(0, -1));
         toast.error("AI engine returned an error");
@@ -943,7 +1017,7 @@ export default function CopilotPage() {
               chatWindow={
                 <ChatWindow
                   messages={messages}
-                  loading={loading}
+                  loading={loading || isThinking}
                   onSelectSuggestion={handleSend}
                   activeModel={selectedModel}
                 />

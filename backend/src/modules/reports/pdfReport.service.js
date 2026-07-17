@@ -1,38 +1,205 @@
 const puppeteer = require("puppeteer");
 const reportTemplate = require("./reportTemplate");
 const fullReportTemplate = require("./fullReportTemplate");
+const PDFDocument = require("pdfkit");
+
+const generatePdfReportFallback = async (report, vulnerabilities, res) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50 });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="athx-report-${report.scanId || "scan"}.pdf"`,
+      );
+      doc.pipe(res);
+
+      // Header block
+      doc.rect(0, 0, 612, 100).fill("#071126");
+      doc
+        .fillColor("#FFFFFF")
+        .fontSize(20)
+        .text("ATHX SECURITY COMPLIANCE REPORT", 50, 40);
+
+      // Executive summary
+      doc.fillColor("#000000").fontSize(14).text("Executive Summary", 50, 120);
+      doc
+        .fontSize(10)
+        .fillColor("#475569")
+        .text(report.executiveSummary || "No summary provided.", 50, 140, {
+          width: 500,
+        });
+
+      // Posture Metrics
+      doc
+        .fontSize(14)
+        .fillColor("#000000")
+        .text("Security Posture HUD", 50, 240);
+      doc
+        .fontSize(11)
+        .fillColor("#334155")
+        .text(`Overall Score: ${report.securityScore || 0}/100`, 50, 260);
+      doc.text(`Security Grade: ${report.grade || "A"}`, 50, 275);
+      doc.text(`Risk Classification: ${report.riskLevel || "Low"}`, 50, 290);
+
+      // Vulnerabilities list
+      doc
+        .fontSize(14)
+        .fillColor("#000000")
+        .text("Discovered Vulnerabilities", 50, 330);
+      let y = 360;
+
+      if (vulnerabilities && vulnerabilities.length > 0) {
+        vulnerabilities.forEach((vuln, i) => {
+          if (y > 700) {
+            doc.addPage();
+            y = 50;
+          }
+          doc
+            .fontSize(11)
+            .fillColor("#EF4444")
+            .text(
+              `${i + 1}. ${vuln.title} [${vuln.severity?.toUpperCase()}]`,
+              50,
+              y,
+            );
+          doc
+            .fontSize(9)
+            .fillColor("#64748B")
+            .text(
+              `CWE: ${vuln.cwe || "N/A"} | OWASP: ${vuln.owasp || "N/A"} | CVSS: ${vuln.cvss || "N/A"}`,
+              50,
+              y + 15,
+            );
+          doc
+            .fontSize(9)
+            .fillColor("#334155")
+            .text(vuln.description || "", 50, y + 28, { width: 500 });
+          y += 65;
+        });
+      } else {
+        doc
+          .fontSize(10)
+          .fillColor("#10B981")
+          .text("Secure! No vulnerabilities discovered.", 50, y);
+      }
+
+      doc.end();
+      resolve();
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+
+const generateSinglePdfReportFallback = async (
+  vulnerability,
+  analysis,
+  res,
+) => {
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ margin: 50 });
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${vulnerability.title || "finding"}.pdf"`,
+      );
+      doc.pipe(res);
+
+      // Header block
+      doc.rect(0, 0, 612, 100).fill("#071126");
+      doc
+        .fillColor("#FFFFFF")
+        .fontSize(20)
+        .text("VULNERABILITY ANALYSIS REPORT", 50, 40);
+
+      // Finding title
+      doc.fillColor("#000000").fontSize(14).text("Threat Details", 50, 120);
+      doc
+        .fontSize(12)
+        .fillColor("#EF4444")
+        .text(vulnerability.title || "Vulnerability", 50, 145);
+
+      // Details block
+      doc
+        .fontSize(10)
+        .fillColor("#334155")
+        .text(`Severity: ${vulnerability.severity?.toUpperCase()}`, 50, 170);
+      doc.text(
+        `CWE: ${vulnerability.cwe || "N/A"} | OWASP: ${vulnerability.owasp || "N/A"}`,
+        50,
+        185,
+      );
+      doc.text(`Endpoint: ${vulnerability.endpoint || "N/A"}`, 50, 200);
+
+      doc.fontSize(12).fillColor("#000000").text("Description", 50, 230);
+      doc
+        .fontSize(10)
+        .fillColor("#475569")
+        .text(
+          vulnerability.description || "No description provided.",
+          50,
+          250,
+          { width: 500 },
+        );
+
+      doc
+        .fontSize(12)
+        .fillColor("#000000")
+        .text("Remediation Strategy", 50, 350);
+      doc
+        .fontSize(10)
+        .fillColor("#475569")
+        .text(
+          analysis.remediationPlan ||
+            "Implement strict authorization headers and input sanitizations.",
+          50,
+          370,
+          { width: 500 },
+        );
+
+      doc.end();
+      resolve();
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
 
 const generatePdfReport = async (vulnerability, analysis, res) => {
   let browser;
+  let finalRes = res;
+  let isFullScanReport = false;
+
+  // Overload check: generatePdfReport(report, res)
+  if (!res && analysis && typeof analysis.send === "function") {
+    finalRes = analysis;
+    isFullScanReport = true;
+  }
+
+  if (!finalRes) return;
 
   try {
-    let finalRes = res;
-    let isFullScanReport = false;
-
-    // Overload check: generatePdfReport(report, res)
-    if (!res && analysis && typeof analysis.send === "function") {
-      finalRes = analysis;
-      isFullScanReport = true;
-    }
-
-    if (!finalRes) throw new Error("Response object required");
-
     let html;
     let filename;
+    let reportObj = vulnerability;
+    let vulnerabilitiesList = [];
 
     if (isFullScanReport) {
-      const report = vulnerability;
       const Vulnerability = require("../vulnerabilities/vulnerability.model");
-      const vulnerabilities = await Vulnerability.find({ scanId: report.scanId });
-      html = fullReportTemplate(report, vulnerabilities);
-      filename = `athx-report-${report.scanId || "scan"}.pdf`;
+      vulnerabilitiesList = await Vulnerability.find({
+        scanId: reportObj.scanId,
+      });
+      html = fullReportTemplate(reportObj, vulnerabilitiesList);
+      filename = `athx-report-${reportObj.scanId || "scan"}.pdf`;
     } else {
       if (!vulnerability || !analysis) throw new Error("Missing data");
       html = reportTemplate(vulnerability, analysis);
       filename = `${vulnerability.title || "finding"}.pdf`;
     }
 
-    // ✅ Production Launch - No executablePath, puppeteer khud manage karega
+    // Launch Headless Chromium via Puppeteer
     browser = await puppeteer.launch({
       headless: true,
       args: [
@@ -43,26 +210,61 @@ const generatePdfReport = async (vulnerability, analysis, res) => {
     });
 
     const page = await browser.newPage();
-    
     await page.setContent(html, { waitUntil: "networkidle0" });
-    
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" },
+      margin: { top: "0", bottom: "0", left: "0", right: "0" },
     });
 
     finalRes.setHeader("Content-Type", "application/pdf");
-    finalRes.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    finalRes.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${filename}"`,
+    );
     finalRes.send(pdfBuffer);
-
   } catch (error) {
-    console.error("PDF Error:", error);
-    if (finalRes && !finalRes.headersSent) {
-      finalRes.status(500).json({ error: "PDF generation failed", message: error.message });
+    console.error(
+      "PDF Puppeteer Error, falling back to PDFKit:",
+      error.message,
+    );
+    try {
+      if (isFullScanReport) {
+        const Vulnerability = require("../vulnerabilities/vulnerability.model");
+        const vulnerabilities = await Vulnerability.find({
+          scanId: vulnerability.scanId,
+        });
+        await generatePdfReportFallback(
+          vulnerability,
+          vulnerabilities,
+          finalRes,
+        );
+      } else {
+        await generateSinglePdfReportFallback(
+          vulnerability,
+          analysis,
+          finalRes,
+        );
+      }
+    } catch (fallbackErr) {
+      console.error("PDFKit fallback failed:", fallbackErr.message);
+      if (finalRes && !finalRes.headersSent) {
+        finalRes
+          .status(500)
+          .json({
+            error: "PDF generation failed",
+            message: fallbackErr.message,
+          });
+      }
     }
   } finally {
-    if (browser) await browser.close();
+    if (browser) {
+      try {
+        await browser.close();
+      } catch (closeErr) {
+        // ignore
+      }
+    }
   }
 };
 

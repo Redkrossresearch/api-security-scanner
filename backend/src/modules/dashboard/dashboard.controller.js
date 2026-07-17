@@ -10,7 +10,12 @@ const getDashboardStats = async (req, res) => {
     const range = req.query.range || "7D";
     const userId = req.user._id;
 
-    const stats = await dashboardService.getDashboardStats(userId, page, limit, range);
+    const stats = await dashboardService.getDashboardStats(
+      userId,
+      page,
+      limit,
+      range,
+    );
 
     const duration = Date.now() - start;
 

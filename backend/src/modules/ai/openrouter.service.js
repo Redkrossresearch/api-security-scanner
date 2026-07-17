@@ -13,9 +13,19 @@ const generateLocalSecurityReport = (vuln) => {
   const cwe = vuln.cwe || "CWE-200";
   const owasp = vuln.owasp || "A01:2021-Broken Access Control";
   const endpoint = vuln.endpoint || "/api/v1/resource";
-  const cvssScore = vuln.cvss || (severity === "CRITICAL" ? 9.5 : severity === "HIGH" ? 8.2 : severity === "MEDIUM" ? 6.1 : 3.5);
+  const cvssScore =
+    vuln.cvss ||
+    (severity === "CRITICAL"
+      ? 9.5
+      : severity === "HIGH"
+        ? 8.2
+        : severity === "MEDIUM"
+          ? 6.1
+          : 3.5);
   const description = vuln.description || "No description provided.";
-  const recommendation = vuln.recommendation || "Implement standard input validation and defense-in-depth security controls.";
+  const recommendation =
+    vuln.recommendation ||
+    "Implement standard input validation and defense-in-depth security controls.";
 
   const report = {
     executiveSummary: `### Executive Briefing
@@ -105,46 +115,58 @@ We recommend implementing the following defense-in-depth measures:
     references: [
       `https://owasp.org/www-project-api-security/`,
       `https://cwe.mitre.org/data/definitions/${cwe.replace("CWE-", "")}.html`,
-      `https://nvd.nist.gov/vuln-metrics/cvss`
+      `https://nvd.nist.gov/vuln-metrics/cvss`,
     ],
 
     riskRating: {
       score: cvssScore,
-      severity: severity
+      severity: severity,
     },
 
     confidence: {
       level: "High",
-      reason: "Analysis verified via direct pattern matching on fuzzer headers and database records."
+      reason:
+        "Analysis verified via direct pattern matching on fuzzer headers and database records.",
     },
 
     mitre: {
-      tactic: severity === "CRITICAL" || severity === "HIGH" ? "Credential Access / Privilege Escalation" : "Defense Evasion / Discovery",
+      tactic:
+        severity === "CRITICAL" || severity === "HIGH"
+          ? "Credential Access / Privilege Escalation"
+          : "Defense Evasion / Discovery",
       technique: "Exploitation of Vulnerability",
       techniqueId: "T1190",
-      confidence: "High"
+      confidence: "High",
     },
 
     owaspContext: {
       category: owasp,
-      riskDescription: "Failing to properly validate or sanitize API parameters allows attackers to execute unauthorized actions.",
+      riskDescription:
+        "Failing to properly validate or sanitize API parameters allows attackers to execute unauthorized actions.",
       likelihood: "High",
-      impact: severity === "CRITICAL" || severity === "HIGH" ? "High" : "Medium"
+      impact:
+        severity === "CRITICAL" || severity === "HIGH" ? "High" : "Medium",
     },
 
     verdict: {
       summary: `The target endpoint is exposed to ${title}. Exploitation is simple and could compromise internal data privacy.`,
-      priority: severity === "CRITICAL" || severity === "HIGH" ? "High" : "Medium",
-      recommendedSLA: severity === "CRITICAL" ? "7 Days" : severity === "HIGH" ? "14 Days" : "30 Days",
+      priority:
+        severity === "CRITICAL" || severity === "HIGH" ? "High" : "Medium",
+      recommendedSLA:
+        severity === "CRITICAL"
+          ? "7 Days"
+          : severity === "HIGH"
+            ? "14 Days"
+            : "30 Days",
       businessCriticality: "High",
-      exploitability: "High"
+      exploitability: "High",
     },
 
     attackFlow: [
       `Identify target endpoint at ${endpoint}`,
       `Analyze input formats and request schemas`,
       `Transmit custom payload with parameters`,
-      `Bypass verification logic and compromise asset`
+      `Bypass verification logic and compromise asset`,
     ],
 
     metadata: {
@@ -152,15 +174,20 @@ We recommend implementing the following defense-in-depth measures:
       owasp: owasp,
       attackSurface: "API Endpoints",
       affectedLayer: "Application Layer",
-      securityDomain: "Access Control & Input Validation"
+      securityDomain: "Access Control & Input Validation",
     },
 
     executiveMetrics: {
-      businessRisk: severity === "CRITICAL" || severity === "HIGH" ? "High" : "Medium",
+      businessRisk:
+        severity === "CRITICAL" || severity === "HIGH" ? "High" : "Medium",
       exploitability: "High",
-      operationalImpact: severity === "CRITICAL" || severity === "HIGH" ? "High" : "Medium",
-      remediationPriority: severity === "CRITICAL" || severity === "HIGH" ? "Critical" : "Standard"
-    }
+      operationalImpact:
+        severity === "CRITICAL" || severity === "HIGH" ? "High" : "Medium",
+      remediationPriority:
+        severity === "CRITICAL" || severity === "HIGH"
+          ? "Critical"
+          : "Standard",
+    },
   };
 
   return JSON.stringify(report, null, 2);
@@ -168,8 +195,14 @@ We recommend implementing the following defense-in-depth measures:
 
 const analyzeWithAI = async (vulnerability) => {
   try {
-    if (!config.openRouterApiKey || config.openRouterApiKey.includes("YOUR_API_KEY") || config.openRouterApiKey === "") {
-      console.log("⚠️ No OpenRouter API key found. Using local security analysis engine.");
+    if (
+      !config.openRouterApiKey ||
+      config.openRouterApiKey.includes("YOUR_API_KEY") ||
+      config.openRouterApiKey === ""
+    ) {
+      console.log(
+        "⚠️ No OpenRouter API key found. Using local security analysis engine.",
+      );
       return generateLocalSecurityReport(vulnerability);
     }
 
@@ -226,7 +259,7 @@ ${JSON.stringify(vulnerability, null, 2)}
     );
 
     let content = response.data.choices[0].message.content;
-    
+
     // Strip markdown formatting wrapping tags if present
     if (content.includes("```json")) {
       content = content.split("```json")[1].split("```")[0].trim();
@@ -238,7 +271,10 @@ ${JSON.stringify(vulnerability, null, 2)}
     JSON.parse(content);
     return content;
   } catch (error) {
-    console.error("⚠️ AI API call failed or returned invalid JSON. Triggering local security analysis engine.", error.message);
+    console.error(
+      "⚠️ AI API call failed or returned invalid JSON. Triggering local security analysis engine.",
+      error.message,
+    );
     return generateLocalSecurityReport(vulnerability);
   }
 };

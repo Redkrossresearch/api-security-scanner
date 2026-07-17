@@ -6,17 +6,40 @@ const { generateJsonReport } = require("./report.service");
 const { generatePdfReport } = require("./pdfReport.service");
 const { generateOpenApiSpec } = require("./openapi.generator");
 
-const checkReportOwnership = async (scanId, userId) => {
-  const scan = await Scan.findOne({
-    _id: scanId,
-    userId: userId,
-  });
-  return !!scan;
+const checkReportOwnership = async (scan, req) => {
+  const userId = req.user._id;
+
+  if (!scan) return false;
+
+  // 1. Is scan creator
+  if (scan.userId.toString() === userId.toString()) return true;
+
+  // 2. Is team member of the team scoped to the scan
+  if (scan.teamId) {
+    const Team = require("../teams/team.model");
+    const team = await Team.findOne({ _id: scan.teamId });
+    if (team) {
+      const isMember =
+        team.ownerId.toString() === userId.toString() ||
+        team.members.some((m) => m.userId.toString() === userId.toString());
+      if (isMember) return true;
+    }
+  }
+
+  return false;
 };
 
 const getReport = async (req, res) => {
   try {
-    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
+    const scan = await Scan.findOne({ scanId: req.params.scanId });
+    if (!scan) {
+      return res.status(404).json({
+        success: false,
+        message: "Scan not found",
+      });
+    }
+
+    const isOwner = await checkReportOwnership(scan, req);
     if (!isOwner) {
       return res.status(403).json({
         success: false,
@@ -25,7 +48,7 @@ const getReport = async (req, res) => {
     }
 
     const report = await Report.findOne({
-      scanId: req.params.scanId,
+      scanId: scan._id,
     });
 
     if (!report) {
@@ -49,7 +72,15 @@ const getReport = async (req, res) => {
 
 const exportJsonReport = async (req, res) => {
   try {
-    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
+    const scan = await Scan.findOne({ scanId: req.params.scanId });
+    if (!scan) {
+      return res.status(404).json({
+        success: false,
+        message: "Scan not found",
+      });
+    }
+
+    const isOwner = await checkReportOwnership(scan, req);
     if (!isOwner) {
       return res.status(403).json({
         success: false,
@@ -58,7 +89,7 @@ const exportJsonReport = async (req, res) => {
     }
 
     const report = await Report.findOne({
-      scanId: req.params.scanId,
+      scanId: scan._id,
     });
 
     if (!report) {
@@ -88,7 +119,15 @@ const exportJsonReport = async (req, res) => {
 
 const exportCsvReport = async (req, res) => {
   try {
-    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
+    const scan = await Scan.findOne({ scanId: req.params.scanId });
+    if (!scan) {
+      return res.status(404).json({
+        success: false,
+        message: "Scan not found",
+      });
+    }
+
+    const isOwner = await checkReportOwnership(scan, req);
     if (!isOwner) {
       return res.status(403).json({
         success: false,
@@ -97,7 +136,7 @@ const exportCsvReport = async (req, res) => {
     }
 
     const report = await Report.findOne({
-      scanId: req.params.scanId,
+      scanId: scan._id,
     });
 
     if (!report) {
@@ -108,7 +147,7 @@ const exportCsvReport = async (req, res) => {
     }
 
     const vulnerabilities = await Vulnerability.find({
-      scanId: report.scanId,
+      scanId: scan._id,
     });
 
     const headers = [
@@ -122,13 +161,18 @@ const exportCsvReport = async (req, res) => {
       "Verified",
       "Endpoint",
       "Vulnerable Parameter",
-      "Exploit Payload"
+      "Exploit Payload",
     ];
 
     const escapeCsv = (val) => {
       if (val === undefined || val === null) return "";
       const str = String(val);
-      if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+      if (
+        str.includes(",") ||
+        str.includes('"') ||
+        str.includes("\n") ||
+        str.includes("\r")
+      ) {
         return `"${str.replace(/"/g, '""')}"`;
       }
       return str;
@@ -136,19 +180,21 @@ const exportCsvReport = async (req, res) => {
 
     const rows = [
       headers.join(","),
-      ...vulnerabilities.map(v => [
-        escapeCsv(v.title),
-        escapeCsv(v.severity),
-        escapeCsv(v.category),
-        escapeCsv(v.cwe),
-        escapeCsv(v.owasp),
-        escapeCsv(v.cvss),
-        escapeCsv(v.status),
-        escapeCsv(v.verified ? "Yes" : "No"),
-        escapeCsv(v.endpoint),
-        escapeCsv(v.vulnerableParameter),
-        escapeCsv(v.exploitPayload)
-      ].join(","))
+      ...vulnerabilities.map((v) =>
+        [
+          escapeCsv(v.title),
+          escapeCsv(v.severity),
+          escapeCsv(v.category),
+          escapeCsv(v.cwe),
+          escapeCsv(v.owasp),
+          escapeCsv(v.cvss),
+          escapeCsv(v.status),
+          escapeCsv(v.verified ? "Yes" : "No"),
+          escapeCsv(v.endpoint),
+          escapeCsv(v.vulnerableParameter),
+          escapeCsv(v.exploitPayload),
+        ].join(","),
+      ),
     ];
 
     const csvContent = rows.join("\n");
@@ -156,7 +202,7 @@ const exportCsvReport = async (req, res) => {
     res.setHeader("Content-Type", "text/csv");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=athx-report-${req.params.scanId}.csv`
+      `attachment; filename=athx-report-${req.params.scanId}.csv`,
     );
 
     res.send(csvContent);
@@ -170,7 +216,15 @@ const exportCsvReport = async (req, res) => {
 
 const exportPdfReport = async (req, res) => {
   try {
-    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
+    const scan = await Scan.findOne({ scanId: req.params.scanId });
+    if (!scan) {
+      return res.status(404).json({
+        success: false,
+        message: "Scan not found",
+      });
+    }
+
+    const isOwner = await checkReportOwnership(scan, req);
     if (!isOwner) {
       return res.status(403).json({
         success: false,
@@ -179,7 +233,7 @@ const exportPdfReport = async (req, res) => {
     }
 
     const report = await Report.findOne({
-      scanId: req.params.scanId,
+      scanId: scan._id,
     });
 
     if (!report) {
@@ -207,23 +261,19 @@ const exportPdfReport = async (req, res) => {
 
 const exportOpenApiReport = async (req, res) => {
   try {
-    const isOwner = await checkReportOwnership(req.params.scanId, req.user._id);
-    if (!isOwner) {
-      return res.status(403).json({
-        success: false,
-        message: "Forbidden: You do not have access to this report.",
-      });
-    }
-
-    const scan = await Scan.findOne({
-      _id: req.params.scanId,
-      userId: req.user._id
-    });
-
+    const scan = await Scan.findOne({ scanId: req.params.scanId });
     if (!scan) {
       return res.status(404).json({
         success: false,
         message: "Scan not found",
+      });
+    }
+
+    const isOwner = await checkReportOwnership(scan, req);
+    if (!isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden: You do not have access to this report.",
       });
     }
 
@@ -234,7 +284,7 @@ const exportOpenApiReport = async (req, res) => {
     res.setHeader("Content-Type", "application/json");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=athx-openapi-${req.params.scanId}.json`
+      `attachment; filename=athx-openapi-${req.params.scanId}.json`,
     );
 
     res.send(JSON.stringify(openApiSpec, null, 2));

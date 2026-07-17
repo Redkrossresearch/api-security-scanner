@@ -20,44 +20,67 @@ const checkAndRunScheduledScans = async () => {
     for (const setting of activeSettings) {
       const scheduleType = setting.cronSchedule;
       const threshold = INTERVALS[scheduleType];
-      
+
       if (!threshold) continue;
 
       const now = Date.now();
-      const lastRunTime = setting.lastCronRun ? new Date(setting.lastCronRun).getTime() : 0;
-      
+      const lastRunTime = setting.lastCronRun
+        ? new Date(setting.lastCronRun).getTime()
+        : 0;
+
       // Check if it's time to run
       if (now - lastRunTime >= threshold) {
-        // Find user's last completed scan target URL
-        let targetScan = await Scan.findOne({
-          userId: setting.userId,
-          status: "completed",
-        }).sort({ createdAt: -1 });
-
-        // Fallback to any latest scan if no completed scan found
-        if (!targetScan) {
-          targetScan = await Scan.findOne({
-            userId: setting.userId,
-          }).sort({ createdAt: -1 });
+        // Parse URLs from scheduledUrls field
+        let urlsToScan = [];
+        if (setting.scheduledUrls && setting.scheduledUrls.trim()) {
+          urlsToScan = setting.scheduledUrls
+            .split(/[\n,]+/)
+            .map((u) => u.trim())
+            .filter((u) => u.length > 0);
         }
 
-        if (targetScan && targetScan.targetUrl) {
+        // Fallback to last scan target if no explicit urls scheduled
+        if (urlsToScan.length === 0) {
+          let targetScan = await Scan.findOne({
+            userId: setting.userId,
+            status: "completed",
+          }).sort({ createdAt: -1 });
+
+          if (!targetScan) {
+            targetScan = await Scan.findOne({
+              userId: setting.userId,
+            }).sort({ createdAt: -1 });
+          }
+
+          if (targetScan && targetScan.targetUrl) {
+            urlsToScan.push(targetScan.targetUrl);
+          }
+        }
+
+        if (urlsToScan.length > 0) {
           console.log(
-            `🚀 Scheduler: Triggering automated '${scheduleType}' scan for User: ${setting.userId} Target: ${targetScan.targetUrl}`
+            `🚀 Scheduler: Triggering automated '${scheduleType}' scans for ${setting.teamId ? "Team: " + setting.teamId : "User: " + setting.userId}`,
           );
-          
-          // Update setting lastCronRun timestamp to prevent double triggers
+
+          // Update setting lastCronRun timestamp
           setting.lastCronRun = new Date();
           await setting.save();
 
-          // Spawn the scan in the background
-          try {
-            await createScan(setting.userId, targetScan.targetUrl);
-          } catch (scanErr) {
-            console.error(`❌ Scheduler: Scan creation failed for target ${targetScan.targetUrl}:`, scanErr.message);
+          for (const url of urlsToScan) {
+            try {
+              console.log(`🤖 Scheduled scan running for URL: ${url}`);
+              await createScan(setting.userId, url, setting.teamId);
+            } catch (scanErr) {
+              console.error(
+                `❌ Scheduler: Scan creation failed for target ${url}:`,
+                scanErr.message,
+              );
+            }
           }
         } else {
-          console.log(`ℹ️ Scheduler: No previous scan target found for User: ${setting.userId}. Skipping.`);
+          console.log(
+            `ℹ️ Scheduler: No targets to scan for Setting ID ${setting._id}. Skipping.`,
+          );
         }
       }
     }
@@ -77,4 +100,5 @@ const start = () => {
 
 module.exports = {
   start,
+  checkAndRunScheduledScans,
 };

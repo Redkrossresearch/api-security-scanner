@@ -31,7 +31,8 @@ const calculateSecurityScore = (findings = []) => {
   const mediumDeduction = Math.min(20, mediumCount * 3);
   const lowDeduction = Math.min(10, lowCount * 1);
 
-  let score = 100 - (criticalDeduction + highDeduction + mediumDeduction + lowDeduction);
+  let score =
+    100 - (criticalDeduction + highDeduction + mediumDeduction + lowDeduction);
 
   // Apply maximum score caps based on severity presence to match industry standards
   if (criticalCount > 0) {

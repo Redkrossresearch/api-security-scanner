@@ -68,12 +68,17 @@ const scanExposedFiles = async (targetUrl) => {
           validateStatus: () => true,
           httpsAgent: new https.Agent({ rejectUnauthorized: false }),
           headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
           },
           responseType: "text",
         });
 
-        if (response.status === 200 && typeof response.data === "string" && response.data.length > 0) {
+        if (
+          response.status === 200 &&
+          typeof response.data === "string" &&
+          response.data.length > 0
+        ) {
           const body = response.data;
           let matchedPattern = false;
 
@@ -84,15 +89,36 @@ const scanExposedFiles = async (targetUrl) => {
             }
           }
 
-          if (matchedPattern || path.includes(".env") || path.includes("config") || path.includes("secret") || path.includes("backup") || path.includes("dump") || path.includes("key") || path.includes("credential") || path.includes("password")) {
+          if (
+            matchedPattern ||
+            path.includes(".env") ||
+            path.includes("config") ||
+            path.includes("secret") ||
+            path.includes("backup") ||
+            path.includes("dump") ||
+            path.includes("key") ||
+            path.includes("credential") ||
+            path.includes("password")
+          ) {
             let findingKey = "EXPOSED_ENV_FILE";
             if (path.includes(".git")) {
               findingKey = "EXPOSED_GIT_DIRECTORY";
-            } else if (path.includes("backup") || path.includes("sql") || path.includes("dump")) {
+            } else if (
+              path.includes("backup") ||
+              path.includes("sql") ||
+              path.includes("dump")
+            ) {
               findingKey = "EXPOSED_BACKUP_FILES";
             } else if (path.includes("admin") || path.includes("wp-admin")) {
               findingKey = "EXPOSED_ADMIN_PANEL";
-            } else if (path.includes("config") || path.includes("xml") || path.includes("yml") || path.includes("yaml") || path.includes("json") || path.includes("php")) {
+            } else if (
+              path.includes("config") ||
+              path.includes("xml") ||
+              path.includes("yml") ||
+              path.includes("yaml") ||
+              path.includes("json") ||
+              path.includes("php")
+            ) {
               findingKey = "EXPOSED_CONFIGURATION_FILES";
             } else if (path.includes("log")) {
               findingKey = "EXPOSED_LOG_FILES";

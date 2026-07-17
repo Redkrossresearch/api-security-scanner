@@ -18,6 +18,7 @@ const {
   getTrainings,
   createTraining,
   deleteTraining,
+  submitFeedback,
 } = require("./copilot.controller");
 
 // Public model registry (no auth needed)
@@ -28,14 +29,25 @@ router.get("/conversations", authenticate, getConversations);
 router.post("/conversations", authenticate, createConversation);
 router.put("/conversations/:id", authenticate, updateConversation);
 router.delete("/conversations/:id", authenticate, deleteConversation);
-router.post("/conversations/:id/duplicate", authenticate, duplicateConversation);
+router.post(
+  "/conversations/:id/duplicate",
+  authenticate,
+  duplicateConversation,
+);
 router.put("/conversations/:id/archive", authenticate, archiveConversation);
 
 // Messages
-router.get("/conversations/:id/messages", authenticate, getConversationMessages);
+router.get(
+  "/conversations/:id/messages",
+  authenticate,
+  getConversationMessages,
+);
 router.post("/conversations/:id/messages", authenticate, handleChatRequest);
-router.post("/conversations/:id/messages/save", authenticate, saveAssistantMessage);
-
+router.post(
+  "/conversations/:id/messages/save",
+  authenticate,
+  saveAssistantMessage,
+);
 
 // Context memories CRUD
 router.get("/memories", authenticate, getMemories);
@@ -46,5 +58,8 @@ router.delete("/memories/:id", authenticate, deleteMemory);
 router.get("/trainings", authenticate, getTrainings);
 router.post("/trainings", authenticate, createTraining);
 router.delete("/trainings/:id", authenticate, deleteTraining);
+
+// Thumbs up/down accuracy feedback loop (Sprint 57)
+router.post("/feedback", authenticate, submitFeedback);
 
 module.exports = router;

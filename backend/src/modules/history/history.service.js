@@ -18,7 +18,9 @@ const getScanHistory = async (userId, query = {}) => {
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit)
-    .select("scanId targetUrl assetName status securityScore grade riskLevel riskScore criticalCount highCount mediumCount lowCount totalFindings startedAt completedAt duration createdAt");
+    .select(
+      "scanId targetUrl assetName status securityScore grade riskLevel riskScore criticalCount highCount mediumCount lowCount totalFindings startedAt completedAt duration createdAt",
+    );
 
   return {
     scans,
@@ -38,7 +40,9 @@ const getScanTimeline = async (userId, days = 30) => {
   const scans = await Scan.find({
     userId,
     createdAt: { $gte: since },
-  }).sort({ createdAt: -1 }).lean();
+  })
+    .sort({ createdAt: -1 })
+    .lean();
 
   return scans;
 };
@@ -52,21 +56,33 @@ const getVulnerabilityHistory = async (userId, days = 90) => {
   const vulnerabilities = await Vulnerability.find({
     scanId: { $in: userScanIds },
     createdAt: { $gte: since },
-  }).sort({ createdAt: -1 }).lean();
+  })
+    .sort({ createdAt: -1 })
+    .lean();
 
   return vulnerabilities;
 };
 
 const getHistorySummary = async (userId) => {
   const totalScans = await Scan.countDocuments({ userId });
-  const completedScans = await Scan.countDocuments({ userId, status: "completed" });
+  const completedScans = await Scan.countDocuments({
+    userId,
+    status: "completed",
+  });
   const failedScans = await Scan.countDocuments({ userId, status: "failed" });
   const runningScans = await Scan.countDocuments({ userId, status: "running" });
 
-  const latestScan = await Scan.findOne({ userId }).sort({ createdAt: -1 }).lean();
+  const latestScan = await Scan.findOne({ userId })
+    .sort({ createdAt: -1 })
+    .lean();
 
   const avgScore = await Scan.aggregate([
-    { $match: { userId: require("mongoose").Types.ObjectId.createFromHexString(userId), status: "completed" } },
+    {
+      $match: {
+        userId: require("mongoose").Types.ObjectId.createFromHexString(userId),
+        status: "completed",
+      },
+    },
     { $group: { _id: null, avg: { $avg: "$securityScore" } } },
   ]);
 

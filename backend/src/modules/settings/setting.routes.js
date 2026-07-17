@@ -1,9 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const authenticate = require("../../middleware/auth.middleware");
-const { 
-  getSettings, 
-  updateSettings, 
+const {
+  getSettings,
+  updateSettings,
   syncGithubWorkflow,
   getGithubClientId,
   handleGithubCallback,
@@ -11,6 +11,7 @@ const {
   disconnectGithub,
   getGithubBranches,
   renderMockAuthorize,
+  syncGitlabWorkflow,
 } = require("./setting.controller");
 
 router.get("/", authenticate, getSettings);
@@ -22,5 +23,6 @@ router.get("/github/repos", authenticate, getGithubRepos);
 router.delete("/github/disconnect", authenticate, disconnectGithub);
 router.get("/github/branches", authenticate, getGithubBranches);
 router.get("/github/mock-authorize", renderMockAuthorize);
+router.post("/gitlab/sync", authenticate, syncGitlabWorkflow);
 
 module.exports = router;

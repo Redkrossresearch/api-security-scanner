@@ -31,7 +31,10 @@ const timeline = async (req, res) => {
 const vulnerabilityHistory = async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 90;
-    const vulnerabilities = await historyService.getVulnerabilityHistory(req.user._id, days);
+    const vulnerabilities = await historyService.getVulnerabilityHistory(
+      req.user._id,
+      days,
+    );
     return res.json({ success: true, vulnerabilities });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

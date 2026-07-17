@@ -11,7 +11,7 @@ const generateAccessToken = (user) => {
     env.jwtAccessSecret,
     {
       expiresIn: "365d",
-    }
+    },
   );
 };
 
@@ -23,7 +23,7 @@ const generateRefreshToken = (user) => {
     env.jwtRefreshSecret,
     {
       expiresIn: "365d",
-    }
+    },
   );
 };
 

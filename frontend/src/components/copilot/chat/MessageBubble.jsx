@@ -6,16 +6,27 @@ import toast from "react-hot-toast";
 
 export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
   const isBot = msg.sender === "assistant";
-  const [displayText, setDisplayText] = React.useState(isBot && isLatest ? "" : msg.text);
+  const [displayText, setDisplayText] = React.useState(isBot && isLatest && !msg.isStreaming ? "" : msg.text);
 
   React.useEffect(() => {
+    if (msg.isStreaming) {
+      setDisplayText(msg.text);
+      return;
+    }
+
     if (isBot && isLatest && msg.text && displayText !== msg.text) {
+      // If we already have partial text (e.g. from streaming), do not typewriter from 0
+      if (displayText && msg.text.startsWith(displayText) && displayText.length > 5) {
+        setDisplayText(msg.text);
+        return;
+      }
+
       let currentIndex = 0;
       const fullText = msg.text;
       
       const interval = setInterval(() => {
         if (currentIndex < fullText.length) {
-          currentIndex += 12; // Speed parameter: characters per interval tick
+          currentIndex += 12; // Speed parameter
           setDisplayText(fullText.slice(0, currentIndex));
         } else {
           setDisplayText(fullText);
@@ -27,7 +38,7 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
     } else {
       setDisplayText(msg.text);
     }
-  }, [msg.text, isLatest, isBot]);
+  }, [msg.text, isLatest, isBot, msg.isStreaming]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(msg.text);
@@ -108,7 +119,56 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
         }}
       >
         {isBot ? (
-          <MarkdownRenderer text={displayText} />
+          displayText ? (
+            <MarkdownRenderer text={displayText} />
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <style>{`
+                @keyframes cursorBlink {
+                  0%, 100% { opacity: 0; }
+                  50% { opacity: 1; }
+                }
+                @keyframes scanLineShift {
+                  0% { background-position: 0% 50%; }
+                  50% { background-position: 100% 50%; }
+                  100% { background-position: 0% 50%; }
+                }
+              `}</style>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                fontSize: "12.5px",
+                fontFamily: "monospace",
+                color: "rgba(255, 255, 255, 0.65)",
+                fontWeight: "600",
+                padding: "4px 8px"
+              }}>
+                <span style={{ 
+                  color: "#8B5CF6", 
+                  textShadow: "0 0 8px rgba(139, 92, 246, 0.4)",
+                  animation: "cursorBlink 1s infinite" 
+                }}>❯</span>
+                <span style={{
+                  background: "linear-gradient(90deg, #A78BFA, #60A5FA, #A78BFA)",
+                  backgroundSize: "200% auto",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  animation: "scanLineShift 3s linear infinite",
+                }}>
+                  Synthesizing intelligent security response...
+                </span>
+                <span style={{
+                  width: "7px",
+                  height: "14px",
+                  backgroundColor: "#3B82F6",
+                  boxShadow: "0 0 8px rgba(59, 130, 246, 0.6)",
+                  display: "inline-block",
+                  animation: "cursorBlink 0.8s step-end infinite"
+                }} />
+              </div>
+            </div>
+          )
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             <p style={{

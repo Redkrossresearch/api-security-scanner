@@ -3,13 +3,17 @@ const axios = require("axios");
 
 const getSettings = async (req, res) => {
   try {
-    const userId = req.user?._id; // Extracted by auth middleware
-    let settings = await Setting.findOne({ userId });
+    const userId = req.user?._id;
+    const teamId = req.headers["x-team-id"];
+    const query = teamId ? { teamId } : { userId };
+
+    let settings = await Setting.findOne(query);
 
     if (!settings) {
       // Create default settings if none exists
       settings = await Setting.create({
-        userId,
+        userId: teamId ? undefined : userId,
+        teamId: teamId || undefined,
         targetHeaders: [],
         authType: "none",
         authToken: "",
@@ -36,12 +40,14 @@ const getSettings = async (req, res) => {
 const updateSettings = async (req, res) => {
   try {
     const userId = req.user?._id;
+    const teamId = req.headers["x-team-id"];
     const updateData = req.body;
+    const query = teamId ? { teamId } : { userId };
 
     let settings = await Setting.findOneAndUpdate(
-      { userId },
+      query,
       { $set: updateData },
-      { new: true, upsert: true }
+      { new: true, upsert: true },
     );
 
     res.json({
@@ -60,7 +66,9 @@ const updateSettings = async (req, res) => {
 const syncGithubWorkflow = async (req, res) => {
   try {
     const userId = req.user?._id;
-    const settings = await Setting.findOne({ userId });
+    const teamId = req.headers["x-team-id"];
+    const query = teamId ? { teamId } : { userId };
+    const settings = await Setting.findOne(query);
 
     if (!settings || !settings.githubToken || !settings.githubRepo) {
       return res.status(400).json({
@@ -72,8 +80,9 @@ const syncGithubWorkflow = async (req, res) => {
     if (settings.githubToken === "MOCK_TOKEN") {
       return res.json({
         success: true,
-        message: "GitHub Actions workflow synchronized successfully! (Mock Simulation)",
-        commit: `https://github.com/${settings.githubRepo}/commit/mock-sync-${Date.now().toString().slice(-6)}`
+        message:
+          "GitHub Actions workflow synchronized successfully! (Mock Simulation)",
+        commit: `https://github.com/${settings.githubRepo}/commit/mock-sync-${Date.now().toString().slice(-6)}`,
       });
     }
 
@@ -87,7 +96,9 @@ const syncGithubWorkflow = async (req, res) => {
       role: req.user?.role,
     };
     const jwt = require("jsonwebtoken");
-    const integrationToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "365d" });
+    const integrationToken = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+      expiresIn: "365d",
+    });
 
     // Path in the user repository
     const url = `https://api.github.com/repos/${githubRepo}/contents/.github/workflows/athx-security-scan.yml`;
@@ -144,7 +155,10 @@ jobs:
 
     let sha = null;
     try {
-      const getRes = await axios.get(url, { headers, params: { ref: githubBranch } });
+      const getRes = await axios.get(url, {
+        headers,
+        params: { ref: githubBranch },
+      });
       if (getRes.data && getRes.data.sha) {
         sha = getRes.data.sha;
       }
@@ -176,20 +190,150 @@ jobs:
   }
 };
 
+const syncGitlabWorkflow = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+    const teamId = req.headers["x-team-id"];
+    const query = teamId ? { teamId } : { userId };
+    const settings = await Setting.findOne(query);
+
+    if (!settings || !settings.gitlabToken || !settings.gitlabRepo) {
+      return res.status(400).json({
+        success: false,
+        message: "GitLab integration is not fully configured.",
+      });
+    }
+
+    if (
+      settings.gitlabToken === "MOCK_TOKEN" ||
+      settings.gitlabToken.startsWith("mock")
+    ) {
+      return res.json({
+        success: true,
+        message:
+          "GitLab CI/CD workflow synchronized successfully! (Mock Simulation)",
+        commit: `https://gitlab.com/${settings.gitlabRepo}/-/commit/mock-sync-${Date.now().toString().slice(-6)}`,
+      });
+    }
+
+    const { gitlabToken, gitlabRepo, gitlabBranch } = settings;
+    const origin = req.headers.origin || "http://localhost:5173";
+
+    // Obtain integration security token
+    const tokenPayload = {
+      id: userId,
+      email: req.user?.email,
+      role: req.user?.role,
+    };
+    const jwt = require("jsonwebtoken");
+    const integrationToken = jwt.sign(
+      tokenPayload,
+      process.env.JWT_SECRET || "fallback",
+      { expiresIn: "365d" },
+    );
+
+    const encodedRepo = encodeURIComponent(gitlabRepo);
+    const getFileUrl = `https://gitlab.com/api/v4/projects/${encodedRepo}/repository/files/.gitlab-ci.yml/raw?ref=${gitlabBranch}`;
+    const commitUrl = `https://gitlab.com/api/v4/projects/${encodedRepo}/repository/commits`;
+
+    const headers = {
+      "PRIVATE-TOKEN": gitlabToken,
+      "Content-Type": "application/json",
+    };
+
+    let action = "create";
+    try {
+      await axios.get(getFileUrl, { headers });
+      action = "update";
+    } catch (e) {
+      // Doesn't exist, keep create action
+    }
+
+    const yamlContent = `stages:
+  - security
+
+athx-security-scan:
+  stage: security
+  image: alpine:latest
+  before_script:
+    - apk add --no-cache curl grep
+  script:
+    - |
+      res=$(curl -s -X POST "${origin}/api/scans" \\
+        -H "Authorization: Bearer \${ATHX_API_TOKEN}" \\
+        -H "Content-Type: application/json" \\
+        -d '{"targetUrl": "YOUR_STAGING_API_URL"}')
+      
+      scanId=$(echo $res | grep -oP '"_id":"\\K[^"]+')
+      echo "ATHX Scan Initialized: $scanId"
+      
+      while true; do
+        status_res=$(curl -s "${origin}/api/scans/$scanId/status" \\
+          -H "Authorization: Bearer \${ATHX_API_TOKEN}")
+        status=\$(echo \$status_res | grep -oP '"status":"\\K[^"]+')
+        echo "Current Status: \$status"
+        if [ "\$status" = "completed" ]; then break; fi
+        if [ "\$status" = "failed" ]; then echo "Scan execution failed"; exit 1; fi
+        sleep 10
+      done
+      
+      report=\$(curl -s "${origin}/api/scans/\$scanId" \\
+        -H "Authorization: Bearer \${ATHX_API_TOKEN}")
+      critical=\$(echo \$report | grep -oP '"criticalCount":\\K[0-9]+')
+      high=\$(echo \$report | grep -oP '"highCount":\\K[0-9]+')
+      
+      echo "Scan finished with \$critical Critical and \$high High findings."
+      if [ "\$critical" -gt 0 ] || [ "\$high" -gt 0 ]; then
+        echo "ATHX Security Gate: FAILED (High/Critical vulnerabilities detected!)"
+        exit 1
+      fi
+      echo "ATHX Security Gate: PASSED"`;
+
+    const commitPayload = {
+      branch: gitlabBranch,
+      commit_message: "ci: configure ATHX Security Gate workflow",
+      actions: [
+        {
+          action,
+          file_path: ".gitlab-ci.yml",
+          content: yamlContent,
+        },
+      ],
+    };
+
+    const commitRes = await axios.post(commitUrl, commitPayload, { headers });
+
+    res.json({
+      success: true,
+      message: "GitLab CI/CD workflow synchronized successfully!",
+      commit: commitRes.data?.web_url || "",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.response?.data?.message || error.message,
+    });
+  }
+};
+
 const getGithubClientId = async (req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
-  if (!clientId || clientId === "PLACEHOLDER_CLIENT_ID" || clientId === "Ov23livi45903bda35fc") {
+  if (
+    !clientId ||
+    clientId === "PLACEHOLDER_CLIENT_ID" ||
+    clientId === "Ov23livi45903bda35fc"
+  ) {
     const protocol = req.headers["x-forwarded-proto"] || req.protocol;
     const baseUrl = `${protocol}://${req.get("host")}/api`;
     return res.json({
       success: true,
       clientId: "MOCK_CLIENT_ID",
-      mockAuthUrl: `${baseUrl}/settings/github/mock-authorize`
+      mockAuthUrl: `${baseUrl}/settings/github/mock-authorize`,
     });
   }
   res.json({
     success: true,
-    clientId
+    clientId,
   });
 };
 
@@ -372,7 +516,8 @@ const handleGithubCallback = async (req, res) => {
       await settings.save();
       return res.json({
         success: true,
-        message: "Successfully authorized Mock GitHub account!"
+        message: "Successfully authorized Mock GitHub account!",
+        githubToken: "MOCK_TOKEN",
       });
     }
 
@@ -382,7 +527,8 @@ const handleGithubCallback = async (req, res) => {
     if (!clientId || !clientSecret) {
       return res.status(400).json({
         success: false,
-        message: "GitHub OAuth app credentials are not configured in the server's .env file. Please add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET."
+        message:
+          "GitHub OAuth app credentials are not configured in the server's .env file. Please add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET.",
       });
     }
 
@@ -391,20 +537,22 @@ const handleGithubCallback = async (req, res) => {
       {
         client_id: clientId,
         client_secret: clientSecret,
-        code
+        code,
       },
       {
         headers: {
-          Accept: "application/json"
-        }
-      }
+          Accept: "application/json",
+        },
+      },
     );
 
     const githubToken = tokenRes.data?.access_token;
     if (!githubToken) {
       return res.status(400).json({
         success: false,
-        message: tokenRes.data?.error_description || "Failed to exchange OAuth code for token."
+        message:
+          tokenRes.data?.error_description ||
+          "Failed to exchange OAuth code for token.",
       });
     }
 
@@ -417,12 +565,13 @@ const handleGithubCallback = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Successfully authorized GitHub account!"
+      message: "Successfully authorized GitHub account!",
+      githubToken,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -430,26 +579,48 @@ const handleGithubCallback = async (req, res) => {
 const getGithubRepos = async (req, res) => {
   try {
     const userId = req.user?._id;
-    const settings = await Setting.findOne({ userId });
+    const teamId = req.headers["x-team-id"];
+    const query = teamId ? { teamId } : { userId };
+    const settings = await Setting.findOne(query);
 
     if (!settings || !settings.githubToken) {
       return res.status(400).json({
         success: false,
-        message: "GitHub integration is not connected."
+        message: "GitHub integration is not connected.",
       });
     }
 
     if (settings.githubToken === "MOCK_TOKEN") {
       const mockRepos = [
-        { fullName: "atharv-design/api-security-scanner", private: true, defaultBranch: "dev" },
-        { fullName: "atharv-design/payment-gateway", private: true, defaultBranch: "main" },
-        { fullName: "atharv-design/node-express-backend", private: false, defaultBranch: "main" },
-        { fullName: "atharv-design/react-dashboard-ui", private: false, defaultBranch: "master" },
-        { fullName: "atharv-design/user-auth-service", private: true, defaultBranch: "main" }
+        {
+          fullName: "atharv-design/api-security-scanner",
+          private: true,
+          defaultBranch: "dev",
+        },
+        {
+          fullName: "atharv-design/payment-gateway",
+          private: true,
+          defaultBranch: "main",
+        },
+        {
+          fullName: "atharv-design/node-express-backend",
+          private: false,
+          defaultBranch: "main",
+        },
+        {
+          fullName: "atharv-design/react-dashboard-ui",
+          private: false,
+          defaultBranch: "master",
+        },
+        {
+          fullName: "atharv-design/user-auth-service",
+          private: true,
+          defaultBranch: "main",
+        },
       ];
       return res.json({
         success: true,
-        repos: mockRepos
+        repos: mockRepos,
       });
     }
 
@@ -457,29 +628,29 @@ const getGithubRepos = async (req, res) => {
       headers: {
         Authorization: `token ${settings.githubToken}`,
         Accept: "application/vnd.github.v3+json",
-        "User-Agent": "ATHX-Security-Scanner/1.0"
+        "User-Agent": "ATHX-Security-Scanner/1.0",
       },
       params: {
         per_page: 100,
-        sort: "updated"
-      }
+        sort: "updated",
+      },
     });
 
-    const repos = reposRes.data.map(repo => ({
+    const repos = reposRes.data.map((repo) => ({
       name: repo.name,
       fullName: repo.full_name,
       private: repo.private,
-      defaultBranch: repo.default_branch
+      defaultBranch: repo.default_branch,
     }));
 
     res.json({
       success: true,
-      repos
+      repos,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.response?.data?.message || error.message
+      message: error.response?.data?.message || error.message,
     });
   }
 };
@@ -487,7 +658,9 @@ const getGithubRepos = async (req, res) => {
 const disconnectGithub = async (req, res) => {
   try {
     const userId = req.user?._id;
-    const settings = await Setting.findOne({ userId });
+    const teamId = req.headers["x-team-id"];
+    const query = teamId ? { teamId } : { userId };
+    const settings = await Setting.findOne(query);
     if (settings) {
       settings.githubToken = "";
       settings.githubRepo = "";
@@ -495,12 +668,12 @@ const disconnectGithub = async (req, res) => {
     }
     res.json({
       success: true,
-      message: "GitHub integration disconnected successfully."
+      message: "GitHub integration disconnected successfully.",
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
 };
@@ -513,15 +686,17 @@ const getGithubBranches = async (req, res) => {
     if (!repo) {
       return res.status(400).json({
         success: false,
-        message: "Repository parameter is required."
+        message: "Repository parameter is required.",
       });
     }
 
-    const settings = await Setting.findOne({ userId });
+    const teamId = req.headers["x-team-id"];
+    const query = teamId ? { teamId } : { userId };
+    const settings = await Setting.findOne(query);
     if (!settings || !settings.githubToken) {
       return res.status(400).json({
         success: false,
-        message: "GitHub integration is not connected."
+        message: "GitHub integration is not connected.",
       });
     }
 
@@ -531,38 +706,43 @@ const getGithubBranches = async (req, res) => {
         "atharv-design/payment-gateway": ["main", "staging", "hotfix"],
         "atharv-design/node-express-backend": ["main", "development"],
         "atharv-design/react-dashboard-ui": ["master", "v2-release"],
-        "atharv-design/user-auth-service": ["main", "refactor"]
+        "atharv-design/user-auth-service": ["main", "refactor"],
       };
-      const branches = (mockBranches[repo] || ["main"]).map(name => ({ name }));
+      const branches = (mockBranches[repo] || ["main"]).map((name) => ({
+        name,
+      }));
       return res.json({
         success: true,
-        branches
+        branches,
       });
     }
 
-    const branchesRes = await axios.get(`https://api.github.com/repos/${repo}/branches`, {
-      headers: {
-        Authorization: `token ${settings.githubToken}`,
-        Accept: "application/vnd.github.v3+json",
-        "User-Agent": "ATHX-Security-Scanner/1.0"
+    const branchesRes = await axios.get(
+      `https://api.github.com/repos/${repo}/branches`,
+      {
+        headers: {
+          Authorization: `token ${settings.githubToken}`,
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "ATHX-Security-Scanner/1.0",
+        },
+        params: {
+          per_page: 100,
+        },
       },
-      params: {
-        per_page: 100
-      }
-    });
+    );
 
-    const branches = branchesRes.data.map(b => ({
-      name: b.name
+    const branches = branchesRes.data.map((b) => ({
+      name: b.name,
     }));
 
     res.json({
       success: true,
-      branches
+      branches,
     });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.response?.data?.message || error.message
+      message: error.response?.data?.message || error.message,
     });
   }
 };
@@ -577,4 +757,5 @@ module.exports = {
   disconnectGithub,
   getGithubBranches,
   renderMockAuthorize,
+  syncGitlabWorkflow,
 };

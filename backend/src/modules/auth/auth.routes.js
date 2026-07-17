@@ -15,13 +15,9 @@ const {
   logoutAll,
 } = require("./auth.controller");
 
-const {
-  registerValidation,
-} = require("./auth.validation");
+const { registerValidation } = require("./auth.validation");
 
-const {
-  loginValidation,
-} = require("./auth.login.validation");
+const { loginValidation } = require("./auth.login.validation");
 
 /*
 |--------------------------------------------------------------------------
@@ -29,29 +25,13 @@ const {
 |--------------------------------------------------------------------------
 */
 
-router.post(
-  "/register",
-  registerValidation,
-  validate,
-  register
-);
+router.post("/register", registerValidation, validate, register);
 
-router.post(
-  "/login",
-  loginValidation,
-  validate,
-  login
-);
+router.post("/login", loginValidation, validate, login);
 
-router.post(
-  "/refresh",
-  refresh
-);
+router.post("/refresh", refresh);
 
-router.post(
-  "/google-login",
-  googleLogin
-);
+router.post("/google-login", googleLogin);
 
 /*
 |--------------------------------------------------------------------------
@@ -59,34 +39,21 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-router.get(
-  "/profile",
-  authenticate,
-  (req, res) => {
-    res.status(200).json({
-      success: true,
-      user: {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        role: req.user.role,
-      },
-    });
-  }
-);
+router.get("/profile", authenticate, (req, res) => {
+  res.status(200).json({
+    success: true,
+    user: {
+      id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+    },
+  });
+});
 
+router.post("/logout", authenticate, logout);
 
-router.post(
-  "/logout",
-  authenticate,
-  logout
-);
-
-router.post(
-  "/logout-all",
-  authenticate,
-  logoutAll
-);
+router.post("/logout-all", authenticate, logoutAll);
 
 /*
 |--------------------------------------------------------------------------
@@ -94,22 +61,17 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-router.get(
-  "/admin-test",
-  authenticate,
-  authorize("admin"),
-  (req, res) => {
-    res.status(200).json({
-      success: true,
-      message: "Admin access granted",
-      user: {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        role: req.user.role,
-      },
-    });
-  }
-);
+router.get("/admin-test", authenticate, authorize("admin"), (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Admin access granted",
+    user: {
+      id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+    },
+  });
+});
 
 module.exports = router;

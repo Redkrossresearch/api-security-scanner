@@ -1,7 +1,4 @@
-const calculateSeverity = (
-  cvss
-) => {
-
+const calculateSeverity = (cvss) => {
   if (cvss >= 9) {
     return "critical";
   }

@@ -3,7 +3,8 @@
 // Projection constants for MongoDB queries
 const SCAN_FIELDS = "targetUrl securityScore riskLevel grade createdAt";
 
-const LATEST_SCAN_FIELDS = "_id targetUrl securityScore grade riskLevel createdAt";
+const LATEST_SCAN_FIELDS =
+  "_id targetUrl securityScore grade riskLevel createdAt";
 
 const CRITICAL_FIELDS = "title severity status createdAt apiName targetUrl";
 

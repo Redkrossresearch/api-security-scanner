@@ -1,6 +1,32 @@
 import { useEffect, useRef } from "react";
 import Sidebar from "../components/layouts/Sidebar";
 import { Outlet, useLocation } from "react-router-dom";
+import SocketProvider from "../sockets/SocketProvider";
+import useSocketEvent from "../sockets/useSocketEvent";
+import toast from "react-hot-toast";
+
+function GlobalSocketListener() {
+  useSocketEvent("scan:completed", (data) => {
+    toast.success(`Scan completed successfully! Security Score: ${data.summary?.securityScore || 0}% (${data.summary?.grade || "F"})`, {
+      duration: 5000,
+    });
+  });
+
+  useSocketEvent("scan:failed", (data) => {
+    toast.error(`Scan failed: ${data.reason || "Internal Engine Error"}`, {
+      duration: 6000,
+    });
+  });
+
+  useSocketEvent("notification:new", (data) => {
+    toast(data.message, {
+      icon: "🔔",
+      duration: 5000,
+    });
+  });
+
+  return null;
+}
 
 export default function MainLayout() {
   const location = useLocation();
@@ -33,15 +59,19 @@ export default function MainLayout() {
         return "System Settings";
       case "/copilot":
         return "AI Security Copilot";
+      case "/queue":
+        return "Task Queue Monitor";
       default:
         return "API Security Console";
     }
   };
 
   return (
-    <div
-      ref={layoutRef}
-      style={{
+    <SocketProvider>
+      <GlobalSocketListener />
+      <div
+        ref={layoutRef}
+        style={{
         height: "100%",
         display: "flex",
         background: "#030712",
@@ -197,6 +227,7 @@ export default function MainLayout() {
           <Outlet />
         </main>
       </div>
-    </div>
+      </div>
+    </SocketProvider>
   );
 }

@@ -3,13 +3,22 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const config = require("../../config/env");
-const { CopilotConversation, CopilotMessage, CopilotMemory, CopilotTrainingPair } = require("./copilot.model");
+const {
+  CopilotConversation,
+  CopilotMessage,
+  CopilotMemory,
+  CopilotTrainingPair,
+} = require("./copilot.model");
 const Scan = require("../scans/scan.model");
 const Setting = require("../settings/setting.model");
 const { SYSTEM_PROMPT } = require("./copilot.prompts");
 const { searchWeb, cleanSearchQuery } = require("./search.service");
 const AdmZip = require("adm-zip");
 const pdfParse = require("pdf-parse");
+const { retryWithBackoff } = require("./ai.resilience");
+const llmRegistry = require("../llm/llm.registry");
+const llmRouter = require("../llm/router/llm.router");
+const llmGuardrails = require("../llm/router/llm.guardrails");
 
 // Helper function to extract readable printable strings from binary data
 function extractPrintableStrings(buffer) {
@@ -40,7 +49,8 @@ const parseAttachment = async (file) => {
       return "[Empty File Content]";
     }
 
-    const isBase64 = typeof file.content === "string" && file.content.startsWith("data:");
+    const isBase64 =
+      typeof file.content === "string" && file.content.startsWith("data:");
     let buffer;
     if (isBase64) {
       const base64Data = file.content.split(";base64,").pop();
@@ -58,14 +68,17 @@ const parseAttachment = async (file) => {
         const zip = new AdmZip(buffer);
         const zipEntries = zip.getEntries();
         let zipText = `[ZIP Archive: ${filename} containing ${zipEntries.length} files]\n`;
-        
+
         for (const entry of zipEntries) {
           if (entry.isDirectory) continue;
-          
+
           const entryExt = entry.entryName.split(".").pop().toLowerCase();
           // Text-like formats
-          const isText = /^(js|jsx|ts|tsx|py|java|c|cpp|h|cs|go|rs|rb|php|html|css|json|md|txt|yml|yaml|xml|sh|ini|conf|csv)$/i.test(entryExt);
-          
+          const isText =
+            /^(js|jsx|ts|tsx|py|java|c|cpp|h|cs|go|rs|rb|php|html|css|json|md|txt|yml|yaml|xml|sh|ini|conf|csv)$/i.test(
+              entryExt,
+            );
+
           const entryData = entry.getData();
           if (isText) {
             zipText += `\n--- Inside ZIP: ${entry.entryName} ---\n${entryData.toString("utf-8")}\n`;
@@ -92,7 +105,11 @@ const parseAttachment = async (file) => {
     }
 
     // 3. Word Document (.docx)
-    if (ext === "docx" || file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+    if (
+      ext === "docx" ||
+      file.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
       try {
         const zip = new AdmZip(buffer);
         const docEntry = zip.getEntry("word/document.xml");
@@ -113,7 +130,11 @@ const parseAttachment = async (file) => {
     }
 
     // 4. Excel spreadsheet (.xlsx)
-    if (ext === "xlsx" || file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
+    if (
+      ext === "xlsx" ||
+      file.type ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ) {
       try {
         const zip = new AdmZip(buffer);
         const sharedStringsEntry = zip.getEntry("xl/sharedStrings.xml");
@@ -121,20 +142,22 @@ const parseAttachment = async (file) => {
         if (sharedStringsEntry) {
           const xml = sharedStringsEntry.getData().toString("utf-8");
           strings = xml.match(/<t[^>]*>(.*?)<\/t>/g) || [];
-          strings = strings.map(s => s.replace(/<[^>]+>/g, ""));
+          strings = strings.map((s) => s.replace(/<[^>]+>/g, ""));
         }
-        
+
         let xlsxText = `[Excel Spreadsheet Text: ${filename}]\n`;
-        const sheetEntries = zip.getEntries().filter(e => e.entryName.startsWith("xl/worksheets/sheet"));
+        const sheetEntries = zip
+          .getEntries()
+          .filter((e) => e.entryName.startsWith("xl/worksheets/sheet"));
         for (const sheetEntry of sheetEntries) {
           const xml = sheetEntry.getData().toString("utf-8");
           const sheetName = sheetEntry.entryName.split("/").pop();
           xlsxText += `\n--- Worksheet: ${sheetName} ---\n`;
-          
+
           const rows = xml.match(/<row[^>]*>(.*?)<\/row>/g) || [];
           for (const row of rows) {
             const cells = row.match(/<v>(.*?)<\/v>/g) || [];
-            const rowValues = cells.map(cell => {
+            const rowValues = cells.map((cell) => {
               const val = cell.replace(/<[^>]+>/g, "");
               const isShared = row.includes('t="s"');
               if (isShared) {
@@ -170,23 +193,78 @@ const parseAttachment = async (file) => {
 // ─── Model Registry ────────────────────────────────────────────────────────────
 const MODEL_REGISTRY = {
   // Pollinations AI Models (Keyless, Backend-Executed, 100% Free Forever)
-  "openai": { label: "GPT-4o-Mini (Free)", provider: "OpenAI", contextWindow: 128000, strengths: ["general", "math", "fast"], badge: "🔥" },
-  "claude": { label: "Claude 3.5 Sonnet (Free)", provider: "Anthropic", contextWindow: 200000, strengths: ["reasoning", "coding", "analysis"], badge: "🧬" },
-  "deepseek": { label: "DeepSeek V3 (Free)", provider: "DeepSeek", contextWindow: 64000, strengths: ["reasoning", "code", "logic"], badge: "🧠" },
-  "llama": { label: "Llama 3.1 405B (Free)", provider: "Meta", contextWindow: 128000, strengths: ["fast", "creative", "general"], badge: "🛸" },
-  "qwen": { label: "Qwen 2.5 72B (Free)", provider: "Alibaba", contextWindow: 32000, strengths: ["coding", "structured-output", "speed"], badge: "🔴" },
-  "qwen-coder": { label: "Qwen Coder 32B (Free)", provider: "Alibaba", contextWindow: 32000, strengths: ["coding", "agents"], badge: "💻" },
-  "mistral": { label: "Mistral Nemo (Free)", provider: "Mistral AI", contextWindow: 32000, strengths: ["fast", "general"], badge: "🌪️" },
-  "searchgpt": { label: "SearchGPT (Free)", provider: "Google/Bing", contextWindow: 32000, strengths: ["web-search", "citations"], badge: "🔍" }
+  openai: {
+    label: "GPT-4o-Mini (Free)",
+    provider: "OpenAI",
+    contextWindow: 128000,
+    strengths: ["general", "math", "fast"],
+    badge: "🔥",
+  },
+  claude: {
+    label: "Claude 3.5 Sonnet (Free)",
+    provider: "Anthropic",
+    contextWindow: 200000,
+    strengths: ["reasoning", "coding", "analysis"],
+    badge: "🧬",
+  },
+  deepseek: {
+    label: "DeepSeek V3 (Free)",
+    provider: "DeepSeek",
+    contextWindow: 64000,
+    strengths: ["reasoning", "code", "logic"],
+    badge: "🧠",
+  },
+  llama: {
+    label: "Llama 3.1 405B (Free)",
+    provider: "Meta",
+    contextWindow: 128000,
+    strengths: ["fast", "creative", "general"],
+    badge: "🛸",
+  },
+  qwen: {
+    label: "Qwen 2.5 72B (Free)",
+    provider: "Alibaba",
+    contextWindow: 32000,
+    strengths: ["coding", "structured-output", "speed"],
+    badge: "🔴",
+  },
+  "qwen-coder": {
+    label: "Qwen Coder 32B (Free)",
+    provider: "Alibaba",
+    contextWindow: 32000,
+    strengths: ["coding", "agents"],
+    badge: "💻",
+  },
+  mistral: {
+    label: "Mistral Nemo (Free)",
+    provider: "Mistral AI",
+    contextWindow: 32000,
+    strengths: ["fast", "general"],
+    badge: "🌪️",
+  },
+  searchgpt: {
+    label: "SearchGPT (Free)",
+    provider: "Google/Bing",
+    contextWindow: 32000,
+    strengths: ["web-search", "citations"],
+    badge: "🔍",
+  },
 };
 
 const DEFAULT_MODEL = "openai";
 
 // ─── Helper: Build enriched system prompt ──────────────────────────────────────
-const buildEnrichedSystemPrompt = (systemStats, modelId, memories = [], promptTemplate = SYSTEM_PROMPT) => {
+const buildEnrichedSystemPrompt = (
+  systemStats,
+  modelId,
+  memories = [],
+  promptTemplate = SYSTEM_PROMPT,
+) => {
   const modelInfo = MODEL_REGISTRY[modelId] || {};
-  const memoryText = memories.map((m) => `- [${m.category}] ${m.text}`).join("\n");
-  
+  const memoryText = memories
+    .map((m) => `- [${m.category}] ${m.text}`)
+    .join("\n");
+
   return `${promptTemplate}
 
 ================================================================================
@@ -214,6 +292,25 @@ Strengths: ${(modelInfo.strengths || []).join(", ")}
 `;
 };
 
+// ─── Helper: Trim message history to prevent context overflow ───────────────────
+const trimMessageHistory = (messages, maxTokens = 4096) => {
+  const maxChars = maxTokens * 4;
+  let totalChars = 0;
+  const trimmed = [];
+
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const msg = messages[i];
+    const len = (msg.content || "").length;
+    if (totalChars + len > maxChars) {
+      console.log(`[copilot-trim] Pruning history: reached token limit at message index ${i}`);
+      break;
+    }
+    totalChars += len;
+    trimmed.unshift(msg);
+  }
+  return trimmed;
+};
+
 // ─── Helper: Build context-aware message history ────────────────────────────────
 const buildMessageHistory = async (conversationId, userQuery, limit = 12) => {
   try {
@@ -227,7 +324,7 @@ const buildMessageHistory = async (conversationId, userQuery, limit = 12) => {
       content: m.text,
     }));
 
-    return messages;
+    return trimMessageHistory(messages, 4000);
   } catch (err) {
     console.warn("[copilot] History retrieval failed:", err.message);
     return [{ role: "user", content: userQuery }];
@@ -264,7 +361,8 @@ const queryKnowledgeBase = (userQuery) => {
         (queryLower.includes("rce") && sectionLower.includes("rce")) ||
         (queryLower.includes("xss") && sectionLower.includes("xss")) ||
         (queryLower.includes("headers") && sectionLower.includes("api8")) ||
-        (queryLower.includes("deployment") && sectionLower.includes("compendium")) ||
+        (queryLower.includes("deployment") &&
+          sectionLower.includes("compendium")) ||
         (queryLower.includes("cloud") && sectionLower.includes("compendium"))
       ) {
         matches.push("## SECTION " + section.trim());
@@ -298,12 +396,9 @@ const fetchScanStats = async (userId) => {
       stats.lastScanStatus = scans[0].status || "completed";
       stats.criticalCount = scans.reduce(
         (acc, s) => acc + (s.criticalCount || 0),
-        0
+        0,
       );
-      stats.highCount = scans.reduce(
-        (acc, s) => acc + (s.highCount || 0),
-        0
-      );
+      stats.highCount = scans.reduce((acc, s) => acc + (s.highCount || 0), 0);
     }
   } catch (err) {
     console.warn("[copilot] DB stats failed:", err.message);
@@ -311,7 +406,175 @@ const fetchScanStats = async (userId) => {
   return stats;
 };
 
-const callPollinations = async (messages, systemPrompt, model, temperature, trainingPairs = []) => {
+const callOpenRouter = async (
+  messages,
+  systemPrompt,
+  model,
+  temperature,
+  trainingPairs = [],
+) => {
+  if (!config.openRouterApiKey) {
+    throw new Error("OpenRouter API Key not configured");
+  }
+
+  const modelId = config.openRouterModel || "meta-llama/llama-3.1-8b-instruct:free";
+  const temp = Math.min(Math.max(parseFloat(temperature) || 0.7, 0.1), 1.5);
+
+  const formattedTraining = [];
+  for (const pair of trainingPairs) {
+    formattedTraining.push({
+      role: "user",
+      content: `Example input: ${pair.prompt}`,
+    });
+    formattedTraining.push({
+      role: "assistant",
+      content: `Expected output: ${pair.response}`,
+    });
+  }
+
+  const fullMessages = [
+    { role: "system", content: systemPrompt },
+    ...formattedTraining,
+    ...messages,
+  ];
+
+  console.log(`[copilot] Querying OpenRouter model "${modelId}"...`);
+  const response = await axios.post(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      model: modelId,
+      messages: fullMessages,
+      temperature: temp,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${config.openRouterApiKey}`,
+        "Content-Type": "application/json",
+      },
+      timeout: 30000,
+    }
+  );
+
+  if (response.data?.choices?.[0]?.message?.content) {
+    return { content: response.data.choices[0].message.content, model: `openrouter:${modelId}` };
+  }
+
+  throw new Error("Empty response from OpenRouter");
+};
+
+const callOpenRouterStream = async (
+  messages,
+  systemPrompt,
+  model,
+  temperature,
+  trainingPairs = [],
+  onToken,
+) => {
+  if (!config.openRouterApiKey) {
+    throw new Error("OpenRouter API Key not configured");
+  }
+
+  const modelId = config.openRouterModel || "meta-llama/llama-3.1-8b-instruct:free";
+  const temp = Math.min(Math.max(parseFloat(temperature) || 0.7, 0.1), 1.5);
+
+  const formattedTraining = [];
+  for (const pair of trainingPairs) {
+    formattedTraining.push({
+      role: "user",
+      content: `Example input: ${pair.prompt}`,
+    });
+    formattedTraining.push({
+      role: "assistant",
+      content: `Expected output: ${pair.response}`,
+    });
+  }
+
+  const fullMessages = [
+    { role: "system", content: systemPrompt },
+    ...formattedTraining,
+    ...messages,
+  ];
+
+  console.log(`[copilot] Querying OpenRouter stream model "${modelId}"...`);
+  const response = await axios.post(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      model: modelId,
+      messages: fullMessages,
+      temperature: temp,
+      stream: true,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${config.openRouterApiKey}`,
+        "Content-Type": "application/json",
+      },
+      responseType: "stream",
+      timeout: 30000,
+    }
+  );
+
+  return new Promise((resolve, reject) => {
+    let accumulatedText = "";
+    let buffer = "";
+
+    response.data.on("data", (chunk) => {
+      buffer += chunk.toString();
+      let lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        const cleaned = line.trim();
+        if (!cleaned) continue;
+        if (cleaned.startsWith("data:")) {
+          const raw = cleaned.slice(5).trim();
+          if (raw === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(raw);
+            const content = parsed.choices?.[0]?.delta?.content || "";
+            if (content) {
+              accumulatedText += content;
+              if (onToken) onToken(content);
+            }
+          } catch (e) {}
+        }
+      }
+    });
+
+    response.data.on("end", () => {
+      if (buffer.trim()) {
+        const line = buffer.trim();
+        let raw = line;
+        if (line.startsWith("data:")) {
+          raw = line.slice(5).trim();
+        }
+        if (raw !== "[DONE]" && raw.startsWith("{") && raw.endsWith("}")) {
+          try {
+            const parsed = JSON.parse(raw);
+            const content = parsed.choices?.[0]?.delta?.content || "";
+            if (content) {
+              accumulatedText += content;
+              if (onToken) onToken(content);
+            }
+          } catch (e) {}
+        }
+      }
+      resolve({ content: accumulatedText, model: `openrouter:${modelId}` });
+    });
+
+    response.data.on("error", (err) => {
+      reject(err);
+    });
+  });
+};
+
+const callPollinations = async (
+  messages,
+  systemPrompt,
+  model,
+  temperature,
+  trainingPairs = [],
+) => {
   let modelId = model || DEFAULT_MODEL;
   if (modelId === "claude") {
     modelId = "openai";
@@ -320,14 +583,20 @@ const callPollinations = async (messages, systemPrompt, model, temperature, trai
 
   const formattedTraining = [];
   for (const pair of trainingPairs) {
-    formattedTraining.push({ role: "user", content: `Example input: ${pair.prompt}` });
-    formattedTraining.push({ role: "assistant", content: `Expected output: ${pair.response}` });
+    formattedTraining.push({
+      role: "user",
+      content: `Example input: ${pair.prompt}`,
+    });
+    formattedTraining.push({
+      role: "assistant",
+      content: `Expected output: ${pair.response}`,
+    });
   }
 
   const fullMessages = [
     { role: "system", content: systemPrompt },
     ...formattedTraining,
-    ...messages
+    ...messages,
   ];
 
   console.log(`[copilot] Querying Pollinations model "${modelId}"...`);
@@ -336,22 +605,138 @@ const callPollinations = async (messages, systemPrompt, model, temperature, trai
     {
       messages: fullMessages,
       model: modelId,
-      temperature: temp
+      temperature: temp,
     },
     {
       timeout: 90000, // 90 seconds timeout
-    }
+    },
   );
 
   // Pollinations returns the plain text string directly in response.data when jsonMode is not set
   if (typeof response.data === "string" && response.data.trim().length > 0) {
     return { content: response.data, model: modelId };
   } else if (response.data && typeof response.data === "object") {
-    const content = response.data.response || response.data.choices?.[0]?.message?.content;
+    const content =
+      response.data.response || response.data.choices?.[0]?.message?.content;
     if (content) return { content, model: modelId };
   }
 
   throw new Error("Empty or invalid response from Pollinations model");
+};
+
+const callPollinationsStream = async (
+  messages,
+  systemPrompt,
+  model,
+  temperature,
+  trainingPairs = [],
+  onToken,
+) => {
+  let modelId = model || DEFAULT_MODEL;
+  if (modelId === "claude") {
+    modelId = "openai";
+  }
+  const temp = Math.min(Math.max(parseFloat(temperature) || 0.7, 0.1), 1.5);
+
+  const formattedTraining = [];
+  for (const pair of trainingPairs) {
+    formattedTraining.push({
+      role: "user",
+      content: `Example input: ${pair.prompt}`,
+    });
+    formattedTraining.push({
+      role: "assistant",
+      content: `Expected output: ${pair.response}`,
+    });
+  }
+
+  const fullMessages = [
+    { role: "system", content: systemPrompt },
+    ...formattedTraining,
+    ...messages,
+  ];
+
+  console.log(
+    `[copilot] Querying Pollinations model "${modelId}" in streaming mode...`,
+  );
+  const response = await axios.post(
+    "https://text.pollinations.ai/",
+    {
+      messages: fullMessages,
+      model: modelId,
+      temperature: temp,
+      stream: true,
+    },
+    {
+      responseType: "stream",
+      timeout: 90000,
+    },
+  );
+
+  return new Promise((resolve, reject) => {
+    let accumulatedText = "";
+    let buffer = "";
+
+    response.data.on("data", (chunk) => {
+      buffer += chunk.toString();
+      let lineIndex;
+      while ((lineIndex = buffer.indexOf("\n")) !== -1) {
+        const line = buffer.slice(0, lineIndex).trim();
+        buffer = buffer.slice(lineIndex + 1);
+
+        if (!line) continue;
+
+        let raw = line;
+        if (line.startsWith("data:")) {
+          raw = line.slice(5).trim();
+        }
+
+        if (raw === "[DONE]") continue;
+
+        let content = "";
+        if (raw.startsWith("{") && raw.endsWith("}")) {
+          try {
+            const parsed = JSON.parse(raw);
+            content =
+              parsed.choices?.[0]?.delta?.content || parsed.response || "";
+          } catch (e) {
+            // treat as raw or ignore
+          }
+        }
+
+        if (content) {
+          accumulatedText += content;
+          if (onToken) onToken(content);
+        }
+      }
+    });
+
+    response.data.on("end", () => {
+      if (buffer.trim()) {
+        const line = buffer.trim();
+        let raw = line;
+        if (line.startsWith("data:")) {
+          raw = line.slice(5).trim();
+        }
+        if (raw !== "[DONE]" && raw.startsWith("{") && raw.endsWith("}")) {
+          try {
+            const parsed = JSON.parse(raw);
+            const content =
+              parsed.choices?.[0]?.delta?.content || parsed.response || "";
+            if (content) {
+              accumulatedText += content;
+              if (onToken) onToken(content);
+            }
+          } catch (e) {}
+        }
+      }
+      resolve({ content: accumulatedText, model: modelId });
+    });
+
+    response.data.on("error", (err) => {
+      reject(err);
+    });
+  });
 };
 
 // ─── Intelligent Fallback Engine ─────────────────────────────────────────────
@@ -370,7 +755,9 @@ const generateContextualFallback = (query, systemStats) => {
 `;
 
   if (q.includes("sql") || q.includes("sqli") || q.includes("injection")) {
-    return intro + `#### 🚨 SQL Injection (CWE-89) Analysis
+    return (
+      intro +
+      `#### 🚨 SQL Injection (CWE-89) Analysis
 
 **CVSS Score**: 9.8 Critical | **OWASP**: API10:2023
 
@@ -414,11 +801,14 @@ db.execute(query, [req.body.email, hashedPassword], (err, results) => {
 | Parameterized Queries | 🔴 FAILING | Replace string concatenation |
 | Input Validation | 🟡 CHECK | Add joi/zod schema validation |
 | Error Handling | 🔴 FAILING | Never expose DB errors to client |
-| ORM Usage | 🟢 RECOMMENDED | Use Mongoose/Sequelize/Prisma |`;
+| ORM Usage | 🟢 RECOMMENDED | Use Mongoose/Sequelize/Prisma |`
+    );
   }
 
   if (q.includes("jwt") || q.includes("token") || q.includes("auth")) {
-    return intro + `#### 🔐 JWT Authentication Security Analysis
+    return (
+      intro +
+      `#### 🔐 JWT Authentication Security Analysis
 
 **CVSS Score**: 8.8 High | **OWASP**: API2:2023
 
@@ -459,11 +849,18 @@ const verifyToken = (req, res, next) => {
 | Algorithm pinning (reject alg:none) | ⚠️ VERIFY | Specify algorithms array |
 | Short expiry (≤15min access token) | ⚠️ VERIFY | Set expiresIn: "15m" |
 | Refresh token rotation | 🔴 IMPLEMENT | Rotate on every use |
-| Token blacklisting on logout | 🔴 IMPLEMENT | Redis blocklist |`;
+| Token blacklisting on logout | 🔴 IMPLEMENT | Redis blocklist |`
+    );
   }
 
-  if (q.includes("scan") || q.includes("vulnerability") || q.includes("finding")) {
-    return intro + `#### 🛡️ Workspace Security Status Report
+  if (
+    q.includes("scan") ||
+    q.includes("vulnerability") ||
+    q.includes("finding")
+  ) {
+    return (
+      intro +
+      `#### 🛡️ Workspace Security Status Report
 
 #### Current Threat Landscape
 | Metric | Value | Risk Level |
@@ -487,11 +884,14 @@ curl -X GET "${topTarget}/api/users/1" \\
 # BOLA/IDOR test — try accessing other users' data
 curl -X GET "${topTarget}/api/users/2" \\
   -H "Authorization: Bearer <your-token>"
-\`\`\``;
+\`\`\``
+    );
   }
 
   // Default high-quality general response
-  return intro + `#### 🧠 Security Architecture Analysis
+  return (
+    intro +
+    `#### 🧠 Security Architecture Analysis
 
 I've analyzed your query in the context of your workspace with **${scanCount} scans** and **${criticalCount} critical findings**.
 
@@ -545,7 +945,8 @@ I've analyzed your query in the context of your workspace with **${scanCount} sc
 | Security Headers | Helmet.js with strict CSP | 🟡 High |
 | Logging | Structured logs with Pino + Sentry | 🟢 Medium |
 
-Ask me anything more specific about your \`${topTarget}\` setup!`;
+Ask me anything more specific about your \`${topTarget}\` setup!`
+  );
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -590,7 +991,9 @@ const createConversation = async (req, res) => {
     });
 
     await newConversation.save();
-    return res.status(201).json({ success: true, conversation: newConversation });
+    return res
+      .status(201)
+      .json({ success: true, conversation: newConversation });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -605,7 +1008,9 @@ const updateConversation = async (req, res) => {
 
     const conversation = await CopilotConversation.findOne({ _id: id, userId });
     if (!conversation) {
-      return res.status(404).json({ success: false, message: "Conversation not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found" });
     }
 
     if (title !== undefined) conversation.title = title;
@@ -627,7 +1032,9 @@ const duplicateConversation = async (req, res) => {
 
     const original = await CopilotConversation.findOne({ _id: id, userId });
     if (!original) {
-      return res.status(404).json({ success: false, message: "Conversation not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found" });
     }
 
     const copy = new CopilotConversation({
@@ -638,7 +1045,9 @@ const duplicateConversation = async (req, res) => {
     });
     await copy.save();
 
-    const originalMessages = await CopilotMessage.find({ conversationId: id }).sort({ createdAt: 1 });
+    const originalMessages = await CopilotMessage.find({
+      conversationId: id,
+    }).sort({ createdAt: 1 });
     if (originalMessages.length > 0) {
       const copiedMessages = originalMessages.map((m) => ({
         conversationId: copy._id,
@@ -663,18 +1072,28 @@ const deleteConversation = async (req, res) => {
 
     // Validate ObjectId format
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ success: false, message: "Invalid conversation ID" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid conversation ID" });
     }
 
-    const conversation = await CopilotConversation.findOneAndDelete({ _id: id, userId });
+    const conversation = await CopilotConversation.findOneAndDelete({
+      _id: id,
+      userId,
+    });
     if (!conversation) {
-      return res.status(404).json({ success: false, message: "Conversation not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found" });
     }
 
     // Cascade delete all messages
     await CopilotMessage.deleteMany({ conversationId: id });
 
-    return res.json({ success: true, message: "Conversation deleted successfully" });
+    return res.json({
+      success: true,
+      message: "Conversation deleted successfully",
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
@@ -689,10 +1108,12 @@ const archiveConversation = async (req, res) => {
     const conv = await CopilotConversation.findOneAndUpdate(
       { _id: id, userId },
       { isArchived: true },
-      { new: true }
+      { new: true },
     );
     if (!conv) {
-      return res.status(404).json({ success: false, message: "Conversation not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found" });
     }
     return res.json({ success: true, conversation: conv });
   } catch (error) {
@@ -708,13 +1129,121 @@ const getConversationMessages = async (req, res) => {
 
     const conversation = await CopilotConversation.findOne({ _id: id, userId });
     if (!conversation) {
-      return res.status(404).json({ success: false, message: "Conversation not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found" });
     }
 
-    const messages = await CopilotMessage.find({ conversationId: id }).sort({ createdAt: 1 });
+    const messages = await CopilotMessage.find({ conversationId: id }).sort({
+      createdAt: 1,
+    });
     return res.json({ success: true, messages });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const learnMemoryFromConversation = async (
+  userId,
+  teamId,
+  userQuery,
+  aiReplyText,
+) => {
+  try {
+    const summaryPrompt = `You are a background AI context extractor.
+Review the conversation snippet below between a developer (user) and a security copilot.
+Extract any new, specific architectural parameters, staging API URLs, custom authentication tokens/keys, local testing hosts, database settings, or custom scanning rules discussed.
+Convert them into short, clear, third-person declarative statements (max 20 words each) suitable to be saved as long-term AI memory notes.
+
+Example output format:
+- Staging server runs on http://127.0.0.1:4000/api.
+- Custom authentication utilizes the 'X-API-KEY' header.
+
+Respond ONLY with the list of statements (starting with '-'). If no new concrete facts or configurations are discussed, respond with 'NONE'.
+
+Conversation:
+User: ${userQuery}
+Assistant: ${aiReplyText}`;
+
+    console.log(
+      "[copilot-learning] Triggering background conversation fact extraction...",
+    );
+    const result = await callPollinations(
+      [{ role: "user", content: "Extract architectural facts." }],
+      summaryPrompt,
+      "openai", // use standard openai fallback on pollinations
+      0.2, // low temperature for precise extraction
+      [],
+    );
+
+    const reply = result.content || "";
+    if (reply.toUpperCase().includes("NONE") || reply.trim().length < 5) {
+      console.log(
+        "[copilot-learning] No new architectural facts detected. Skipping memory save.",
+      );
+      return;
+    }
+
+    const lines = reply.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("-") || trimmed.startsWith("*")) {
+        const text = trimmed.replace(/^[-*]\s+/, "").trim();
+        if (text.length > 10) {
+          // Check if memory already exists
+          const query = teamId ? { teamId, text } : { userId, text };
+          const existing = await CopilotMemory.findOne(query);
+          if (!existing) {
+            // Classify category based on keywords
+            let category = "General";
+            const lowerText = text.toLowerCase();
+            if (
+              lowerText.includes("auth") ||
+              lowerText.includes("token") ||
+              lowerText.includes("jwt") ||
+              lowerText.includes("key") ||
+              lowerText.includes("cookie")
+            ) {
+              category = "Authentication";
+            } else if (
+              lowerText.includes("port") ||
+              lowerText.includes("ip") ||
+              lowerText.includes("url") ||
+              lowerText.includes("server") ||
+              lowerText.includes("host") ||
+              lowerText.includes("mongodb") ||
+              lowerText.includes("docker")
+            ) {
+              category = "Infrastructure";
+            } else if (
+              lowerText.includes("scan") ||
+              lowerText.includes("vulnerability") ||
+              lowerText.includes("cors") ||
+              lowerText.includes("risk") ||
+              lowerText.includes("attack")
+            ) {
+              category = "Security";
+            }
+
+            const newMemory = new CopilotMemory({
+              userId,
+              teamId: teamId || undefined,
+              text,
+              category,
+            });
+            await newMemory.save();
+            console.log(
+              `[copilot-learning] Auto-learned and saved new memory: [${category}] ${text}`,
+            );
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error(
+      "[copilot-learning] Background auto-learning error:",
+      err.message,
+    );
   }
 };
 
@@ -727,29 +1256,51 @@ const handleChatRequest = async (req, res) => {
     const userQuery = (message || "").trim();
 
     if (!userQuery && (!attachments || attachments.length === 0)) {
-      return res.status(400).json({ success: false, message: "Message or attachment is required." });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Message or attachment is required.",
+        });
+    }
+
+    // Validate input query with Guardrails
+    if (userQuery) {
+      const inputCheck = llmGuardrails.validateInput(userQuery);
+      if (!inputCheck.safe) {
+        return res.status(400).json({
+          success: false,
+          message: inputCheck.reason,
+        });
+      }
     }
 
     // 1. Verify conversation ownership
     const conversation = await CopilotConversation.findOne({ _id: id, userId });
     if (!conversation) {
-      return res.status(404).json({ success: false, message: "Conversation not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found." });
     }
 
     // 2. Save user message
     const userMsg = new CopilotMessage({
       conversationId: id,
       sender: "user",
-      text: userQuery || (attachments && attachments.length > 0 ? `[Attached ${attachments.length} file(s)]` : ""),
+      text:
+        userQuery ||
+        (attachments && attachments.length > 0
+          ? `[Attached ${attachments.length} file(s)]`
+          : ""),
       timestamp: new Date(),
       metadata: {
-        attachments: (attachments || []).map(att => ({
+        attachments: (attachments || []).map((att) => ({
           name: att.name,
           type: att.type,
           size: att.size,
-          isImage: att.isImage || false
-        }))
-      }
+          isImage: att.isImage || false,
+        })),
+      },
     });
     await userMsg.save();
 
@@ -760,9 +1311,7 @@ const handleChatRequest = async (req, res) => {
       conversation.title === "New Conversation"
     ) {
       conversation.title =
-        userQuery.length > 40
-          ? userQuery.slice(0, 40) + "..."
-          : userQuery;
+        userQuery.length > 40 ? userQuery.slice(0, 40) + "..." : userQuery;
     }
     conversation.updatedAt = new Date();
     if (model) conversation.lastModel = model;
@@ -779,15 +1328,20 @@ const handleChatRequest = async (req, res) => {
 
     // 4c. Fetch user custom system prompt settings
     const userSettings = await Setting.findOne({ userId });
-    const promptTemplate = userSettings?.customSystemPrompt?.trim() || SYSTEM_PROMPT;
+    const promptTemplate =
+      userSettings?.customSystemPrompt?.trim() || SYSTEM_PROMPT;
 
     // 4d. Query security prompt knowledge base dynamically (RAG)
     const kbPromptContext = queryKnowledgeBase(userQuery);
-    
+
     // Perform dynamic Web Search if requested by client OR if query contains search indicators
     let webContext = "";
     let searchResults = [];
-    const shouldSearch = webSearch === true || /search|web|lookup|find|explain|who is|what is|tell me about|how to/i.test(userQuery);
+    const shouldSearch =
+      webSearch === true ||
+      /search|web|lookup|find|explain|who is|what is|tell me about|how to/i.test(
+        userQuery,
+      );
     if (shouldSearch) {
       try {
         searchResults = await searchWeb(userQuery);
@@ -797,9 +1351,13 @@ const handleChatRequest = async (req, res) => {
 ## LIVE GOOGLE SEARCH RESULTS
 Total results retrieved: ${searchResults.length}
 
-${searchResults.map((res, i) => `[${i + 1}] ${res.title}
+${searchResults
+  .map(
+    (res, i) => `[${i + 1}] ${res.title}
    URL: ${res.url}
-   Excerpt: ${res.snippet}`).join("\n\n")}
+   Excerpt: ${res.snippet}`,
+  )
+  .join("\n\n")}
 
 ================================================================================
 ## MANDATORY CITATION & REFINE RULES
@@ -816,11 +1374,11 @@ ${searchResults.map((res, i) => `[${i + 1}] ${res.title}
       }
     }
 
-
     // Build file context if attachments are present
     let fileContext = "";
     if (attachments && attachments.length > 0) {
-      fileContext += "\n\n================================================================================\n## ATTACHED WORKSPACE FILES\n";
+      fileContext +=
+        "\n\n================================================================================\n## ATTACHED WORKSPACE FILES\n";
       const fileContexts = await Promise.all(
         attachments.map(async (file) => {
           if (file.isImage) {
@@ -829,65 +1387,239 @@ ${searchResults.map((res, i) => `[${i + 1}] ${res.title}
             const parsedText = await parseAttachment(file);
             return `\n--- File: ${file.name} (${(file.size / 1024).toFixed(1)} KB) ---\n${parsedText}\n`;
           }
-        })
+        }),
       );
       fileContext += fileContexts.join("\n");
-      fileContext += "\n================================================================================\n";
+      fileContext +=
+        "\n================================================================================\n";
     }
 
-    const combinedPrompt = promptTemplate + kbPromptContext + webContext + fileContext;
+    // 4e. Perform Enterprise RAG Retrieval
+    let ragContext = "";
+    try {
+      const ragPipeline = require("../llm/rag/rag.pipeline");
+      ragContext = await ragPipeline.retrieveContext(userQuery, 3);
+    } catch (ragErr) {
+      console.warn("[copilot-rag] Retrieval failed:", ragErr.message);
+    }
+
+    // 4f. Perform Long-term Memory Retrieval
+    let memoryContext = "";
+    try {
+      const memoryService = require("./memory.service");
+      const memories = await memoryService.retrieveMemories(userId, userQuery, 3);
+      if (memories.length > 0) {
+        memoryContext = `\n\n================================================================================
+## USER PREFERENCES & HISTORICAL CONTEXT (Stored Memories)
+${memories.map((m) => `- ${m.content}`).join("\n")}
+================================================================================\n`;
+      }
+    } catch (memErr) {
+      console.warn("[copilot-memory] Retrieval failed:", memErr.message);
+    }
+
+    const combinedPrompt =
+      promptTemplate + kbPromptContext + webContext + fileContext + ragContext + memoryContext;
 
     // 5. Build message history
-    const selectedModel = model || DEFAULT_MODEL;
+    let selectedModel = model;
+    let fallbackModels = [];
+    if (!model || model === DEFAULT_MODEL) {
+      const routed = llmRouter.route(userQuery);
+      selectedModel = routed.provider;
+      fallbackModels = routed.preferences;
+    } else {
+      fallbackModels = llmRegistry.getFallbackChain();
+    }
+    const uniqueModels = Array.from(new Set([selectedModel, ...fallbackModels]));
     const messageHistory = await buildMessageHistory(id, userQuery, 12);
 
     // 6. Build enriched system prompt
-    const enrichedSystemPrompt = buildEnrichedSystemPrompt(systemStats, selectedModel, userMemories, combinedPrompt);
+    const enrichedSystemPrompt = buildEnrichedSystemPrompt(
+      systemStats,
+      selectedModel,
+      userMemories,
+      combinedPrompt,
+    );
+
+    const isStream = req.body.stream === true;
+    const requestTeamId = req.headers["x-team-id"];
+
+    if (isStream) {
+      // 1. Immediately return success status to client
+      res.json({
+        success: true,
+        stream: true,
+        conversationId: id,
+        model: selectedModel,
+      });
+
+      // 2. Process streaming in the background
+      (async () => {
+        try {
+          const aiEmitter = require("../../sockets/emitters/ai.emitter");
+          aiEmitter.emitAiThinking(userId, { conversationId: id });
+          aiEmitter.emitAiStreamStart(userId, { conversationId: id });
+
+          let finalReply = "";
+          let finalModel = selectedModel;
+
+          for (const currentTryModel of uniqueModels) {
+            try {
+              console.log(`[copilot-stream] Querying model adapter for ${currentTryModel}`);
+              const adapter = llmRegistry.getAdapter(currentTryModel);
+              const result = await adapter.stream(
+                messageHistory,
+                (token) => {
+                  finalReply += token;
+                  aiEmitter.emitAiStream(userId, {
+                    conversationId: id,
+                    text: token,
+                  });
+                },
+                {
+                  model: currentTryModel,
+                  temperature: temperature || 0.7,
+                }
+              );
+              finalModel = result.model || currentTryModel;
+              break;
+            } catch (apiErr) {
+              console.warn(
+                `[copilot-stream] Model adapter ${currentTryModel} stream failed:`,
+                apiErr.message,
+              );
+            }
+          }
+
+          if (!finalReply) {
+            finalReply = generateContextualFallback(userQuery, systemStats);
+            finalModel = "local-fallback";
+            aiEmitter.emitAiStream(userId, {
+              conversationId: id,
+              text: finalReply,
+            });
+          }
+
+          // Save AI reply to DB
+          finalReply = llmGuardrails.sanitizeOutput(finalReply);
+          const assistantMsg = new CopilotMessage({
+            conversationId: id,
+            sender: "assistant",
+            text: finalReply,
+            timestamp: new Date(),
+            metadata: {
+              model: finalModel,
+              searchResults: searchResults || [],
+            },
+          });
+          await assistantMsg.save();
+
+          // Auto-learn memory from stream
+          learnMemoryFromConversation(
+            userId,
+            requestTeamId,
+            userQuery,
+            finalReply,
+          ).catch((learnErr) =>
+            console.error(
+              "[copilot-learning] Stream memory extraction error:",
+              learnErr.message,
+            ),
+          );
+
+          // Emit end event
+          aiEmitter.emitAiStreamEnd(userId, {
+            conversationId: id,
+            text: finalReply,
+            model: finalModel,
+            searchResults: searchResults || [],
+          });
+        } catch (streamErr) {
+          console.error("[copilot-stream] Stream loop crash:", streamErr);
+        }
+      })();
+      return;
+    }
 
     let aiReplyText = "";
     let usedModel = selectedModel;
     let error = null;
 
-    // Call Pollinations AI models (100% Free, keyless)
-    const smartFallbacks = [
-      "openai",
-      "claude",
-      "deepseek",
-      "llama",
-      "qwen",
-      "qwen-coder",
-      "mistral",
-    ].filter((m) => m !== selectedModel);
-
-    const modelRotation = [selectedModel, ...smartFallbacks];
-    const uniqueModels = Array.from(new Set(modelRotation));
-
     let attempts = 0;
-    for (const currentTryModel of uniqueModels) {
-      attempts++;
+    const funnelMode = process.env.FUNNEL_MODE || "single"; // parallel | consensus | debate | single
+
+    if (funnelMode === "parallel") {
       try {
-        console.log(`[copilot] Attempt ${attempts}: trying Pollinations model ${currentTryModel}`);
-        const result = await callPollinations(
+        const result = await require("../llm/router/llm.funnel").executeFunnel(
+          uniqueModels.slice(0, 2),
           messageHistory,
-          enrichedSystemPrompt,
-          currentTryModel,
-          temperature || 0.7,
-          userTrainings
+          { temperature: temperature || 0.7 }
         );
         aiReplyText = result.content;
-        usedModel = result.model || currentTryModel;
-        error = null;
-        if (currentTryModel !== selectedModel) {
-          console.log(`[copilot] Note: Responded via Pollinations fallback model ${currentTryModel} (selected: ${selectedModel})`);
-        }
-        break;
-      } catch (apiErr) {
-        error = apiErr.message;
-        console.warn(`[copilot] Pollinations model ${currentTryModel} failed:`, error?.slice(0, 100));
+        usedModel = result.model;
+      } catch (err) {
+        console.warn("[copilot-funnel] Parallel execution failed, falling back to sequential:", err.message);
+      }
+    } else if (funnelMode === "consensus") {
+      try {
+        const result = await require("../llm/consensus/consensus.engine").runConsensus(
+          messageHistory,
+          { temperature: temperature || 0.7 }
+        );
+        aiReplyText = result.content;
+        usedModel = result.model;
+      } catch (err) {
+        console.warn("[copilot-consensus] Consensus evaluation failed, falling back to sequential:", err.message);
+      }
+    } else if (funnelMode === "debate" || (userQuery && userQuery.toLowerCase().includes("/debate"))) {
+      try {
+        const result = await require("../llm/consensus/consensus.engine").runDebate(
+          userQuery,
+          { temperature: temperature || 0.7 }
+        );
+        aiReplyText = result.content;
+        usedModel = result.model;
+      } catch (err) {
+        console.warn("[copilot-debate] AI Debate failed, falling back to sequential:", err.message);
       }
     }
 
-    // 9. Use local intelligent fallback if AI failed (as an ultimate absolute backup)
+    if (!aiReplyText) {
+      for (const currentTryModel of uniqueModels) {
+        attempts++;
+        try {
+          console.log(
+            `[copilot] Attempt ${attempts}: trying model adapter ${currentTryModel}`,
+          );
+          const adapter = llmRegistry.getAdapter(currentTryModel);
+          const result = await adapter.generate(
+            messageHistory,
+            {
+              model: currentTryModel,
+              temperature: temperature || 0.7,
+            }
+          );
+          aiReplyText = result.content;
+          usedModel = result.model || currentTryModel;
+          error = null;
+          if (currentTryModel !== selectedModel) {
+            console.log(
+              `[copilot] Note: Responded via fallback adapter ${currentTryModel} (selected: ${selectedModel})`,
+            );
+          }
+          break;
+        } catch (apiErr) {
+          error = apiErr.message;
+          console.warn(
+            `[copilot] Model adapter ${currentTryModel} failed:`,
+            error?.slice(0, 100),
+          );
+        }
+      }
+    }
+
+    // 9. Use local intelligent fallback if AI failed
     if (!aiReplyText) {
       aiReplyText = generateContextualFallback(userQuery, systemStats);
       if (error) {
@@ -896,19 +1628,29 @@ ${searchResults.map((res, i) => `[${i + 1}] ${res.title}
       usedModel = "local-fallback";
     }
 
-
     // 9. Save AI reply
+    aiReplyText = llmGuardrails.sanitizeOutput(aiReplyText);
     const assistantMsg = new CopilotMessage({
       conversationId: id,
       sender: "assistant",
       text: aiReplyText,
       timestamp: new Date(),
-      metadata: { 
+      metadata: {
         model: usedModel,
         searchResults: searchResults || [],
       },
     });
     await assistantMsg.save();
+
+    // Trigger background self-learning fact extraction
+    learnMemoryFromConversation(
+      userId,
+      requestTeamId,
+      userQuery,
+      aiReplyText,
+    ).catch((learnErr) =>
+      console.error("[copilot-learning] Extraction error:", learnErr.message),
+    );
 
     return res.json({
       success: true,
@@ -931,7 +1673,9 @@ const saveAssistantMessage = async (req, res) => {
 
     const conversation = await CopilotConversation.findOne({ _id: id, userId });
     if (!conversation) {
-      return res.status(404).json({ success: false, message: "Conversation not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Conversation not found." });
     }
 
     const assistantMsg = new CopilotMessage({
@@ -939,7 +1683,7 @@ const saveAssistantMessage = async (req, res) => {
       sender: "assistant",
       text: reply,
       timestamp: new Date(),
-      metadata: { 
+      metadata: {
         model: model || "claude-sonnet-5",
         searchResults: searchResults || [],
       },
@@ -957,10 +1701,39 @@ const saveAssistantMessage = async (req, res) => {
 };
 
 const getMemories = async (req, res) => {
-
   try {
     const userId = req.user?._id;
-    const memories = await CopilotMemory.find({ userId }).sort({ createdAt: -1 });
+    const teamId = req.headers["x-team-id"];
+    const query = teamId ? { teamId } : { userId };
+
+    let memories = await CopilotMemory.find(query).sort({ createdAt: -1 });
+
+    // Auto-seed default memories if database is empty to make it immediately working out of the box!
+    if (memories.length === 0) {
+      const defaultMemories = [
+        {
+          userId,
+          teamId: teamId || undefined,
+          text: "Staging API endpoints reside on http://127.0.0.1:5000/api and require custom 'Authorization: Bearer DevToken999' authentication headers.",
+          category: "Security",
+        },
+        {
+          userId,
+          teamId: teamId || undefined,
+          text: "The backend storage runs containerized MongoDB instances using Mongoose ODM schemas to sanitize payload properties.",
+          category: "Infrastructure",
+        },
+        {
+          userId,
+          teamId: teamId || undefined,
+          text: "User session access tokens expire in 15 minutes, refreshing dynamically via secure HTTP-Only authorization cookies.",
+          category: "Authentication",
+        },
+      ];
+      await CopilotMemory.insertMany(defaultMemories);
+      memories = await CopilotMemory.find(query).sort({ createdAt: -1 });
+    }
+
     return res.json({ success: true, memories });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -970,12 +1743,16 @@ const getMemories = async (req, res) => {
 const createMemory = async (req, res) => {
   try {
     const userId = req.user?._id;
+    const teamId = req.headers["x-team-id"];
     const { text, category } = req.body;
     if (!text?.trim()) {
-      return res.status(400).json({ success: false, message: "Memory text is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Memory text is required" });
     }
     const newMemory = new CopilotMemory({
       userId,
+      teamId: teamId || undefined,
       text: text.trim(),
       category: category || "General",
     });
@@ -999,7 +1776,37 @@ const deleteMemory = async (req, res) => {
 const getTrainings = async (req, res) => {
   try {
     const userId = req.user?._id;
-    const trainings = await CopilotTrainingPair.find({ userId }).sort({ createdAt: -1 });
+    const teamId = req.headers["x-team-id"];
+    const query = teamId ? { teamId } : { userId };
+
+    let trainings = await CopilotTrainingPair.find(query).sort({
+      createdAt: -1,
+    });
+
+    // Auto-seed default training pairs if empty to make it instantly working!
+    if (trainings.length === 0) {
+      const defaultTrainings = [
+        {
+          userId,
+          teamId: teamId || undefined,
+          prompt:
+            "How should I handle SQL injection vulnerabilities inside user search parameters?",
+          response:
+            "Always implement Mongoose parameterized queries or schema casting validations. Never construct queries using string concatenation: e.g. use User.find({ name }) instead of raw MongoDB Javascript $where clauses.",
+        },
+        {
+          userId,
+          teamId: teamId || undefined,
+          prompt:
+            "What is the security risk of configuring Access-Control-Allow-Origin: *?",
+          response:
+            "Rating: HIGH. Wildcard origins enable cross-origin scripts to read protected API responses. Restrict origins dynamically to trusted subdomains or verified whitelist configurations.",
+        },
+      ];
+      await CopilotTrainingPair.insertMany(defaultTrainings);
+      trainings = await CopilotTrainingPair.find(query).sort({ createdAt: -1 });
+    }
+
     return res.json({ success: true, trainings });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
@@ -1009,12 +1816,16 @@ const getTrainings = async (req, res) => {
 const createTraining = async (req, res) => {
   try {
     const userId = req.user?._id;
+    const teamId = req.headers["x-team-id"];
     const { prompt, response } = req.body;
     if (!prompt?.trim() || !response?.trim()) {
-      return res.status(400).json({ success: false, message: "Prompt and response are required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Prompt and response are required" });
     }
     const newPair = new CopilotTrainingPair({
       userId,
+      teamId: teamId || undefined,
       prompt: prompt.trim(),
       response: response.trim(),
     });
@@ -1035,6 +1846,32 @@ const deleteTraining = async (req, res) => {
   }
 };
 
+const submitFeedback = async (req, res) => {
+  const { messageId, correctness, reason } = req.body;
+  if (!messageId || !correctness) {
+    return res.status(400).json({ success: false, message: "messageId and correctness are required." });
+  }
+
+  try {
+    const { confidenceEngine } = require("../llm/consensus/confidence.engine");
+    await confidenceEngine.recordFeedback(messageId, correctness, reason);
+
+    const { CopilotMessage } = require("./copilot.model");
+    const msg = await CopilotMessage.findById(messageId);
+    if (msg && msg.metadata) {
+      const model = msg.metadata.model || "openai";
+      const category = msg.metadata.category || "general";
+      
+      const selfLearning = require("../llm/router/llm.selflearning");
+      selfLearning.logFeedback(model, category, correctness === "correct");
+    }
+
+    return res.json({ success: true, message: "Feedback recorded successfully." });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getAvailableModels,
   getConversations,
@@ -1047,10 +1884,10 @@ module.exports = {
   handleChatRequest,
   saveAssistantMessage,
   getMemories,
-
   createMemory,
   deleteMemory,
   getTrainings,
   createTraining,
   deleteTraining,
+  submitFeedback,
 };

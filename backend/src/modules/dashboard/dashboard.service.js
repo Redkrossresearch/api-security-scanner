@@ -35,21 +35,19 @@ const logTable = (data) => {
 const fillSecurityTrendSpikes = (aggregatedTrend, days) => {
   const result = [];
   const dateMap = new Map();
-  aggregatedTrend.forEach(item => {
+  aggregatedTrend.forEach((item) => {
     dateMap.set(item.date, item.score);
   });
 
   const now = new Date();
-  
+
   if (days === 1) {
     for (let i = 24; i >= 0; i--) {
       const d = new Date(now.getTime() - i * 60 * 60 * 1000);
       const hourStr = d.toISOString();
       const base = 72;
       const variation = Math.round(
-        Math.sin(i * 0.6) * 14 + 
-        Math.cos(i * 1.1) * 8 + 
-        (i % 4 === 0 ? 9 : -6)
+        Math.sin(i * 0.6) * 14 + Math.cos(i * 1.1) * 8 + (i % 4 === 0 ? 9 : -6),
       );
       result.push({
         date: hourStr,
@@ -63,19 +61,19 @@ const fillSecurityTrendSpikes = (aggregatedTrend, days) => {
     const d = new Date();
     d.setDate(now.getDate() - i);
     const dateStr = d.toISOString().split("T")[0];
-    
+
     let score = dateMap.get(dateStr);
     if (score === undefined) {
       const base = 75;
       const variation = Math.round(
-        Math.sin(i * 0.85) * 16 + 
-        Math.cos(i * 1.5) * 10 + 
-        (i % 3 === 0 ? 11 : 0) - 
-        (i % 5 === 0 ? 13 : 0)
+        Math.sin(i * 0.85) * 16 +
+          Math.cos(i * 1.5) * 10 +
+          (i % 3 === 0 ? 11 : 0) -
+          (i % 5 === 0 ? 13 : 0),
       );
       score = Math.max(35, Math.min(98, base + variation));
     }
-    
+
     result.push({
       date: dateStr,
       score: score,
@@ -84,12 +82,7 @@ const fillSecurityTrendSpikes = (aggregatedTrend, days) => {
   return result;
 };
 
-const getDashboardStats = async (
-  userId,
-  page = 1,
-  limit = 5,
-  range = "7D",
-) => {
+const getDashboardStats = async (userId, page = 1, limit = 5, range = "7D") => {
   const serviceStart = Date.now();
 
   const cacheKey = `dashboard-${userId}-${page}-${limit}-${range}`;
@@ -307,14 +300,19 @@ const getDashboardStats = async (
     totalAssets: uniqueAssets.size,
   };
 
-  const severityDistributionResult = vulnerabilityAnalytics[0].severityDistribution;
+  const severityDistributionResult =
+    vulnerabilityAnalytics[0].severityDistribution;
   const averageCvssResult = vulnerabilityAnalytics[0].averageCvss;
   const topFindings = vulnerabilityAnalytics[0].topFindings;
   const owaspDistributionResult = vulnerabilityAnalytics[0].owaspDistribution;
   const cweDistributionResult = vulnerabilityAnalytics[0].cweDistribution;
 
   const severityDistribution = {
-    critical: 0, high: 0, medium: 0, low: 0, info: 0,
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+    info: 0,
   };
   severityDistributionResult.forEach((item) => {
     const severity = item._id?.toLowerCase();
@@ -421,14 +419,16 @@ const getDashboardStats = async (
     { subject: "A10", value: 100 },
   ];
 
-  const allVulnerabilities = await Vulnerability.find({ scanId: { $in: userScanIds } }).lean();
+  const allVulnerabilities = await Vulnerability.find({
+    scanId: { $in: userScanIds },
+  }).lean();
   allVulnerabilities.forEach((v) => {
     const owaspStr = String(v.owasp || "").toUpperCase();
     let index = -1;
     for (let i = 1; i <= 10; i++) {
       if (
-        owaspStr.includes(`A${i}:`) || 
-        owaspStr.includes(`A0${i}:`) || 
+        owaspStr.includes(`A${i}:`) ||
+        owaspStr.includes(`A0${i}:`) ||
         owaspStr.includes(`API${i}:`) ||
         owaspStr.startsWith(`A${i} `) ||
         owaspStr.startsWith(`A0${i} `)
@@ -442,7 +442,10 @@ const getDashboardStats = async (
       if (v.severity?.toLowerCase() === "critical") deduction = 25;
       else if (v.severity?.toLowerCase() === "high") deduction = 15;
       else if (v.severity?.toLowerCase() === "medium") deduction = 10;
-      complianceRadarData[index].value = Math.max(30, complianceRadarData[index].value - deduction);
+      complianceRadarData[index].value = Math.max(
+        30,
+        complianceRadarData[index].value - deduction,
+      );
     }
   });
 
@@ -537,7 +540,10 @@ const getDashboardActivityLogs = async (userId) => {
   const userScanIds = await Scan.find({ userId }).distinct("_id");
   const [scans, vulnerabilities] = await Promise.all([
     Scan.find({ userId }).sort({ createdAt: -1 }).limit(10).lean(),
-    Vulnerability.find({ scanId: { $in: userScanIds } }).sort({ createdAt: -1 }).limit(30).lean()
+    Vulnerability.find({ scanId: { $in: userScanIds } })
+      .sort({ createdAt: -1 })
+      .limit(30)
+      .lean(),
   ]);
 
   const compiledLogs = [];
@@ -552,7 +558,7 @@ const getDashboardActivityLogs = async (userId) => {
       timestamp: scanTime.getTime(),
       time: timeStr,
       type: "info",
-      text: `Scanner engine initialized dynamic audit for target: ${targetHost}`
+      text: `Scanner engine initialized dynamic audit for target: ${targetHost}`,
     });
 
     compiledLogs.push({
@@ -560,7 +566,7 @@ const getDashboardActivityLogs = async (userId) => {
       timestamp: scanTime.getTime() + 10000,
       time: new Date(scanTime.getTime() + 10000).toTimeString().split(" ")[0],
       type: "pass",
-      text: `Security posture audit completed for ${targetHost}. Score: ${scan.securityScore || scan.score || 85}/100 | Grade: ${scan.grade || "B"}`
+      text: `Security posture audit completed for ${targetHost}. Score: ${scan.securityScore || scan.score || 85}/100 | Grade: ${scan.grade || "B"}`,
     });
   });
 
@@ -573,8 +579,12 @@ const getDashboardActivityLogs = async (userId) => {
       id: `vuln-${vuln._id}`,
       timestamp: vulnTime.getTime(),
       time: timeStr,
-      type: vuln.severity?.toLowerCase() === "critical" || vuln.severity?.toLowerCase() === "high" ? "alert" : "warn",
-      text: `Security Alert: Identified [${vuln.severity || "Medium"}] ${vuln.title} on endpoint: ${host}`
+      type:
+        vuln.severity?.toLowerCase() === "critical" ||
+        vuln.severity?.toLowerCase() === "high"
+          ? "alert"
+          : "warn",
+      text: `Security Alert: Identified [${vuln.severity || "Medium"}] ${vuln.title} on endpoint: ${host}`,
     });
   });
 

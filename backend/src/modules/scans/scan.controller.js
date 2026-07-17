@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
-const { createScan, getUserScans, getActiveScanProgress } = require("./scan.service");
+const {
+  createScan,
+  getUserScans,
+  getActiveScanProgress,
+} = require("./scan.service");
 
 const Scan = require("./scan.model");
 const Vulnerability = require("../vulnerabilities/vulnerability.model");
@@ -12,6 +16,7 @@ const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const create = async (req, res) => {
   try {
     const { targetUrl } = req.body;
+    const teamId = req.headers["x-team-id"] || null;
 
     if (!targetUrl) {
       return res.status(400).json({
@@ -29,7 +34,7 @@ const create = async (req, res) => {
       });
     }
 
-    const scan = await createScan(req.user._id, targetUrl);
+    const scan = await createScan(req.user._id, targetUrl, teamId);
 
     return res.status(201).json({
       success: true,
@@ -45,7 +50,8 @@ const create = async (req, res) => {
 
 const getAll = async (req, res) => {
   try {
-    const scans = await getUserScans(req.user._id);
+    const teamId = req.headers["x-team-id"] || null;
+    const scans = await getUserScans(req.user._id, teamId);
 
     return res.status(200).json({
       success: true,
@@ -78,7 +84,8 @@ const getScanHistory = async (req, res) => {
     const { search, status, riskLevel, profile, startDate, endDate } =
       req.query;
 
-    const query = { userId: req.user._id };
+    const teamId = req.headers["x-team-id"];
+    const query = teamId ? { teamId } : { userId: req.user._id };
 
     if (search) {
       const escaped = escapeRegex(search);
@@ -126,17 +133,19 @@ const getScanHistory = async (req, res) => {
 
 const getScanById = async (req, res) => {
   try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid scan id",
-      });
+    const isObjectId = mongoose.Types.ObjectId.isValid(req.params.id);
+    const query = isObjectId
+      ? { _id: req.params.id }
+      : { scanId: req.params.id };
+
+    const teamId = req.headers["x-team-id"];
+    if (teamId) {
+      query.teamId = teamId;
+    } else {
+      query.userId = req.user._id;
     }
 
-    const scan = await Scan.findOne({
-      _id: req.params.id,
-      userId: req.user._id,
-    }).lean();
+    const scan = await Scan.findOne(query).lean();
 
     if (!scan) {
       return res.status(404).json({
@@ -145,7 +154,9 @@ const getScanById = async (req, res) => {
       });
     }
 
-    const vulnerabilities = await Vulnerability.find({ scanId: scan._id }).lean();
+    const vulnerabilities = await Vulnerability.find({
+      scanId: scan._id,
+    }).lean();
     scan.vulnerabilities = vulnerabilities;
 
     return res.json({
@@ -236,7 +247,8 @@ const getDashboardSummary = async (req, res) => {
       scanId: { $in: userScanIds },
       status: "resolved",
     });
-    const remediatedRate = totalVulns > 0 ? Math.round((resolvedVulns / totalVulns) * 100) : 0;
+    const remediatedRate =
+      totalVulns > 0 ? Math.round((resolvedVulns / totalVulns) * 100) : 0;
 
     return res.json({
       success: true,
@@ -539,7 +551,10 @@ const getAIInsights = async (req, res) => {
       scanId: { $in: userScanIds },
       status: "resolved",
     });
-    const remediationRate = totalVulns > 0 ? `${Math.round((resolvedVulns / totalVulns) * 100)}%` : "0%";
+    const remediationRate =
+      totalVulns > 0
+        ? `${Math.round((resolvedVulns / totalVulns) * 100)}%`
+        : "0%";
 
     const resolvedList = await Vulnerability.find({
       scanId: { $in: userScanIds },
@@ -549,14 +564,15 @@ const getAIInsights = async (req, res) => {
     let mttr = "N/A";
     if (resolvedList.length > 0) {
       let totalDiff = 0;
-      resolvedList.forEach(v => {
+      resolvedList.forEach((v) => {
         const diff = new Date(v.updatedAt) - new Date(v.createdAt);
         totalDiff += diff;
       });
       const avgDiffHours = totalDiff / resolvedList.length / (1000 * 60 * 60);
-      mttr = avgDiffHours < 24
-        ? `${Math.round(avgDiffHours)}h`
-        : `${Math.round(avgDiffHours / 24)}d`;
+      mttr =
+        avgDiffHours < 24
+          ? `${Math.round(avgDiffHours)}h`
+          : `${Math.round(avgDiffHours / 24)}d`;
     }
 
     const firstScan = await Scan.findOne({ userId, status: "completed" }).sort({

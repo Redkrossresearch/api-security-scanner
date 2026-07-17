@@ -1,5 +1,8 @@
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import api from "../../services/api";
+import ConnectionStatus from "../../sockets/ConnectionStatus";
 import {
   LayoutDashboard,
   Search,
@@ -12,6 +15,7 @@ import {
   ClipboardList,
   Settings,
   LogOut,
+  Server,
 } from "lucide-react";
 
 const menuItems = [
@@ -52,6 +56,16 @@ const menuItems = [
     icon: <Bot size={17} />,
   },
   {
+    name: "Queue Monitor",
+    path: "/queue",
+    icon: <Server size={17} />,
+  },
+  {
+    name: "Workflow Builder",
+    path: "/workflows",
+    icon: <ClipboardList size={17} />,
+  },
+  {
     name: "Compliance",
     path: "/compliance",
     icon: <ShieldCheck size={17} />,
@@ -73,6 +87,39 @@ const menuItems = [
 function Sidebar() {
   const location = useLocation();
   const { currentUser, logout } = useAuth();
+  const [teams, setTeams] = useState([]);
+  const [activeTeam, setActiveTeam] = useState("");
+
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const res = await api.get("/teams");
+        if (res.data?.success) {
+          const list = res.data.teams || [];
+          setTeams(list);
+          const saved = localStorage.getItem("activeTeamId");
+          if (saved && list.some((t) => t._id === saved)) {
+            setActiveTeam(saved);
+          } else if (list.length > 0) {
+            setActiveTeam(list[0]._id);
+            localStorage.setItem("activeTeamId", list[0]._id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load teams:", err);
+      }
+    };
+    if (currentUser) {
+      fetchTeams();
+    }
+  }, [currentUser]);
+
+  const handleWorkspaceChange = (e) => {
+    const val = e.target.value;
+    setActiveTeam(val);
+    localStorage.setItem("activeTeamId", val);
+    window.location.reload();
+  };
 
   const userName = currentUser?.displayName || "Authenticated User";
   const userEmail = currentUser?.email || "No Email";
@@ -122,6 +169,55 @@ function Sidebar() {
         >
           Enterprise API Security
         </p>
+        <div style={{ marginTop: "12px" }}>
+          <ConnectionStatus />
+        </div>
+      </div>
+
+      {/* Workspace Selector Dropdown */}
+      <div style={{ marginBottom: "26px", padding: "0 8px" }}>
+        <label style={{ color: "#64748B", fontSize: "10px", fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.8px", display: "block", marginBottom: "6px" }}>
+          Active Workspace
+        </label>
+        {teams.length === 0 ? (
+          <div style={{
+            background: "rgba(255,255,255,0.02)",
+            border: "1px solid rgba(255,255,255,0.06)",
+            borderRadius: "10px",
+            padding: "10px 14px",
+            fontSize: "12px",
+            color: "#64748B",
+            fontStyle: "italic"
+          }}>
+            No Workspaces Available
+          </div>
+        ) : (
+          <select
+            value={activeTeam}
+            onChange={handleWorkspaceChange}
+            style={{
+              width: "100%",
+              background: "#090F1B",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "10px",
+              padding: "10px 14px",
+              fontSize: "12.5px",
+              color: "#FFF",
+              fontWeight: "600",
+              outline: "none",
+              cursor: "pointer",
+              transition: "border 0.2s",
+            }}
+            onFocus={(e) => e.target.style.border = "1px solid #F97316"}
+            onBlur={(e) => e.target.style.border = "1px solid rgba(255,255,255,0.08)"}
+          >
+            {teams.map((t) => (
+              <option key={t._id} value={t._id}>
+                💼 {t.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Navigation List */}

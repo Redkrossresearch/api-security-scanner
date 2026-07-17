@@ -1,0 +1,352 @@
+[
+  {
+    "id": "case-1",
+    "query": "Is SELECT * FROM users WHERE id = ' + input + ' vulnerable?",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "SQL Injection"
+  },
+  {
+    "id": "case-2",
+    "query": "How to secure database access using parameterized SQL queries?",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-3",
+    "query": "Found endpoint GET /api/user?id=123 returning full profile details without authorization.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Broken Access Control (IDOR)"
+  },
+  {
+    "id": "case-4",
+    "query": "Is exposing stack traces in production web errors critical?",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Information Disclosure"
+  },
+  {
+    "id": "case-5",
+    "query": "Hi, what is the best programming language for beginners?",
+    "expectedCategory": "general",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-6",
+    "query": "Exposing JWT secret key plaintext in application environment properties file.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Sensitive Data Exposure"
+  },
+  {
+    "id": "case-7",
+    "query": "Encrypting passwords using salted bcrypt hashing function.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-8",
+    "query": "Enforcing HTTPS-only traffic redirect headers in ingress rules.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-9",
+    "query": "Injecting unsanitized input directly into innerHTML rendering template.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Cross-site Scripting (XSS)"
+  },
+  {
+    "id": "case-10",
+    "query": "Storing static API credentials in hardcoded Javascript frontend constants.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Credential Exposure"
+  },
+  {
+    "id": "case-11",
+    "query": "Adding strict Content-Security-Policy (CSP) headers.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-12",
+    "query": "Exposing Swagger JSON endpoint publicly in non-production staging env.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-13",
+    "query": "Using MD5 algorithm for cryptographic password storage checks.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Weak Cryptography"
+  },
+  {
+    "id": "case-14",
+    "query": "Implementing multi-factor authentication (MFA) logic.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-15",
+    "query": "Using HTTP Basic Auth over unencrypted transport layer channels.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Cleartext Credentials Transmission"
+  },
+  {
+    "id": "case-16",
+    "query": "Storing session IDs in HTTPOnly, Secure cookie store configurations.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-17",
+    "query": "Vulnerable parser allowing XXE external entities loading.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "XML External Entity (XXE)"
+  },
+  {
+    "id": "case-18",
+    "query": "Setting Access-Control-Allow-Origin: * on sensitive client data endpoints.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "CORS Misconfiguration"
+  },
+  {
+    "id": "case-19",
+    "query": "Validating uploaded file extensions against a strict whitelist array.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-20",
+    "query": "Uploading unvalidated ZIP archive files extracting to absolute directories.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Zip Slip Path Traversal"
+  },
+  {
+    "id": "case-21",
+    "query": "Enforcing rate limiting on login attempts to block brute-force scripts.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-22",
+    "query": "Exposing Docker daemon sockets publicly to internet interfaces.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Insecure Docker Exposure"
+  },
+  {
+    "id": "case-23",
+    "query": "Adding helmet middleware protection rules in Express configuration.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-24",
+    "query": "Vulnerable command execution through child_process.exec(input).",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Remote Code Execution (RCE)"
+  },
+  {
+    "id": "case-25",
+    "query": "Storing database config files with world-readable permissions.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Improper File Permissions"
+  },
+  {
+    "id": "case-26",
+    "query": "Implementing secure CORS origin dynamic check whitelist methods.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-27",
+    "query": "Concatenating user-supplied variables directly to path.join executions.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Path Traversal"
+  },
+  {
+    "id": "case-28",
+    "query": "Exposing local dev logs containing auth tokens publicly in root directory.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Sensitive Info Leakage"
+  },
+  {
+    "id": "case-29",
+    "query": "Setting secure anti-CSRF request validation tokens in forms.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-30",
+    "query": "Vulnerable deserialization of untrusted JS objects using node-serialize.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Insecure Deserialization"
+  },
+  {
+    "id": "case-31",
+    "query": "Verifying signature validation on incoming webhook payloads.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-32",
+    "query": "Allowing SSRF via unvalidated user URL input fetch requests.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Server-Side Request Forgery"
+  },
+  {
+    "id": "case-33",
+    "query": "Using secure randomness generators for cryptographic token generation.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-34",
+    "query": "Exposing active Spring Boot Actuator dev endpoints to internet.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Information Exposure"
+  },
+  {
+    "id": "case-35",
+    "query": "Verifying JSON Web Token algorithms match standard RS256 formats.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-36",
+    "query": "Accepting JWT tokens with alg header set to none.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "JWT Signature Bypass"
+  },
+  {
+    "id": "case-37",
+    "query": "Enforcing account lockout conditions after 5 failed login attempts.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-38",
+    "query": "Exposing sensitive DB table credentials in public git repositories.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Secret Exposure"
+  },
+  {
+    "id": "case-39",
+    "query": "Deploying internal applications inside secure VPN segmented environments.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-40",
+    "query": "Allowing open redirection via unvalidated user parameter redirect links.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Open Redirection"
+  },
+  {
+    "id": "case-41",
+    "query": "Applying secure regex validators limiting inputs to alphanumeric strings.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-42",
+    "query": "Vulnerable regex evaluation causing catastrophic ReDoS stack exhaustion.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Regular Expression Denial of Service"
+  },
+  {
+    "id": "case-43",
+    "query": "Encrypting database storage at rest using AES-256 standards.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-44",
+    "query": "Hardcoding symmetric encryption keys directly in application codebase.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Key Hardcoding"
+  },
+  {
+    "id": "case-45",
+    "query": "Implementing secure role-based access control filters on API paths.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-46",
+    "query": "Allowing mass assignment by mapping raw request bodies directly to db.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Mass Assignment"
+  },
+  {
+    "id": "case-47",
+    "query": "Adding security audit logging to track all administrative changes.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-48",
+    "query": "Exposing user password hashes in public autocomplete profile payloads.",
+    "expectedCategory": "reasoning",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Sensitive Info Exposure"
+  },
+  {
+    "id": "case-49",
+    "query": "Using secure parameterized database templates in JPA queries.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "safe",
+    "vulnerabilityType": "None"
+  },
+  {
+    "id": "case-50",
+    "query": "Vulnerable prototype pollution via merge operation on untrusted inputs.",
+    "expectedCategory": "coding",
+    "expectedVerdict": "vulnerable",
+    "vulnerabilityType": "Prototype Pollution"
+  }
+]

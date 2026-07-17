@@ -6,10 +6,12 @@ import {
   Terminal,
 } from "lucide-react";
 
-export default function LiveScannerLogs({ scan, scanStatus }) {
+export default function LiveScannerLogs({ scan, scanStatus, liveLogs = [] }) {
   let logs = [];
 
-  if (scanStatus && scanStatus.scanners) {
+  if (liveLogs && liveLogs.length > 0) {
+    logs = liveLogs;
+  } else if (scanStatus && scanStatus.scanners) {
     logs.push({
       level: "INFO",
       time: "INIT",

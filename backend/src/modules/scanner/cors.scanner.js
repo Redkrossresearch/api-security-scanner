@@ -25,12 +25,12 @@ const scanCORS = async (targetUrl) => {
     }
 
     if (origin.toLowerCase() === "null") {
-  const finding = createFinding("DANGEROUS_CORS_CONFIGURATION");
+      const finding = createFinding("DANGEROUS_CORS_CONFIGURATION");
 
-  if (finding) {
-    findings.push(finding);
-  }
-}
+      if (finding) {
+        findings.push(finding);
+      }
+    }
 
     if (origin === "*") {
       const finding = createFinding("WILDCARD_CORS");

@@ -9,9 +9,13 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
+    const activeTeamId = localStorage.getItem("activeTeamId");
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (activeTeamId) {
+      config.headers["X-Team-ID"] = activeTeamId;
     }
 
     return config;

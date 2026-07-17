@@ -39,3 +39,8 @@ export const getGithubBranches = async (repo) => {
   const res = await api.get("/settings/github/branches", { params: { repo } });
   return res.data.branches;
 };
+
+export const syncGitlabWorkflow = async () => {
+  const res = await api.post("/settings/gitlab/sync");
+  return res.data;
+};

@@ -45,11 +45,11 @@ const SENSITIVE_KEYWORDS = [
 
 const scanApiInventory = async (input) => {
   const findings = [];
-  
+
   // Resolve unified input parameter safely
   let targetUrl = "";
   let crawledEndpoints = [];
-  
+
   if (input && typeof input === "object" && input.targetUrl) {
     targetUrl = input.targetUrl;
     crawledEndpoints = input.crawledEndpoints || [];
@@ -77,13 +77,16 @@ const scanApiInventory = async (input) => {
     if (!openApiSpec) {
       for (const path of OPENAPI_DISCOVERY_PATHS) {
         try {
-          const response = await axios.get(`${targetUrl.replace(/\/+$/, "")}${path}`, {
-            timeout: 5000,
-            validateStatus: () => true,
-            headers: {
-              "User-Agent": "API-Security-Scanner/1.0",
+          const response = await axios.get(
+            `${targetUrl.replace(/\/+$/, "")}${path}`,
+            {
+              timeout: 5000,
+              validateStatus: () => true,
+              headers: {
+                "User-Agent": "API-Security-Scanner/1.0",
+              },
             },
-          });
+          );
 
           if (response.data?.paths) {
             openApiSpec = response.data;
@@ -147,11 +150,11 @@ const scanApiInventory = async (input) => {
       crawledEndpoints.forEach((item) => {
         inventory.totalEndpoints++;
         inventory.totalOperations++;
-        
+
         const path = item.path || "/";
         const method = (item.method || "GET").toUpperCase();
         const lowerPath = path.toLowerCase();
-        
+
         const endpointInfo = {
           path,
           methods: [method],
@@ -187,7 +190,8 @@ const scanApiInventory = async (input) => {
       severity: "info",
       category: "API Inventory",
       description: `Discovered ${inventory.totalEndpoints} endpoints and ${inventory.totalOperations} operations.`,
-      recommendation: "Review exposed API inventory and restrict unnecessary endpoints.",
+      recommendation:
+        "Review exposed API inventory and restrict unnecessary endpoints.",
       inventory,
     });
 

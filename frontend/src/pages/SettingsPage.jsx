@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import api from "../services/api";
 import { 
   getSettings, 
   updateSettings, 
@@ -21,7 +22,9 @@ import {
   Trash2,
   CheckCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Users,
+  ClipboardList
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -190,6 +193,7 @@ export default function SettingsPage() {
   const [authType, setAuthType] = useState("none");
   const [authToken, setAuthToken] = useState("");
   const [cronSchedule, setCronSchedule] = useState("disabled");
+  const [scheduledUrls, setScheduledUrls] = useState("");
   const [slackWebhook, setSlackWebhook] = useState("");
   const [jiraWebhook, setJiraWebhook] = useState("");
   const [discordWebhook, setDiscordWebhook] = useState("");
@@ -206,6 +210,17 @@ export default function SettingsPage() {
   const [useManualToken, setUseManualToken] = useState(false);
   const [branches, setBranches] = useState([]);
   const [loadingBranches, setLoadingBranches] = useState(false);
+
+  // Teams Workspace & RBAC states
+  const [myTeams, setMyTeams] = useState([]);
+  const [activeTeamId, setActiveTeamId] = useState("");
+  const [activeTeamData, setActiveTeamData] = useState(null);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("member");
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [invitingMember, setInvitingMember] = useState(false);
 
   // Demo Simulation states
   const [isDemoMode, setIsDemoMode] = useState(true);
@@ -311,6 +326,106 @@ export default function SettingsPage() {
     }
   };
 
+  // Teams & RBAC Logic
+  const fetchTeamsAndLogs = async () => {
+    try {
+      const res = await api.get("/teams");
+      if (res.data?.success) {
+        const list = res.data.teams || [];
+        setMyTeams(list);
+        
+        let activeId = localStorage.getItem("activeTeamId");
+        if (!activeId && list.length > 0) {
+          activeId = list[0]._id;
+          localStorage.setItem("activeTeamId", activeId);
+        }
+        setActiveTeamId(activeId || "");
+
+        const activeTeamObj = list.find((t) => t._id === activeId);
+        setActiveTeamData(activeTeamObj || null);
+
+        if (activeId) {
+          // Fetch Audit Logs for this team
+          const auditRes = await api.get(`/teams/${activeId}/audit`);
+          if (auditRes.data?.success) {
+            setAuditLogs(auditRes.data.logs || []);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch teams and audit logs:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchTeamsAndLogs();
+  }, []);
+
+  const handleCreateTeam = async (e) => {
+    e.preventDefault();
+    if (!newTeamName.trim()) {
+      toast.error("Team name cannot be empty");
+      return;
+    }
+    setCreatingTeam(true);
+    try {
+      const res = await api.post("/teams", { name: newTeamName });
+      if (res.data?.success) {
+        toast.success(`Team "${newTeamName}" created successfully!`);
+        setNewTeamName("");
+        localStorage.setItem("activeTeamId", res.data.team._id);
+        await fetchTeamsAndLogs();
+        window.location.reload();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to create team");
+    } finally {
+      setCreatingTeam(false);
+    }
+  };
+
+  const handleInviteMember = async (e) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+    if (!activeTeamId) {
+      toast.error("No active team workspace selected");
+      return;
+    }
+    setInvitingMember(true);
+    try {
+      const res = await api.post(`/teams/${activeTeamId}/members`, {
+        email: inviteEmail,
+        role: inviteRole,
+      });
+      if (res.data?.success) {
+        toast.success("Member added to team successfully!");
+        setInviteEmail("");
+        await fetchTeamsAndLogs();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to add member");
+    } finally {
+      setInvitingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId) => {
+    if (!activeTeamId) return;
+    if (!window.confirm("Are you sure you want to remove this member?")) return;
+    try {
+      const res = await api.delete(`/teams/${activeTeamId}/members/${userId}`);
+      if (res.data?.success) {
+        toast.success("Member removed successfully");
+        await fetchTeamsAndLogs();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to remove member");
+    }
+  };
+
   // Load user settings
   useEffect(() => {
     const loadSettings = async () => {
@@ -320,6 +435,7 @@ export default function SettingsPage() {
           setAuthType(data.authType || "none");
           setAuthToken(data.authToken || "");
           setCronSchedule(data.cronSchedule || "disabled");
+          setScheduledUrls(data.scheduledUrls || "");
           setSlackWebhook(data.slackWebhook || "");
           setJiraWebhook(data.jiraWebhook || "");
           setDiscordWebhook(data.discordWebhook || "");
@@ -364,6 +480,7 @@ export default function SettingsPage() {
         authType,
         authToken,
         cronSchedule,
+        scheduledUrls,
         slackWebhook,
         jiraWebhook,
         discordWebhook,
@@ -393,6 +510,7 @@ export default function SettingsPage() {
         authType,
         authToken,
         cronSchedule,
+        scheduledUrls,
         slackWebhook,
         jiraWebhook,
         discordWebhook,
@@ -579,18 +697,30 @@ export default function SettingsPage() {
       <div style={styles.grid}>
         
         {/* API Authorization Settings */}
-        <div style={styles.card}>
+        <div style={{
+          ...styles.card,
+          border: "1px solid rgba(56, 189, 248, 0.18)",
+          background: "linear-gradient(180deg, rgba(56, 189, 248, 0.02) 0%, rgba(9, 13, 22, 0.65) 100%)",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.3)"
+        }}>
           <div style={styles.cardHeader}>
-            <Key style={{ width: "18px", height: "18px", color: COLORS.purple }} />
-            <h3 style={styles.cardTitle}>API Target Authorization</h3>
+            <Key style={{ width: "18px", height: "18px", color: "#38BDF8" }} />
+            <h3 style={{ ...styles.cardTitle, color: "#38BDF8" }}>API Target Authorization</h3>
           </div>
 
           <div style={styles.fieldGroup}>
-            <label style={styles.label}>Authentication Type</label>
+            <label style={{ ...styles.label, color: "#94A3B8" }}>Authentication Type</label>
             <select 
               value={authType} 
               onChange={(e) => setAuthType(e.target.value)}
-              style={styles.select}
+              style={{
+                ...styles.select,
+                background: "#060910",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "10px",
+                padding: "10px 14px",
+                color: "#FFF"
+              }}
             >
               <option value="none">No Authentication</option>
               <option value="bearer">Bearer Token (Authorization header)</option>
@@ -601,19 +731,28 @@ export default function SettingsPage() {
 
           {authType !== "none" && (
             <div style={styles.fieldGroup}>
-              <label style={styles.label}>Secret Token / Credential</label>
+              <label style={{ ...styles.label, color: "#94A3B8" }}>Secret Token / Credential</label>
               <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                 <input 
                   type={showToken ? "text" : "password"} 
                   value={authToken}
                   onChange={(e) => setAuthToken(e.target.value)}
                   placeholder={authType === "bearer" ? "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." : "API key value"}
-                  style={{ ...styles.input, width: "100%", paddingRight: "36px" }}
+                  style={{
+                    ...styles.input,
+                    width: "100%",
+                    paddingRight: "38px",
+                    background: "#060910",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "10px",
+                    padding: "10px 14px",
+                    color: "#FFF"
+                  }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowToken(!showToken)}
-                  style={{ position: "absolute", right: "8px", background: "transparent", border: "none", color: COLORS.muted, cursor: "pointer" }}
+                  style={{ position: "absolute", right: "12px", background: "transparent", border: "none", color: COLORS.muted, cursor: "pointer" }}
                 >
                   {showToken ? <EyeOff style={{ width: "16px", height: "16px" }} /> : <Eye style={{ width: "16px", height: "16px" }} />}
                 </button>
@@ -622,35 +761,72 @@ export default function SettingsPage() {
           )}
 
           {/* Custom Headers Config */}
-          <div style={{ ...styles.fieldGroup, borderTop: "1px solid rgba(255,255,255,0.03)", paddingTop: "12px" }}>
-            <label style={styles.label}>Custom Target Request Headers</label>
-            {targetHeaders.map((header, idx) => (
-              <div key={idx} style={styles.customHeaderRow}>
-                <input 
-                  type="text" 
-                  value={header.name} 
-                  onChange={(e) => handleHeaderChange(idx, "name", e.target.value)}
-                  placeholder="Header-Name" 
-                  style={{ ...styles.input, flex: 1 }}
-                />
-                <input 
-                  type="text" 
-                  value={header.value} 
-                  onChange={(e) => handleHeaderChange(idx, "value", e.target.value)}
-                  placeholder="value" 
-                  style={{ ...styles.input, flex: 1.5 }}
-                />
-                <button 
-                  onClick={() => handleRemoveHeader(idx)}
-                  style={styles.deleteHeaderBtn}
-                >
-                  <Trash2 style={{ width: "16px", height: "16px" }} />
-                </button>
-              </div>
-            ))}
+          <div style={{ ...styles.fieldGroup, borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "16px", marginTop: "10px" }}>
+            <label style={{ ...styles.label, color: "#94A3B8" }}>Custom Target Request Headers</label>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {targetHeaders.map((header, idx) => (
+                <div key={idx} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                  <input 
+                    type="text" 
+                    value={header.name} 
+                    onChange={(e) => handleHeaderChange(idx, "name", e.target.value)}
+                    placeholder="Header-Name" 
+                    style={{
+                      ...styles.input,
+                      flex: 1,
+                      background: "#060910",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "8px",
+                      padding: "8px 12px"
+                    }}
+                  />
+                  <input 
+                    type="text" 
+                    value={header.value} 
+                    onChange={(e) => handleHeaderChange(idx, "value", e.target.value)}
+                    placeholder="value" 
+                    style={{
+                      ...styles.input,
+                      flex: 1.5,
+                      background: "#060910",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "8px",
+                      padding: "8px 12px"
+                    }}
+                  />
+                  <button 
+                    onClick={() => handleRemoveHeader(idx)}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      color: "#F87171",
+                      cursor: "pointer",
+                      padding: "4px",
+                      display: "flex",
+                      alignItems: "center"
+                    }}
+                  >
+                    <Trash2 style={{ width: "16px", height: "16px" }} />
+                  </button>
+                </div>
+              ))}
+            </div>
             <button 
               onClick={handleAddHeader}
-              style={styles.addHeaderBtn}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                background: "rgba(56, 189, 248, 0.08)",
+                border: "1px solid rgba(56, 189, 248, 0.2)",
+                borderRadius: "8px",
+                padding: "8px 14px",
+                fontSize: "12px",
+                color: "#38BDF8",
+                cursor: "pointer",
+                marginTop: targetHeaders.length > 0 ? "12px" : "4px",
+                fontWeight: "750"
+              }}
             >
               <Plus style={{ width: "12px", height: "12px" }} />
               Add Custom Header
@@ -659,18 +835,44 @@ export default function SettingsPage() {
         </div>
 
         {/* Scanner Schedule settings */}
-        <div style={styles.card}>
+        <div style={{
+          ...styles.card,
+          border: "1px solid rgba(167, 139, 250, 0.18)",
+          background: "linear-gradient(180deg, rgba(167, 139, 250, 0.02) 0%, rgba(9, 13, 22, 0.65) 100%)",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.3)"
+        }}>
           <div style={styles.cardHeader}>
-            <Calendar style={{ width: "18px", height: "18px", color: COLORS.purple }} />
-            <h3 style={styles.cardTitle}>Automated Scanner Scheduling</h3>
+            <Calendar style={{ width: "18px", height: "18px", color: "#A78BFA" }} />
+            <h3 style={{ ...styles.cardTitle, color: "#A78BFA" }}>Automated Scanner Scheduling</h3>
           </div>
 
           <div style={styles.fieldGroup}>
-            <label style={styles.label}>Assessment Frequency</label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <label style={{ ...styles.label, color: "#94A3B8", margin: 0 }}>Assessment Frequency</label>
+              <span style={{
+                fontSize: "9px",
+                fontWeight: "900",
+                letterSpacing: "0.5px",
+                color: cronSchedule !== "disabled" ? "#34D399" : "#F87171",
+                background: cronSchedule !== "disabled" ? "rgba(52,211,153,0.1)" : "rgba(248,113,113,0.1)",
+                padding: "2px 8px",
+                borderRadius: "20px",
+                border: `1px solid ${cronSchedule !== "disabled" ? "rgba(52,211,153,0.2)" : "rgba(248,113,113,0.2)"}`
+              }}>
+                {cronSchedule !== "disabled" ? "● ACTIVE SCHEDULE" : "○ DISABLED"}
+              </span>
+            </div>
             <select 
               value={cronSchedule} 
               onChange={(e) => setCronSchedule(e.target.value)}
-              style={styles.select}
+              style={{
+                ...styles.select,
+                background: "#060910",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "10px",
+                padding: "10px 14px",
+                color: "#FFF"
+              }}
             >
               <option value="disabled">Disabled (On-Demand Scans Only)</option>
               <option value="daily">Daily Security Run (Every day at 00:00 UTC)</option>
@@ -679,76 +881,179 @@ export default function SettingsPage() {
             </select>
           </div>
 
-          <div style={{ color: COLORS.muted, fontSize: "12px", lineHeight: "1.6", background: "rgba(139,92,246,0.05)", border: "1px solid rgba(139,92,246,0.1)", padding: "12px", borderRadius: "10px", marginTop: "12px" }}>
-            🛡️ <strong>Note on Automatic Runs:</strong> When scheduled, the API Security Scanner will run background pipelines using authorization headers configured on this page and report critical issues directly to integrations.
+          <div style={{ ...styles.fieldGroup, marginTop: "12px" }}>
+            <label style={{ ...styles.label, color: "#94A3B8" }}>Scheduled Target URLs (One URL per line)</label>
+            <textarea
+              value={scheduledUrls}
+              onChange={(e) => setScheduledUrls(e.target.value)}
+              placeholder="e.g.&#10;https://api.mycompany.com&#10;https://staging.company.com/v1"
+              style={{
+                ...styles.input,
+                background: "#060910",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "10px",
+                padding: "10px 14px",
+                color: "#FFF",
+                width: "100%",
+                minHeight: "80px",
+                fontFamily: "monospace",
+                fontSize: "12px",
+                lineHeight: "1.5",
+                resize: "vertical"
+              }}
+            />
+          </div>
+
+          <div style={{
+            color: "#94A3B8",
+            fontSize: "12px",
+            lineHeight: "1.6",
+            background: "rgba(167, 139, 250, 0.04)",
+            border: "1px solid rgba(167, 139, 250, 0.12)",
+            padding: "14px",
+            borderRadius: "12px",
+            marginTop: "16px"
+          }}>
+            🛡️ <strong>Note on Automatic Runs:</strong> When scheduled, the API Security Scanner runs automated background pipelines using the credentials and custom target headers configured in this workspace. Reports are pushed directly to webhooks.
           </div>
         </div>
 
         {/* Integration settings */}
-        <div style={styles.card}>
+        <div style={{
+          ...styles.card,
+          border: "1px solid rgba(244, 63, 94, 0.18)",
+          background: "linear-gradient(180deg, rgba(244, 63, 94, 0.01) 0%, rgba(9, 13, 22, 0.65) 100%)",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.3)"
+        }}>
           <div style={styles.cardHeader}>
-            <Bell style={{ width: "18px", height: "18px", color: COLORS.purple }} />
-            <h3 style={styles.cardTitle}>External Channel Integrations</h3>
+            <Bell style={{ width: "18px", height: "18px", color: "#F43F5E" }} />
+            <h3 style={{ ...styles.cardTitle, color: "#F43F5E" }}>External Channel Integrations</h3>
           </div>
 
           {/* Slack webhook config */}
           <div style={styles.fieldGroup}>
-            <label style={styles.label}>Slack Incoming Webhook</label>
-            <input 
-              type="text" 
-              value={slackWebhook}
-              onChange={(e) => setSlackWebhook(e.target.value)}
-              placeholder="https://hooks.slack.com/services/..."
-              style={styles.input}
-            />
-            {slackWebhook && (
-              <button 
-                onClick={() => handleTestIntegration("Slack")}
-                style={styles.testBtn}
-              >
-                Test Connection
-              </button>
-            )}
+            <label style={{ ...styles.label, color: "#94A3B8", display: "flex", justifyBetween: "space-between", alignItems: "center" }}>
+              <span>Slack Incoming Webhook</span>
+              <span style={{ fontSize: "10px", color: "#E0A82E" }}>🎗️ Slack Alerting</span>
+            </label>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input 
+                type="text" 
+                value={slackWebhook}
+                onChange={(e) => setSlackWebhook(e.target.value)}
+                placeholder="https://hooks.slack.com/services/..."
+                style={{
+                  ...styles.input,
+                  flex: 1,
+                  background: "#060910",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: "10px",
+                  padding: "10px 14px",
+                  color: "#FFF"
+                }}
+              />
+              {slackWebhook && (
+                <button 
+                  onClick={() => handleTestIntegration("Slack")}
+                  style={{
+                    background: "rgba(56, 189, 248, 0.08)",
+                    border: "1px solid rgba(56, 189, 248, 0.2)",
+                    borderRadius: "10px",
+                    padding: "10px 16px",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    color: "#38BDF8",
+                    cursor: "pointer"
+                  }}
+                >
+                  Test
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Jira webhook config */}
           <div style={styles.fieldGroup}>
-            <label style={styles.label}>Jira Cloud Ticket Endpoint</label>
-            <input 
-              type="text" 
-              value={jiraWebhook}
-              onChange={(e) => setJiraWebhook(e.target.value)}
-              placeholder="https://your-domain.atlassian.net/rest/api/..."
-              style={styles.input}
-            />
-            {jiraWebhook && (
-              <button 
-                onClick={() => handleTestIntegration("Jira")}
-                style={styles.testBtn}
-              >
-                Test Connection
-              </button>
-            )}
+            <label style={{ ...styles.label, color: "#94A3B8", display: "flex", justifyBetween: "space-between", alignItems: "center" }}>
+              <span>Jira Cloud Ticket Endpoint</span>
+              <span style={{ fontSize: "10px", color: "#0052CC" }}>🎫 Jira Ticketing</span>
+            </label>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input 
+                type="text" 
+                value={jiraWebhook}
+                onChange={(e) => setJiraWebhook(e.target.value)}
+                placeholder="https://your-domain.atlassian.net/rest/api/..."
+                style={{
+                  ...styles.input,
+                  flex: 1,
+                  background: "#060910",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: "10px",
+                  padding: "10px 14px",
+                  color: "#FFF"
+                }}
+              />
+              {jiraWebhook && (
+                <button 
+                  onClick={() => handleTestIntegration("Jira")}
+                  style={{
+                    background: "rgba(56, 189, 248, 0.08)",
+                    border: "1px solid rgba(56, 189, 248, 0.2)",
+                    borderRadius: "10px",
+                    padding: "10px 16px",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    color: "#38BDF8",
+                    cursor: "pointer"
+                  }}
+                >
+                  Test
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Discord webhook config */}
           <div style={styles.fieldGroup}>
-            <label style={styles.label}>Discord Webhook URL</label>
-            <input 
-              type="text" 
-              value={discordWebhook}
-              onChange={(e) => setDiscordWebhook(e.target.value)}
-              placeholder="https://discord.com/api/webhooks/..."
-              style={styles.input}
-            />
-            {discordWebhook && (
-              <button 
-                onClick={() => handleTestIntegration("Discord")}
-                style={styles.testBtn}
-              >
-                Test Connection
-              </button>
-            )}
+            <label style={{ ...styles.label, color: "#94A3B8", display: "flex", justifyBetween: "space-between", alignItems: "center" }}>
+              <span>Discord Webhook URL</span>
+              <span style={{ fontSize: "10px", color: "#5865F2" }}>💬 Discord Sync</span>
+            </label>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <input 
+                type="text" 
+                value={discordWebhook}
+                onChange={(e) => setDiscordWebhook(e.target.value)}
+                placeholder="https://discord.com/api/webhooks/..."
+                style={{
+                  ...styles.input,
+                  flex: 1,
+                  background: "#060910",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: "10px",
+                  padding: "10px 14px",
+                  color: "#FFF"
+                }}
+              />
+              {discordWebhook && (
+                <button 
+                  onClick={() => handleTestIntegration("Discord")}
+                  style={{
+                    background: "rgba(56, 189, 248, 0.08)",
+                    border: "1px solid rgba(56, 189, 248, 0.2)",
+                    borderRadius: "10px",
+                    padding: "10px 16px",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    color: "#38BDF8",
+                    cursor: "pointer"
+                  }}
+                >
+                  Test
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -1469,6 +1774,284 @@ GITHUB_CLIENT_SECRET=your_secret_here`}
             )}
           </div>
         </div>
+
+        {/* Multi-Tenant Team & Workspace Configurations */}
+        <div style={{
+          ...styles.card,
+          gridColumn: "span 2",
+          border: "1px solid rgba(139, 92, 246, 0.2)",
+          background: "linear-gradient(180deg, rgba(139, 92, 246, 0.02) 0%, rgba(9, 13, 22, 0.6) 100%)",
+          boxShadow: "0 15px 35px rgba(0,0,0,0.4)"
+        }}>
+          <div style={styles.cardHeader}>
+            <Users style={{ width: "18px", height: "18px", color: "#A78BFA" }} />
+            <h3 style={{ ...styles.cardTitle, background: "linear-gradient(90deg, #E2E8F0, #A78BFA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Team Workspace & Member Directory
+            </h3>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "28px" }}>
+            
+            {/* Left Column: Team Creation & Invitation */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              
+              {/* Workspace creation */}
+              <div style={{
+                padding: "20px",
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.05)",
+                borderRadius: "14px",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)"
+              }}>
+                <h4 style={{ margin: "0 0 14px 0", fontSize: "13.5px", fontWeight: "750", color: "#FFF", display: "flex", alignItems: "center", gap: "6px" }}>
+                  💼 Create New Workspace
+                </h4>
+                <form onSubmit={handleCreateTeam} style={{ display: "flex", gap: "12px" }}>
+                  <input
+                    type="text"
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    placeholder="e.g., Security Operations"
+                    style={{
+                      ...styles.input,
+                      flex: 1,
+                      background: "#060910",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: "10px",
+                      padding: "10px 14px",
+                      color: "#FFF"
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={creatingTeam}
+                    style={{
+                      ...styles.saveBtn,
+                      background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
+                      padding: "10px 20px",
+                      borderRadius: "10px",
+                      fontSize: "12.5px",
+                      boxShadow: "0 4px 15px rgba(124,58,237,0.2)"
+                    }}
+                  >
+                    {creatingTeam ? "Creating..." : "Create Team"}
+                  </button>
+                </form>
+              </div>
+
+              {/* Add member */}
+              {activeTeamData && (
+                <div style={{
+                  padding: "20px",
+                  background: "rgba(255,255,255,0.02)",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                  borderRadius: "14px",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)"
+                }}>
+                  <h4 style={{ margin: "0 0 14px 0", fontSize: "13.5px", fontWeight: "750", color: "#FFF", display: "flex", alignItems: "center", gap: "6px" }}>
+                    ➕ Add Workspace Member
+                  </h4>
+                  <form onSubmit={handleInviteMember} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                    <div style={styles.fieldGroup}>
+                      <label style={{ ...styles.label, color: "#94A3B8" }}>Member Email Address</label>
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="collaborator@company.com"
+                        style={{
+                          ...styles.input,
+                          background: "#060910",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: "10px",
+                          padding: "10px 14px"
+                        }}
+                      />
+                    </div>
+                    <div style={styles.fieldGroup}>
+                      <label style={{ ...styles.label, color: "#94A3B8" }}>Access Role</label>
+                      <select
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value)}
+                        style={{
+                          ...styles.select,
+                          background: "#060910",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: "10px",
+                          padding: "10px 14px"
+                        }}
+                      >
+                        <option value="member">Member (Read & Trigger scans)</option>
+                        <option value="admin">Admin (Manage members & configurations)</option>
+                      </select>
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={invitingMember}
+                      style={{
+                        ...styles.saveBtn,
+                        background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
+                        width: "fit-content",
+                        padding: "10px 24px",
+                        borderRadius: "10px",
+                        fontSize: "12.5px",
+                        boxShadow: "0 4px 15px rgba(124,58,237,0.2)"
+                      }}
+                    >
+                      {invitingMember ? "Adding..." : "Add to Workspace"}
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Directory List */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{
+                padding: "20px",
+                background: "rgba(255,255,255,0.02)",
+                border: "1px solid rgba(255,255,255,0.05)",
+                borderRadius: "14px",
+                minHeight: "330px",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03)"
+              }}>
+                <h4 style={{ margin: "0 0 14px 0", fontSize: "13.5px", fontWeight: "750", color: "#FFF", display: "flex", alignItems: "center", gap: "6px" }}>
+                  📋 Members Directory
+                </h4>
+                {!activeTeamData ? (
+                  <p style={{ color: COLORS.muted, fontSize: "12.5px", fontStyle: "italic", margin: 0 }}>
+                    Please select or create a team workspace workspace to view directory members.
+                  </p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {activeTeamData.members?.map((m) => (
+                      <div
+                        key={m.userId?._id || m.userId}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "12px 16px",
+                          background: "rgba(255,255,255,0.015)",
+                          border: "1px solid rgba(255,255,255,0.04)",
+                          borderRadius: "10px",
+                          transition: "background 0.2s"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.015)"}
+                      >
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span style={{ fontSize: "13.5px", fontWeight: "750", color: "#FFF" }}>{m.userId?.name || "Invited Member"}</span>
+                          <span style={{ fontSize: "11.5px", color: COLORS.muted }}>{m.userId?.email || "No email"}</span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <span style={{
+                            background: m.role === "owner" ? "rgba(56,189,248,0.08)" : m.role === "admin" ? "rgba(167,139,250,0.08)" : "rgba(255,255,255,0.03)",
+                            color: m.role === "owner" ? "#38BDF8" : m.role === "admin" ? "#A78BFA" : "#94A3B8",
+                            fontSize: "10px",
+                            fontWeight: "800",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.5px",
+                            padding: "3px 10px",
+                            borderRadius: "20px",
+                            border: `1px solid ${m.role === "owner" ? "rgba(56,189,248,0.2)" : m.role === "admin" ? "rgba(167,139,250,0.2)" : "rgba(255,255,255,0.06)"}`
+                          }}>
+                            {m.role}
+                          </span>
+                          
+                          {m.role !== "owner" && (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMember(m.userId?._id || m.userId)}
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "#F87171",
+                                cursor: "pointer",
+                                padding: "4px",
+                                display: "flex",
+                                alignItems: "center",
+                                transition: "transform 0.15s"
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.15)"}
+                              onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1.0)"}
+                            >
+                              <Trash2 style={{ width: "15px", height: "15px" }} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Audit Logs Row */}
+          {activeTeamData && (
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "24px", marginTop: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+                <ClipboardList style={{ width: "17px", height: "17px", color: "#A78BFA" }} />
+                <h4 style={{ margin: 0, fontSize: "14px", fontWeight: "750", color: "#FFF" }}>
+                  🛡️ Workspace Administrative Audit Trail
+                </h4>
+              </div>
+              {auditLogs.length === 0 ? (
+                <p style={{ color: COLORS.muted, fontSize: "12px", fontStyle: "italic", margin: 0 }}>No logs recorded for this workspace.</p>
+              ) : (
+                <div style={{
+                  maxHeight: "200px",
+                  overflowY: "auto",
+                  background: "#020617",
+                  border: "1px solid rgba(255,255,255,0.05)",
+                  borderRadius: "12px",
+                  padding: "12px",
+                  fontFamily: "monospace"
+                }}>
+                  {auditLogs.map((log) => (
+                    <div
+                      key={log._id}
+                      style={{
+                        padding: "10px 8px",
+                        borderBottom: "1px solid rgba(255,255,255,0.03)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "12px",
+                        alignItems: "center"
+                      }}
+                    >
+                      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                        <span style={{
+                          fontSize: "9px",
+                          fontWeight: "800",
+                          textTransform: "uppercase",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          background: log.action === "team_created" ? "rgba(52,211,153,0.1)" : "rgba(56,189,248,0.1)",
+                          color: log.action === "team_created" ? "#34D399" : "#38BDF8"
+                        }}>
+                          {log.action === "team_created" ? "created" : "action"}
+                        </span>
+                        <span style={{ color: "#E2E8F0" }}>
+                          <strong style={{ color: "#38BDF8" }}>{log.userId?.name || "System"}</strong>{" "}
+                          {log.action === "team_created" ? "created workspace" :
+                           log.action === "member_added" ? `invited "${log.details?.invitedUser}" as ${log.details?.role}` :
+                           log.action === "member_removed" ? `removed "${log.details?.removedUser}"` :
+                           log.action}
+                        </span>
+                      </div>
+                      <span style={{ color: COLORS.muted, fontSize: "11px" }}>
+                        {new Date(log.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* Save Button Row */}

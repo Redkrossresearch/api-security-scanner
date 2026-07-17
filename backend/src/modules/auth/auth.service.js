@@ -3,13 +3,12 @@ const User = require("./auth.model");
 const jwt = require("jsonwebtoken");
 const env = require("../../config/env");
 
-const {generateAccessToken,generateRefreshToken,} = require("./token.service");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+} = require("./token.service");
 
-const registerUser = async ({
-  name,
-  email,
-  password,
-}) => {
+const registerUser = async ({ name, email, password }) => {
   const existingUser = await User.findOne({
     email,
   });
@@ -18,10 +17,7 @@ const registerUser = async ({
     throw new Error("Email already registered");
   }
 
-  const passwordHash = await bcrypt.hash(
-    password,
-    12
-  );
+  const passwordHash = await bcrypt.hash(password, 12);
 
   const user = await User.create({
     name,
@@ -37,46 +33,31 @@ const registerUser = async ({
   };
 };
 
-const loginUser = async ({
-  email,
-  password,
-}) => {
+const loginUser = async ({ email, password }) => {
   const user = await User.findOne({
     email,
     isDeleted: false,
   });
-  
-  
 
   if (!user) {
-    throw new Error(
-      "Invalid email or password"
-    );
+    throw new Error("Invalid email or password");
   }
 
-  const isMatch = await bcrypt.compare(
-    password,
-    user.passwordHash
-  );
+  const isMatch = await bcrypt.compare(password, user.passwordHash);
 
   if (!isMatch) {
-    throw new Error(
-      "Invalid email or password"
-    );
+    throw new Error("Invalid email or password");
   }
 
-  const accessToken =
-    generateAccessToken(user);
+  const accessToken = generateAccessToken(user);
 
-  const refreshToken =
-    generateRefreshToken(user);
+  const refreshToken = generateRefreshToken(user);
 
-const refreshTokenHash =
-  await bcrypt.hash(refreshToken, 12);
+  const refreshTokenHash = await bcrypt.hash(refreshToken, 12);
 
-user.refreshTokens.push({
-  token: refreshTokenHash,
-});
+  user.refreshTokens.push({
+    token: refreshTokenHash,
+  });
 
   user.lastLogin = new Date();
 
@@ -94,78 +75,50 @@ user.refreshTokens.push({
   };
 };
 
-const refreshAccessToken = async (
-  refreshToken
-) => {
+const refreshAccessToken = async (refreshToken) => {
   let decoded;
 
   try {
-    decoded = jwt.verify(
-      refreshToken,
-      env.jwtRefreshSecret
-    );
+    decoded = jwt.verify(refreshToken, env.jwtRefreshSecret);
   } catch {
-    throw new Error(
-      "Invalid refresh token"
-    );
+    throw new Error("Invalid refresh token");
   }
 
-  const user = await User.findById(
-    decoded.id
-  );
+  const user = await User.findById(decoded.id);
 
   if (!user) {
     throw new Error("User not found");
   }
 
-  const storedToken =
-    user.refreshTokens.find((rt) =>
-      bcrypt.compareSync(
-        refreshToken,
-        rt.token
-      )
-    );
+  const storedToken = user.refreshTokens.find((rt) =>
+    bcrypt.compareSync(refreshToken, rt.token),
+  );
 
   if (!storedToken) {
-    throw new Error(
-      "Refresh token not recognized"
-    );
+    throw new Error("Refresh token not recognized");
   }
 
-  const accessToken =
-    generateAccessToken(user);
+  const accessToken = generateAccessToken(user);
 
   return { accessToken };
 };
 
-const logoutUser = async (
-  userId,
-  refreshToken
-) => {
-  const user =
-    await User.findById(userId);
+const logoutUser = async (userId, refreshToken) => {
+  const user = await User.findById(userId);
 
   if (!user) {
     throw new Error("User not found");
   }
 
-  user.refreshTokens =
-    user.refreshTokens.filter(
-      (rt) =>
-        !bcrypt.compareSync(
-          refreshToken,
-          rt.token
-        )
-    );
+  user.refreshTokens = user.refreshTokens.filter(
+    (rt) => !bcrypt.compareSync(refreshToken, rt.token),
+  );
 
   await user.save();
 };
 
-const logoutAllUser = async (
-  userId
-) => {
-  const user =
-    await User.findById(userId);
+const logoutAllUser = async (userId) => {
+  const user = await User.findById(userId);
 
   if (!user) {
     throw new Error("User not found");
@@ -176,8 +129,6 @@ const logoutAllUser = async (
   await user.save();
 };
 
-
-
 const googleLoginUser = async ({ name, email }) => {
   let user = await User.findOne({
     email,
@@ -185,7 +136,10 @@ const googleLoginUser = async ({ name, email }) => {
   });
 
   if (!user) {
-    const dummyPasswordHash = await bcrypt.hash("google-auth-no-password-" + Math.random(), 12);
+    const dummyPasswordHash = await bcrypt.hash(
+      "google-auth-no-password-" + Math.random(),
+      12,
+    );
     user = await User.create({
       name,
       email,

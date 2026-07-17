@@ -7,6 +7,7 @@ const cookieParser = require("cookie-parser");
 const scanRoutes = require("./modules/scans/scan.routes");
 const authRoutes = require("./modules/auth/auth.routes");
 const env = require("./config/env");
+const { isOriginAllowed } = require("./config/cors.util");
 const { apiLimiter, authLimiter } = require("./middleware/rateLimiter");
 const dashboardRoutes = require("./modules/dashboard/dashboard.routes");
 const vulnerabilityRoutes = require("./modules/vulnerabilities/vulnerability.routes");
@@ -15,8 +16,15 @@ const reportRoutes = require("./modules/reports/report.routes"); // ✅ Moved to
 const settingRoutes = require("./modules/settings/setting.routes");
 const copilotRoutes = require("./modules/copilot/copilot.routes");
 const historyRoutes = require("./modules/history/history.routes");
+const queueRoutes = require("./modules/queue/queue.routes");
+const teamRoutes = require("./modules/teams/team.routes");
+const autonomousRoutes = require("./modules/llm/autonomous/autonomous.routes");
+const workflowRoutes = require("./modules/workflows/workflow.routes");
+const requestLogger = require("./middleware/requestLogger");
 
 const app = express();
+
+app.use(requestLogger);
 
 // Disable ETag to prevent HTTP 304 Not Modified responses and force HTTP 200 OK
 app.disable("etag");
@@ -24,16 +32,10 @@ app.disable("etag");
 // 🔴 Critical 1 — Trust Proxy (Required for Render/reverse proxy)
 app.set("trust proxy", 1);
 
-const allowedOrigins = ["http://localhost:5173", env.clientUrl].filter(Boolean);
-
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.includes(origin)) {
+      if (!origin || isOriginAllowed(origin)) {
         return callback(null, true);
       }
 
@@ -98,6 +100,10 @@ app.use("/api/settings", settingRoutes);
 app.use("/api/copilot", copilotRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/history", historyRoutes);
+app.use("/api/queue", queueRoutes);
+app.use("/api/teams", teamRoutes);
+app.use("/api/autonomous", autonomousRoutes);
+app.use("/api/workflows", workflowRoutes);
 
 // 🟡 Recommended 2 — 404 Handler (Express 5 compatible - no "*" wildcard)
 app.use((req, res) => {

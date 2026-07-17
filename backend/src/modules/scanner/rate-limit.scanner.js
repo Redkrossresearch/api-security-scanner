@@ -46,10 +46,7 @@ const scanRateLimit = async (targetUrl) => {
       }
     }
 
-    if (
-      rateLimitedResponses > 0 &&
-      rateLimitedResponses < 3
-    ) {
+    if (rateLimitedResponses > 0 && rateLimitedResponses < 3) {
       const finding = createFinding("WEAK_RATE_LIMIT");
 
       if (finding) {
@@ -57,10 +54,7 @@ const scanRateLimit = async (targetUrl) => {
       }
     }
 
-    if (
-      rateLimitedResponses > 0 &&
-      !retryAfterFound
-    ) {
+    if (rateLimitedResponses > 0 && !retryAfterFound) {
       const finding = createFinding("NO_RETRY_AFTER_HEADER");
 
       if (finding) {

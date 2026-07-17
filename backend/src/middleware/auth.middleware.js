@@ -15,13 +15,12 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(
-      token,
-      env.jwtAccessSecret
-    );
+    const decoded = jwt.verify(token, env.jwtAccessSecret);
 
-    const user = await User.findOne({ _id: decoded.id, isDeleted: { $ne: true } })
-      .select("-passwordHash");
+    const user = await User.findOne({
+      _id: decoded.id,
+      isDeleted: { $ne: true },
+    }).select("-passwordHash");
 
     if (!user) {
       return res.status(401).json({
@@ -33,9 +32,7 @@ const authenticate = async (req, res, next) => {
     req.user = user;
 
     next();
-
   } catch (error) {
-
     return res.status(401).json({
       success: false,
       message: error.message,

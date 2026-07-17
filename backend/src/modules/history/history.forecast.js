@@ -14,7 +14,7 @@ const predictScoreTrend = async (userId) => {
   }
 
   const recent = scans.slice(-5);
-  const scores = recent.map(s => s.securityScore);
+  const scores = recent.map((s) => s.securityScore);
   const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
   const last = scores[scores.length - 1];
   const first = scores[0];
@@ -49,10 +49,11 @@ const getRiskForecast = async (userId) => {
   }
 
   const recent = scans.slice(-10);
-  const criticalRates = recent.map(s => s.criticalCount);
-  const highRates = recent.map(s => s.highCount);
+  const criticalRates = recent.map((s) => s.criticalCount);
+  const highRates = recent.map((s) => s.highCount);
 
-  const avgCritical = criticalRates.reduce((a, b) => a + b, 0) / criticalRates.length;
+  const avgCritical =
+    criticalRates.reduce((a, b) => a + b, 0) / criticalRates.length;
   const avgHigh = highRates.reduce((a, b) => a + b, 0) / highRates.length;
 
   let riskTrend = "stable";

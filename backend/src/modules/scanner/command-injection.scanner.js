@@ -49,7 +49,18 @@ const scanCommandInjection = async (targetUrl) => {
     ];
 
     const uniquePaths = [...new Set(testPaths)];
-    const paramsToTest = ["ip", "host", "hostname", "domain", "cmd", "command", "exec", "ping", "addr", "target"];
+    const paramsToTest = [
+      "ip",
+      "host",
+      "hostname",
+      "domain",
+      "cmd",
+      "command",
+      "exec",
+      "ping",
+      "addr",
+      "target",
+    ];
 
     for (const path of uniquePaths.slice(0, 3)) {
       const testUrl = `${baseUrl}${path}`;
@@ -63,12 +74,16 @@ const scanCommandInjection = async (targetUrl) => {
               validateStatus: () => true,
               httpsAgent: new https.Agent({ rejectUnauthorized: false }),
               headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "User-Agent":
+                  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
               },
               responseType: "text",
             });
 
-            const body = typeof response.data === "string" ? response.data : JSON.stringify(response.data);
+            const body =
+              typeof response.data === "string"
+                ? response.data
+                : JSON.stringify(response.data);
 
             for (const pattern of CMD_OUTPUT_PATTERNS) {
               if (pattern.test(body)) {

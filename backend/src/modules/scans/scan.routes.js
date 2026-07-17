@@ -36,7 +36,11 @@ router.get("/dashboard/risk-distribution", authenticate, getRiskDistribution);
 
 router.get("/dashboard/activity", authenticate, getScanActivity);
 
-router.get("/dashboard/vulnerability-trends", authenticate, getVulnerabilityTrends);
+router.get(
+  "/dashboard/vulnerability-trends",
+  authenticate,
+  getVulnerabilityTrends,
+);
 
 router.get("/dashboard/leaderboard", authenticate, getAssetLeaderboard);
 

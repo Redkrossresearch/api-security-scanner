@@ -59,8 +59,7 @@ const refresh = async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
-    const result =
-      await refreshAccessToken(refreshToken);
+    const result = await refreshAccessToken(refreshToken);
 
     return res.status(200).json({
       success: true,
@@ -78,10 +77,7 @@ const logout = async (req, res) => {
   try {
     const { refreshToken } = req.body;
 
-    await logoutUser(
-      req.user._id,
-      refreshToken
-    );
+    await logoutUser(req.user._id, refreshToken);
 
     return res.status(200).json({
       success: true,
@@ -101,8 +97,7 @@ const logoutAll = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message:
-        "Logged out from all devices",
+      message: "Logged out from all devices",
     });
   } catch (error) {
     return res.status(400).json({

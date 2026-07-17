@@ -39,25 +39,29 @@ const auditOpenApiSchema = (doc, targetUrl) => {
 
   // Helper to check if authentication is defined
   const isAuthRequired = (operationSecurity) => {
-    const security = operationSecurity !== undefined ? operationSecurity : globalSecurity;
+    const security =
+      operationSecurity !== undefined ? operationSecurity : globalSecurity;
     return Array.isArray(security) && security.length > 0;
   };
 
   // Rule 1: Weak Server Protocol (HTTP)
-  const insecureServers = servers.filter(s => s.url && s.url.startsWith("http://"));
+  const insecureServers = servers.filter(
+    (s) => s.url && s.url.startsWith("http://"),
+  );
   if (insecureServers.length > 0) {
     schemaFindings.push({
       title: "Insecure Communication Protocol in API Servers",
       severity: "medium",
       category: "Security Misconfiguration",
-      description: `The API schema defines insecure server URL endpoint schemes: ${insecureServers.map(s => s.url).join(", ")}. Using unencrypted HTTP allows intercepting traffic (CWE-319).`,
-      recommendation: "Ensure all server endpoints defined in the API specification use secure HTTPS communication.",
+      description: `The API schema defines insecure server URL endpoint schemes: ${insecureServers.map((s) => s.url).join(", ")}. Using unencrypted HTTP allows intercepting traffic (CWE-319).`,
+      recommendation:
+        "Ensure all server endpoints defined in the API specification use secure HTTPS communication.",
       owasp: "API5:2023 Security Misconfiguration",
       cwe: "CWE-319",
       cvss: 5.9,
       remediationSteps: [
         "Change the scheme of server URLs from http:// to https://.",
-        "Configure servers to reject unencrypted traffic and enforce TLS."
+        "Configure servers to reject unencrypted traffic and enforce TLS.",
       ],
       endpoint: "/servers",
       evidence: JSON.stringify(insecureServers),
@@ -78,7 +82,11 @@ const auditOpenApiSchema = (doc, targetUrl) => {
       const lowerMethod = method.toLowerCase();
 
       // Skip non-HTTP methods like parameters or summary extensions
-      if (!["get", "post", "put", "patch", "delete", "options", "head"].includes(lowerMethod)) {
+      if (
+        !["get", "post", "put", "patch", "delete", "options", "head"].includes(
+          lowerMethod,
+        )
+      ) {
         continue;
       }
 
@@ -91,7 +99,10 @@ const auditOpenApiSchema = (doc, targetUrl) => {
       const authRequired = isAuthRequired(operation.security);
 
       // Rule 2: Unauthenticated State-Changing Operations
-      if (["post", "put", "patch", "delete"].includes(lowerMethod) && !authRequired) {
+      if (
+        ["post", "put", "patch", "delete"].includes(lowerMethod) &&
+        !authRequired
+      ) {
         unauthStateChanges.push(`${lowerMethod.toUpperCase()} ${path}`);
       }
 
@@ -104,11 +115,21 @@ const auditOpenApiSchema = (doc, targetUrl) => {
       // Rule 4: PII / Sensitive data exposure in request parameters or response body schemas
       const searchForSensitiveKeys = (obj, pathTracker = []) => {
         if (!obj || typeof obj !== "object") return;
-        
+
         const sensitiveKeys = [
-          "password", "ssn", "social_security", "socialsecurity", 
-          "creditcard", "credit_card", "cardnumber", "cvv", 
-          "secret", "privatekey", "private_key", "authtoken", "auth_token"
+          "password",
+          "ssn",
+          "social_security",
+          "socialsecurity",
+          "creditcard",
+          "credit_card",
+          "cardnumber",
+          "cvv",
+          "secret",
+          "privatekey",
+          "private_key",
+          "authtoken",
+          "auth_token",
         ];
 
         for (const [key, val] of Object.entries(obj)) {
@@ -142,13 +163,14 @@ const auditOpenApiSchema = (doc, targetUrl) => {
       severity: "high",
       category: "Broken Authentication",
       description: `The specification documents ${unauthStateChanges.length} state-changing operations that do not require any security credentials or token validations: \n${unauthStateChanges.slice(0, 5).join(", ")}${unauthStateChanges.length > 5 ? "..." : ""}. Unauthenticated access to state-changing operations allows critical logic execution without identity proof (CWE-306).`,
-      recommendation: "Define a security requirement block globally or per-operation in the OpenAPI schema, and implement backend verification.",
+      recommendation:
+        "Define a security requirement block globally or per-operation in the OpenAPI schema, and implement backend verification.",
       owasp: "API2:2023 Broken Authentication",
       cwe: "CWE-306",
       cvss: 8.5,
       remediationSteps: [
         "Register security schemes (e.g. BearerToken, OAuth2) in components/securitySchemes.",
-        "Add security arrays to enforce authentication globally or on sensitive operations."
+        "Add security arrays to enforce authentication globally or on sensitive operations.",
       ],
       endpoint: unauthStateChanges[0].split(" ")[1],
       evidenceSnippet: unauthStateChanges.join("\n"),
@@ -162,13 +184,14 @@ const auditOpenApiSchema = (doc, targetUrl) => {
       severity: "high",
       category: "Broken Object Level Authorization",
       description: `API schema documents ${bolaRisks.length} parameterized reference routes without requiring authentication filters: \n${bolaRisks.slice(0, 5).join(", ")}${bolaRisks.length > 5 ? "..." : ""}. This allows attackers to access/modify resources dynamically by altering identifiers (CWE-639).`,
-      recommendation: "Configure these endpoints to require authorization verification and authenticate the requesting user's session.",
+      recommendation:
+        "Configure these endpoints to require authorization verification and authenticate the requesting user's session.",
       owasp: "API1:2023 Broken Object Level Authorization",
       cwe: "CWE-639",
       cvss: 8.1,
       remediationSteps: [
         "Enforce token verification checks on all parameterized routes.",
-        "Verify ownership of the requested resource identifiers at the controller level."
+        "Verify ownership of the requested resource identifiers at the controller level.",
       ],
       endpoint: bolaRisks[0].split(" ")[1],
       evidenceSnippet: bolaRisks.join("\n"),
@@ -177,22 +200,32 @@ const auditOpenApiSchema = (doc, targetUrl) => {
   }
 
   if (piiExposures.length > 0) {
-    const uniqExposures = piiExposures.filter((v, i, a) => a.findIndex(t => t.path === v.path && t.property === v.property) === i);
+    const uniqExposures = piiExposures.filter(
+      (v, i, a) =>
+        a.findIndex((t) => t.path === v.path && t.property === v.property) ===
+        i,
+    );
     schemaFindings.push({
       title: "Sensitive Property Level Data Exposure in API Spec",
       severity: "medium",
       category: "Broken Object Property Level Authorization",
-      description: `Found ${uniqExposures.length} schema fields exposing potential sensitive details (such as tokens, passwords, or PII) in API request parameters or response payloads: \n${uniqExposures.slice(0, 5).map(e => `${e.path} (${e.property})`).join(", ")}${uniqExposures.length > 5 ? "..." : ""}. (CWE-200)`,
-      recommendation: "Ensure sensitive parameters are filtered, encrypted, or omitted from public schemas unless absolutely required.",
+      description: `Found ${uniqExposures.length} schema fields exposing potential sensitive details (such as tokens, passwords, or PII) in API request parameters or response payloads: \n${uniqExposures
+        .slice(0, 5)
+        .map((e) => `${e.path} (${e.property})`)
+        .join(", ")}${uniqExposures.length > 5 ? "..." : ""}. (CWE-200)`,
+      recommendation:
+        "Ensure sensitive parameters are filtered, encrypted, or omitted from public schemas unless absolutely required.",
       owasp: "API3:2023 Broken Object Property Level Authorization",
       cwe: "CWE-200",
       cvss: 6.5,
       remediationSteps: [
         "Omit fields like cleartext passwords, tokens, or SSNs from API response models.",
-        "Enforce strict read/write property schema filters."
+        "Enforce strict read/write property schema filters.",
       ],
       endpoint: uniqExposures[0].path.split(" ")[1],
-      evidenceSnippet: uniqExposures.map(e => `${e.path} -> ${e.property}`).join("\n"),
+      evidenceSnippet: uniqExposures
+        .map((e) => `${e.path} -> ${e.property}`)
+        .join("\n"),
       verified: true,
     });
   }
@@ -202,14 +235,16 @@ const auditOpenApiSchema = (doc, targetUrl) => {
       title: "Missing Rate-Limiting Documented Status Code",
       severity: "low",
       category: "Unrestricted Resource Consumption",
-      description: "The API specification does not document any HTTP 429 (Too Many Requests) rate limit responses for its endpoints (CWE-770).",
-      recommendation: "Implement rate limiting policies on API endpoints and document HTTP 429 responses in the specification.",
+      description:
+        "The API specification does not document any HTTP 429 (Too Many Requests) rate limit responses for its endpoints (CWE-770).",
+      recommendation:
+        "Implement rate limiting policies on API endpoints and document HTTP 429 responses in the specification.",
       owasp: "API4:2023 Unrestricted Resource Consumption",
       cwe: "CWE-770",
       cvss: 3.2,
       remediationSteps: [
         "Configure rate limiters (e.g. rate-limit middleware or gateway rules).",
-        "Add a 429 response schema object under the paths definitions."
+        "Add a 429 response schema object under the paths definitions.",
       ],
       endpoint: "/rate-limiting",
       verified: true,

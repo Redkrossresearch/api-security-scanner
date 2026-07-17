@@ -71,12 +71,20 @@ export default function MessageBubble({ msg, onRegenerate, index }) {
     }
   };
 
-  const handleFeedback = (type) => {
+  const handleFeedback = async (type) => {
     setFeedback(type);
     toast.success(type === "up" ? "Thanks for the feedback!" : "Feedback recorded", {
       duration: 1500,
     });
-    // Here you can call an API to record feedback
+    try {
+      await api.post("/copilot/feedback", {
+        messageId: msg._id,
+        correctness: type === "up" ? "correct" : "incorrect",
+        reason: "User thumbs UI selection",
+      });
+    } catch (err) {
+      console.warn("Failed to submit AI feedback to server:", err.message);
+    }
   };
 
   const timeStr = msg.timestamp

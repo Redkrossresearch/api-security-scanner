@@ -19,9 +19,19 @@
       "type": "object",
       "description": "Internal reasoning steps (optional, for debugging or transparency)",
       "properties": {
-        "analysis": { "type": "string", "description": "Detailed analysis and reasoning" },
-        "plan": { "type": "string", "description": "Proposed plan of action, if any" },
-        "issues": { "type": "array", "items": { "type": "string" }, "description": "List of identified issues or open questions" }
+        "analysis": {
+          "type": "string",
+          "description": "Detailed analysis and reasoning"
+        },
+        "plan": {
+          "type": "string",
+          "description": "Proposed plan of action, if any"
+        },
+        "issues": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of identified issues or open questions"
+        }
       },
       "required": ["analysis"]
     },
@@ -29,8 +39,14 @@
       "type": "object",
       "description": "The main user‑facing result",
       "properties": {
-        "summary": { "type": "string", "description": "Brief human‑readable summary" },
-        "details": { "type": "string", "description": "Full explanation, markdown formatted" },
+        "summary": {
+          "type": "string",
+          "description": "Brief human‑readable summary"
+        },
+        "details": {
+          "type": "string",
+          "description": "Full explanation, markdown formatted"
+        },
         "artifacts": {
           "type": "array",
           "items": {
