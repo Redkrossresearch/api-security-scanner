@@ -39,13 +39,15 @@ const COLORS = {
 export default function ReportsPage() {
   const [scans, setScans] = useState([]);
   const [selectedScanId, setSelectedScanId] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [activeStandard, setActiveStandard] = useState("owasp"); // owasp, pci, soc2
   const [activeScanData, setActiveScanData] = useState(null);
 
   // Load Scan history to select from
   useEffect(() => {
     const fetchHistory = async () => {
+      setLoading(true);
+      const safetyTimer = setTimeout(() => setLoading(false), 4000);
       try {
         const res = await api.get("/scans/history");
         const list = res.data.scans || [];
@@ -56,6 +58,7 @@ export default function ReportsPage() {
       } catch (err) {
         toast.error("Failed to load historical scans list");
       } finally {
+        clearTimeout(safetyTimer);
         setLoading(false);
       }
     };

@@ -734,7 +734,14 @@ export default function VulnerabilitiesPage() {
   const [matrixFilter, setMatrixFilter] = useState(null); // { exp, imp }
 
   // Data States
-  const [intelligence, setIntelligence] = useState(null);
+  const [intelligence, setIntelligence] = useState({
+    total: 0, counts: { critical: 0, high: 0, medium: 0, low: 0 },
+    riskExposureScore: 0, riskExposureText: "Loading",
+    heatmapData: [], matrix: {}, remediation: { resolved: 0, inProgress: 0, pending: 0 },
+    topFindings: [], trends: [],
+    insights: { aiSuggestion: "Loading AI suggestions...", attackTrend: "—", mostAffectedAsset: "—", complianceImpact: "Loading..." }
+  });
+
   const [vulnerabilities, setVulnerabilities] = useState([]);
   const [totalVulns, setTotalVulns] = useState(0);
   const [page, setPage] = useState(1);
@@ -777,17 +784,18 @@ export default function VulnerabilitiesPage() {
     fetchAssets();
   }, []);
 
-  // Fetch Intelligence Analytics
+  // Fetch Intelligence Analytics (non-blocking - independent load)
   const fetchIntelligence = async () => {
     try {
       const data = await getVulnerabilityIntelligence();
       setIntelligence(data);
     } catch (err) {
-      toast.error("Failed to load intelligence stats");
+      // Set a fallback so the page doesn't stay blocked
+      setIntelligence({ total: 0, counts: { critical: 0, high: 0, medium: 0, low: 0 }, riskExposureScore: 0, riskExposureText: "N/A", heatmapData: [], matrix: {}, remediation: { resolved: 0, inProgress: 0, pending: 0 }, topFindings: [], trends: [], insights: {} });
     }
   };
 
-  // Fetch Vulnerability list with filters
+  // Fetch Vulnerability list with filters (blocks page load - keep fast)
   const fetchVulnerabilityList = async () => {
     setLoadingList(true);
     try {
@@ -827,12 +835,15 @@ export default function VulnerabilitiesPage() {
     }
   };
 
-  // Load everything
+  // Load: show page fast via vulnerability list, load intelligence separately in background
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true);
-      await Promise.all([fetchIntelligence(), fetchVulnerabilityList()]);
+      // Fetch vulnerability list first (fast query), don't await intelligence (slow)
+      await fetchVulnerabilityList();
       setLoading(false);
+      // Intelligence loads in background independently - no page blocking
+      fetchIntelligence();
     };
     loadAll();
   }, [page, debouncedSearch, severity, status, matrixFilter]);
@@ -864,11 +875,12 @@ export default function VulnerabilitiesPage() {
     });
   };
 
-  if (loading || !intelligence) {
+  if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", itemsCenter: "center", justifyContent: "center", minHeight: "100%", background: COLORS.background, color: COLORS.white }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", background: COLORS.background, color: COLORS.white }}>
         <RefreshCw style={{ width: "48px", height: "48px", color: COLORS.purple, margin: "0 auto 16px auto", animation: "spin 1s linear infinite" }} />
-        <p style={{ textAlign: "center", color: COLORS.muted, fontWeight: "500" }}>Synthesizing vulnerability intelligence schemas...</p>
+        <p style={{ textAlign: "center", color: COLORS.muted, fontWeight: "500" }}>Loading vulnerability records...</p>
+        <style>{`@keyframes spin { 100% { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -918,11 +930,11 @@ export default function VulnerabilitiesPage() {
       <div style={styles.kpiGrid}>
         {/* KPI Cards */}
         {[
-          { title: "TOTAL VULNERABILITIES", count: intelligence.total, diff: "+18%", color: COLORS.purple },
-          { title: "CRITICAL", count: intelligence.counts.critical, diff: "+27%", color: COLORS.critical },
-          { title: "HIGH", count: intelligence.counts.high, diff: "+12%", color: COLORS.warning },
-          { title: "MEDIUM", count: intelligence.counts.medium, diff: "-9%", color: COLORS.yellow },
-          { title: "LOW", count: intelligence.counts.low, diff: "+22%", color: COLORS.success },
+          { title: "TOTAL VULNERABILITIES", count: intelligence?.total ?? "—", diff: "+18%", color: COLORS.purple },
+          { title: "CRITICAL", count: intelligence?.counts?.critical ?? "—", diff: "+27%", color: COLORS.critical },
+          { title: "HIGH", count: intelligence?.counts?.high ?? "—", diff: "+12%", color: COLORS.warning },
+          { title: "MEDIUM", count: intelligence?.counts?.medium ?? "—", diff: "-9%", color: COLORS.yellow },
+          { title: "LOW", count: intelligence?.counts?.low ?? "—", diff: "+22%", color: COLORS.success },
         ].map((kpi, idx) => (
           <div key={idx} style={styles.kpiCard}>
             <div style={styles.kpiTitle}>{kpi.title}</div>
@@ -949,7 +961,7 @@ export default function VulnerabilitiesPage() {
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                 />
                 <path
-                  strokeDasharray={`${intelligence.riskExposureScore}, 100`}
+                  strokeDasharray={`${intelligence?.riskExposureScore ?? 0}, 100`}
                   strokeWidth="3.5"
                   strokeLinecap="round"
                   stroke={COLORS.critical}
@@ -1101,7 +1113,7 @@ export default function VulnerabilitiesPage() {
 
           <div style={{ width: "100%", height: "240px", marginTop: "16px" }}>
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={intelligence.heatmapData}>
+              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={intelligence?.heatmapData || []}>
                 <PolarGrid stroke="rgba(255,255,255,0.06)" />
                 <PolarAngleAxis dataKey="subject" tick={{ fill: COLORS.muted, fontSize: 10, fontWeight: 600 }} />
                 <Radar name="Threat Vector" dataKey="A" stroke={COLORS.purple} fill={COLORS.purple} fillOpacity={0.25} />
@@ -1125,7 +1137,7 @@ export default function VulnerabilitiesPage() {
               <div key={imp} style={styles.matrixRow}>
                 <div style={styles.matrixLabelY}>{imp}</div>
                 {["Low", "Medium", "High"].map((exp) => {
-                  const val = intelligence.matrix[imp]?.[exp] || 0;
+                  const val = intelligence?.matrix?.[imp]?.[exp] || 0;
                   const isSelected = matrixFilter?.exp === exp && matrixFilter?.imp === imp;
                   
                   // Compute color based on cell priority
@@ -1203,7 +1215,7 @@ export default function VulnerabilitiesPage() {
           </div>
 
           <div style={styles.topFindingsList}>
-            {intelligence.topFindings.map((f, idx) => (
+            {(intelligence?.topFindings || []).map((f, idx) => (
               <button
                 key={idx}
                 onClick={async () => {
@@ -1250,7 +1262,7 @@ export default function VulnerabilitiesPage() {
 
           <div style={{ width: "100%", height: "180px", marginTop: "16px" }}>
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={intelligence.trends}>
+              <AreaChart data={intelligence?.trends || []}>
                 <defs>
                   <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor={COLORS.purple} stopOpacity={0.4}/>
@@ -1311,10 +1323,10 @@ export default function VulnerabilitiesPage() {
             <div style={styles.progressRow}>
               <div style={styles.progressInfo}>
                 <span style={{ color: COLORS.muted }}>Resolved</span>
-                <span style={{ color: COLORS.success, fontWeight: "700" }}>{intelligence.remediation.resolved}</span>
+                <span style={{ color: COLORS.success, fontWeight: "700" }}>{intelligence?.remediation?.resolved ?? 0}</span>
               </div>
               <div style={styles.progressBarBg}>
-                <div style={{ ...styles.progressBarFill, background: COLORS.success, width: `${Math.min(100, (intelligence.remediation.resolved / (intelligence.total || 25)) * 100)}%` }}></div>
+                <div style={{ ...styles.progressBarFill, background: COLORS.success, width: `${Math.min(100, ((intelligence?.remediation?.resolved ?? 0) / (intelligence?.total || 25)) * 100)}%` }}></div>
               </div>
             </div>
 
@@ -1322,10 +1334,10 @@ export default function VulnerabilitiesPage() {
             <div style={styles.progressRow}>
               <div style={styles.progressInfo}>
                 <span style={{ color: COLORS.muted }}>In Progress</span>
-                <span style={{ color: "#60A5FA", fontWeight: "700" }}>{intelligence.remediation.inProgress}</span>
+                <span style={{ color: "#60A5FA", fontWeight: "700" }}>{intelligence?.remediation?.inProgress ?? 0}</span>
               </div>
               <div style={styles.progressBarBg}>
-                <div style={{ ...styles.progressBarFill, background: "#60A5FA", width: `${Math.min(100, (intelligence.remediation.inProgress / (intelligence.total || 25)) * 100)}%` }}></div>
+                <div style={{ ...styles.progressBarFill, background: "#60A5FA", width: `${Math.min(100, ((intelligence?.remediation?.inProgress ?? 0) / (intelligence?.total || 25)) * 100)}%` }}></div>
               </div>
             </div>
 
@@ -1333,10 +1345,10 @@ export default function VulnerabilitiesPage() {
             <div style={styles.progressRow}>
               <div style={styles.progressInfo}>
                 <span style={{ color: COLORS.muted }}>Pending</span>
-                <span style={{ color: COLORS.yellow, fontWeight: "700" }}>{intelligence.remediation.pending}</span>
+                <span style={{ color: COLORS.yellow, fontWeight: "700" }}>{intelligence?.remediation?.pending ?? 0}</span>
               </div>
               <div style={styles.progressBarBg}>
-                <div style={{ ...styles.progressBarFill, background: COLORS.yellow, width: `${Math.min(100, (intelligence.remediation.pending / (intelligence.total || 25)) * 100)}%` }}></div>
+                <div style={{ ...styles.progressBarFill, background: COLORS.yellow, width: `${Math.min(100, ((intelligence?.remediation?.pending ?? 0) / (intelligence?.total || 25)) * 100)}%` }}></div>
               </div>
             </div>
           </div>
@@ -1357,7 +1369,7 @@ export default function VulnerabilitiesPage() {
             <span style={styles.insightTag}>AI SUGGESTION</span>
           </div>
           <p style={styles.insightBody}>
-            {intelligence.insights.aiSuggestion}
+            {intelligence?.insights?.aiSuggestion || "Loading AI analysis..."}
           </p>
           <div onClick={triggerAiRemediation} style={styles.insightLink}>
             Fix Now with AI <ChevronRight style={{ width: "12px", height: "12px", marginLeft: "2px" }} />
@@ -1366,9 +1378,9 @@ export default function VulnerabilitiesPage() {
 
         {/* Stats columns */}
         {[
-          { title: "ATTACK TREND", val: intelligence.insights.attackTrend, label: "Increase in attempts", color: "#F87171" },
-          { title: "MOST AFFECTED ASSET", val: intelligence.insights.mostAffectedAsset, label: "Vulnerability concentration", color: "#E2E8F0" },
-          { title: "COMPLIANCE IMPACT", val: intelligence.insights.complianceImpact, label: "Regulatory verification state", color: intelligence.insights.complianceImpact.includes("DSS") ? COLORS.critical : COLORS.success },
+          { title: "ATTACK TREND", val: intelligence?.insights?.attackTrend ?? "—", label: "Increase in attempts", color: "#F87171" },
+          { title: "MOST AFFECTED ASSET", val: intelligence?.insights?.mostAffectedAsset ?? "—", label: "Vulnerability concentration", color: "#E2E8F0" },
+          { title: "COMPLIANCE IMPACT", val: intelligence?.insights?.complianceImpact ?? "Loading...", label: "Regulatory verification state", color: (intelligence?.insights?.complianceImpact || "").includes("DSS") ? COLORS.critical : COLORS.success },
         ].map((insight, idx) => (
           <div key={idx} style={styles.insightCard}>
             <div style={styles.insightMiniTitle}>{insight.title}</div>

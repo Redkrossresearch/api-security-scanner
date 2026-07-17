@@ -6,7 +6,7 @@ import { DEFAULT_COMPLIANCE_DATA } from "../constants/dashboardConstants";
 export default function useDashboard() {
   // ✅ Saari state
   const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [trendRange, setTrendRange] = useState("7D");
   const [selectedVulnerability, setSelectedVulnerability] = useState(null);
@@ -47,6 +47,7 @@ export default function useDashboard() {
   // ✅ fetchDashboard function
   const fetchDashboard = useCallback(
     async (pageNumber = 1) => {
+      const safetyTimer = setTimeout(() => setLoading(false), 8000);
       try {
         setLoading(true);
         setError(null);
@@ -66,6 +67,7 @@ export default function useDashboard() {
         logger.error(err, "Dashboard fetch failed");
         setError("Failed to load dashboard");
       } finally {
+        clearTimeout(safetyTimer);
         setLoading(false);
       }
     },

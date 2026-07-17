@@ -184,7 +184,7 @@ const styles = {
 };
 
 export default function SettingsPage() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [integrationToken, setIntegrationToken] = useState("");
@@ -429,6 +429,11 @@ export default function SettingsPage() {
   // Load user settings
   useEffect(() => {
     const loadSettings = async () => {
+      setLoading(true);
+      // Safety timeout: never block UI more than 4 seconds
+      const safetyTimer = setTimeout(() => {
+        setLoading(false);
+      }, 4000);
       try {
         const data = await getSettings();
         if (data) {
@@ -466,6 +471,7 @@ export default function SettingsPage() {
       } catch (err) {
         toast.error("Failed to load settings configuration");
       } finally {
+        clearTimeout(safetyTimer);
         setLoading(false);
       }
     };
