@@ -1,17 +1,65 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link2, Search, ExternalLink, Globe, Sparkles } from "lucide-react";
+import api from "../../../services/api";
 
 export default function SourcesPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState("all");
+  const [sources, setSources] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const sources = [
+  const fallbackSources = [
     { id: "1", title: "OWASP API Security Top 10 (2023)", url: "https://owasp.org/www-project-api-security/", type: "OWASP", desc: "Top 10 security risks associated with modern Web API endpoints." },
     { id: "2", title: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command", url: "https://cwe.mitre.org/data/definitions/89.html", type: "CWE", desc: "Common Weakness Enumeration entry for SQL Injection vulnerabilities." },
     { id: "3", title: "RFC 7519: JSON Web Token (JWT) Specifications", url: "https://datatracker.ietf.org/doc/html/rfc7519", type: "RFC", desc: "Official standard specifications mapping JWT claims and validation controls." },
     { id: "4", title: "NIST SP 800-115: Technical Guide to Information Security Testing", url: "https://csrc.nist.gov/publications/detail/sp/800-115/final", type: "NIST", desc: "Methodology and guidelines for penetration testing and vulnerability auditing." },
     { id: "5", title: "CWE-94: Improper Control of Generation of Code ('Code Injection')", url: "https://cwe.mitre.org/data/definitions/94.html", type: "CWE", desc: "Root causes of server-side code and parameter injections." }
   ];
+
+  useEffect(() => {
+    async function fetchRAGSources() {
+      try {
+        setIsLoading(true);
+        const res = await api.get("/copilot/sources");
+        if (res.data && res.data.success && res.data.sources?.length > 0) {
+          // Format sources
+          const formatted = res.data.sources.map((s, idx) => {
+            let type = "Generic";
+            let desc = `Indexed knowledge vector block (${s.sourceType}).`;
+            if (s.sourceType === "threat_intelligence") {
+              type = s.metadata?.source === "OWASP" ? "OWASP" : "CWE";
+              desc = `Platform security catalog rules mapping ${s.id}.`;
+            } else if (s.sourceType === "github_advisory") {
+              type = "GitHub";
+              desc = `Security bulletin advisory: ${s.metadata?.severity?.toUpperCase() || "unknown"} severity.`;
+            } else if (s.sourceType === "security_scan") {
+              type = "Scan Audit";
+              desc = `Indexed vulnerability targets crawl results for scan ID: ${s.metadata?.scanId?.slice(-6) || "N/A"}.`;
+            } else if (s.sourceType === "web_search_cache") {
+              type = "Web Cache";
+              desc = `Cached intelligence retrieved from live search query: "${s.metadata?.query || ""}".`;
+            }
+            return {
+              id: s.id || String(idx),
+              title: s.title,
+              url: s.metadata?.url || "https://owasp.org",
+              type,
+              desc
+            };
+          });
+          setSources(formatted);
+        } else {
+          setSources(fallbackSources);
+        }
+      } catch (err) {
+        console.warn("Failed to load real RAG sources from server:", err.message);
+        setSources(fallbackSources);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchRAGSources();
+  }, []);
 
   const filtered = sources.filter((s) => {
     const matchesSearch = s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.desc.toLowerCase().includes(searchQuery.toLowerCase());
@@ -98,12 +146,13 @@ export default function SourcesPanel() {
           </div>
 
           {/* Filter tabs */}
-          <div style={{ display: "flex", gap: "6px", overflowX: "auto" }}>
-            {["all", "OWASP", "CWE", "RFC", "NIST"].map((type) => (
+          <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "4px" }}>
+            {["all", "OWASP", "CWE", "GitHub", "Web Cache", "Scan Audit", "NIST", "RFC"].map((type) => (
               <button
                 key={type}
                 onClick={() => setSelectedType(type)}
                 className={`src-type-tab ${selectedType === type ? "active" : ""}`}
+                style={{ whiteSpace: "nowrap" }}
               >
                 {type}
               </button>
@@ -113,14 +162,18 @@ export default function SourcesPanel() {
 
         {/* Scrollable list of bibliography items */}
         <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "10px" }}>
-          {filtered.length === 0 && (
+          {isLoading ? (
+            <div style={{ textAlign: "center", color: "rgba(139,92,246,0.6)", padding: "40px 10px", fontSize: "12px", fontFamily: "monospace" }}>
+              <span className="animate-pulse">⚡ Scanning RAG Knowledge Catalog...</span>
+            </div>
+          ) : filtered.length === 0 ? (
             <div style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", padding: "40px 10px" }}>
               <Globe size={24} style={{ display: "block", margin: "0 auto 8px" }} />
               <span style={{ fontSize: "11.5px" }}>No sources found</span>
             </div>
-          )}
+          ) : null}
 
-          {filtered.map((item) => (
+          {!isLoading && filtered.map((item) => (
             <a
               key={item.id}
               href={item.url}

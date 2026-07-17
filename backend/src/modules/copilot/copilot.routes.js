@@ -19,10 +19,14 @@ const {
   createTraining,
   deleteTraining,
   submitFeedback,
+  getRAGSources,
 } = require("./copilot.controller");
 
 // Public model registry (no auth needed)
 router.get("/models", authenticate, getAvailableModels);
+
+// Real RAG Indexed Knowledge Sources endpoint
+router.get("/sources", authenticate, getRAGSources);
 
 // Conversation CRUD
 router.get("/conversations", authenticate, getConversations);

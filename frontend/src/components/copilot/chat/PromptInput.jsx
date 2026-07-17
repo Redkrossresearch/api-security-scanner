@@ -219,6 +219,7 @@ const getFileBadgeColor = (name) => {
 
 export default function PromptInput({
   value, onChange, onSend, disabled, selectedModel, onModelChange, temperature, onTemperatureChange, webSearch, onWebSearchChange,
+  funnelMode = "single", onFunnelModeChange,
 }) {
   const textareaRef = useRef(null);
   const containerRef = useRef(null);
@@ -738,6 +739,38 @@ export default function PromptInput({
             style={{ display: "flex", alignItems: "center", gap: "5px", padding: "5px 10px", background: webSearch ? "rgba(16,185,129,0.15)" : THEME.colors.surface, border: `1px solid ${webSearch ? "#10B98140" : THEME.colors.border}`, borderRadius: "20px", color: webSearch ? "#10B981" : THEME.colors.textMuted, fontSize: "11px", fontWeight: "600", cursor: "pointer" }}
           >
             {webSearch ? <Wifi size={11} /> : <WifiOff size={11} />} Web
+          </button>
+
+          {/* AI Strategy */}
+          <button
+            onClick={() => {
+              const nextMode = 
+                funnelMode === "single" ? "parallel" :
+                funnelMode === "parallel" ? "consensus" :
+                funnelMode === "consensus" ? "debate" : "single";
+              onFunnelModeChange && onFunnelModeChange(nextMode);
+              toast.success(`AI Strategy: ${
+                nextMode === "single" ? "Single Model Mode" :
+                nextMode === "parallel" ? "Parallel Funnel" :
+                nextMode === "consensus" ? "Consensus Voting" : "Multi-Agent Debate"
+              }`);
+            }}
+            className="tool-chip"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              padding: "5px 10px",
+              background: funnelMode !== "single" ? "rgba(139,92,246,0.15)" : THEME.colors.surface,
+              border: `1px solid ${funnelMode !== "single" ? THEME.colors.primary + "40" : THEME.colors.border}`,
+              borderRadius: "20px",
+              color: funnelMode !== "single" ? "#A78BFA" : THEME.colors.textMuted,
+              fontSize: "11px",
+              fontWeight: "600",
+              cursor: "pointer"
+            }}
+          >
+            <Layers size={11} /> Strategy: {funnelMode.toUpperCase()}
           </button>
 
           {/* Memory */}

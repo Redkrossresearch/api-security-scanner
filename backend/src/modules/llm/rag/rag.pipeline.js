@@ -112,10 +112,43 @@ Responses: ${JSON.stringify(detail.responses || {})}`;
 
   /**
    * Retrieve relevant chunks and rerank (Sprint 37)
+   * Integrates dynamic Web Search if local matches are sparse/irrelevant
    */
   async retrieveContext(query, limit = 3) {
     console.log(`[rag-pipeline] Querying RAG index for query: "${query}"`);
-    const results = await vectorDb.query(query, limit * 2);
+    let results = await vectorDb.query(query, limit * 2);
+
+    // Auto-growing RAG: If local matches are sparse or have low similarity, trigger web search query
+    const topScore = results.length > 0 ? results[0].similarity : 0;
+    if (results.length === 0 || topScore < 0.65) {
+      console.log(`[rag-pipeline] Low local similarity (${topScore.toFixed(2)}). Triggering dynamic web search integration...`);
+      try {
+        const { searchWeb } = require("../../copilot/search.service");
+        const webMatches = await searchWeb(query);
+        
+        if (webMatches && webMatches.length > 0) {
+          // Temporarily cache top 3 web results to vector store so they enrich subsequent questions
+          for (let i = 0; i < Math.min(3, webMatches.length); i++) {
+            const match = webMatches[i];
+            const textChunk = `Web Search Title: ${match.title}
+Source URL: ${match.url}
+Extract: ${match.snippet}`;
+            
+            const docId = `web-cache-${Date.now()}-${i}`;
+            await vectorDb.addDocument(docId, textChunk, {
+              sourceType: "web_search_cache",
+              url: match.url,
+              query: query,
+            });
+          }
+
+          // Re-query vector DB to include newly ingested web cache vectors
+          results = await vectorDb.query(query, limit * 2);
+        }
+      } catch (err) {
+        console.warn("[rag-pipeline] Dynamic web search integration failed:", err.message);
+      }
+    }
 
     if (results.length === 0) {
       return "";

@@ -60,6 +60,7 @@ export default function CopilotPage() {
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const [temperature, setTemperature] = useState(DEFAULT_TEMPERATURE);
   const [webSearch, setWebSearch] = useState(false);
+  const [funnelMode, setFunnelMode] = useState("single");
   const [theme, setTheme] = useState("void");
 
   // Layout Panels State
@@ -324,6 +325,7 @@ export default function CopilotPage() {
         model: selectedModel,
         temperature,
         webSearch,
+        funnelMode,
         attachments: attachedFiles,
         stream: true
       });
@@ -1034,6 +1036,8 @@ export default function CopilotPage() {
                   onTemperatureChange={setTemperature}
                   webSearch={webSearch}
                   onWebSearchChange={setWebSearch}
+                  funnelMode={funnelMode}
+                  onFunnelModeChange={setFunnelMode}
                 />
               }
             />

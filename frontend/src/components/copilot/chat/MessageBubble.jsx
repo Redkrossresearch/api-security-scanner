@@ -3,6 +3,7 @@ import { Bot, User, Copy, ThumbsUp, ThumbsDown, RefreshCw, Edit2, Download, Exte
 import { motion } from "framer-motion";
 import MarkdownRenderer from "../MarkdownRenderer";
 import toast from "react-hot-toast";
+import api from "../../../services/api";
 
 const MermaidDiagram = lazy(() => import("./MermaidDiagram"));
 
@@ -169,6 +170,21 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
   const handleCopy = () => {
     navigator.clipboard.writeText(msg.text);
     toast.success("Copied to clipboard", { duration: 1500 });
+  };
+
+  const handleFeedback = async (type) => {
+    toast.success(type === "up" ? "Thanks for the feedback!" : "Feedback recorded", {
+      duration: 1500,
+    });
+    try {
+      await api.post("/copilot/feedback", {
+        messageId: msg._id,
+        correctness: type === "up" ? "correct" : "incorrect",
+        reason: "User thumbs UI selection",
+      });
+    } catch (err) {
+      console.warn("Failed to submit AI feedback to server:", err.message);
+    }
   };
 
   const timeStr = msg.timestamp
@@ -489,14 +505,14 @@ export default function MessageBubble({ msg, onRegenerate, onEdit, isLatest }) {
             {isBot && (
               <>
                 <button
-                  onClick={() => toast.success("Feedback saved")}
+                  onClick={() => handleFeedback("up")}
                   title="Thumbs up"
                   style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", padding: 0, display: "flex" }}
                 >
                   <ThumbsUp size={12} />
                 </button>
                 <button
-                  onClick={() => toast.success("Feedback saved")}
+                  onClick={() => handleFeedback("down")}
                   title="Thumbs down"
                   style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", padding: 0, display: "flex" }}
                 >

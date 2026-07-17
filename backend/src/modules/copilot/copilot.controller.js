@@ -1547,7 +1547,7 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
     let error = null;
 
     let attempts = 0;
-    const funnelMode = process.env.FUNNEL_MODE || "single"; // parallel | consensus | debate | single
+    const funnelMode = req.body.funnelMode || process.env.FUNNEL_MODE || "single"; // parallel | consensus | debate | single
 
     if (funnelMode === "parallel") {
       try {
@@ -1907,6 +1907,16 @@ const submitFeedback = async (req, res) => {
   }
 };
 
+const getRAGSources = async (req, res) => {
+  try {
+    const vectorDb = require("../llm/rag/vector.db");
+    const summary = vectorDb.getIndexSummary();
+    return res.json({ success: true, sources: summary });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getAvailableModels,
   getConversations,
@@ -1925,4 +1935,5 @@ module.exports = {
   createTraining,
   deleteTraining,
   submitFeedback,
+  getRAGSources,
 };

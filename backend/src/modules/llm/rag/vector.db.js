@@ -89,6 +89,25 @@ class VectorDatabase {
   clear() {
     this.vectors = [];
   }
+
+  /**
+   * Return index summary for frontend statistics and citation panel
+   */
+  getIndexSummary() {
+    return this.vectors.map((v) => {
+      let title = v.id;
+      if (v.metadata?.sourceType === "threat_intelligence" || v.metadata?.sourceType === "github_advisory") {
+        const firstLine = v.text.split("\n")[0] || "";
+        title = firstLine.replace(/^(GHSA ID:|CVE ID:|OWASP|CWE-?\d+:)\s*/i, "").trim() || v.id;
+      }
+      return {
+        id: v.id,
+        title: title,
+        sourceType: v.metadata?.sourceType || "generic",
+        metadata: v.metadata,
+      };
+    });
+  }
 }
 
 module.exports = new VectorDatabase();
