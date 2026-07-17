@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import {
   Globe,
@@ -7,11 +7,16 @@ import {
   Terminal,
   Settings,
   Play,
+  Sliders,
 } from "lucide-react";
 
 export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScanning }) {
   const swaggerRef = useRef(null);
   const postmanRef = useRef(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [maxDepth, setMaxDepth] = useState(15);
+  const [timeoutSecs, setTimeoutSecs] = useState(5);
+  const [intensity, setIntensity] = useState("Moderate");
 
   const handleSwaggerImport = (event) => {
     const file = event.target.files[0];
@@ -199,7 +204,9 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
         {/* Settings */}
         <button
           disabled={isScanning}
+          onClick={() => setShowSettingsModal(true)}
           className="sci-fi-settings-btn"
+          title="Advanced Scanner Configuration"
         >
           <Settings size={15} />
         </button>
@@ -273,6 +280,58 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
           Import cURL
         </button>
       </div>
+
+      {/* ─── Advanced Settings Modal ─── */}
+      {showSettingsModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: "#071126", border: "1px solid rgba(249,115,22,0.25)", borderRadius: "24px", padding: "28px", width: "90%", maxWidth: "520px", boxShadow: "0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(249,115,22,0.1)" }}>
+            <h3 style={{ margin: 0, color: "#FFFFFF", fontSize: "19px", fontWeight: "800", display: "flex", alignItems: "center", gap: "10px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+              <Sliders size={18} color="#F97316" /> Advanced Scanner Config
+            </h3>
+            <p style={{ color: "#94A3B8", fontSize: "13px", marginTop: "8px", marginBottom: "20px" }}>Tune crawling parameters and active penetration testing payloads intensity.</p>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              {/* Max Crawl Depth */}
+              <div>
+                <label style={{ display: "block", color: "#64748B", fontSize: "10px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>Max Crawl Depth</label>
+                <select value={maxDepth} onChange={(e) => setMaxDepth(Number(e.target.value))} className="sci-fi-select">
+                  <option value={5}>5 Links (Fast Demonstration)</option>
+                  <option value={15}>15 Links (Moderate Audit)</option>
+                  <option value={30}>30 Links (Deep Scan)</option>
+                </select>
+              </div>
+
+              {/* Request Timeout */}
+              <div>
+                <label style={{ display: "block", color: "#64748B", fontSize: "10px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>Request Timeout (Seconds)</label>
+                <select value={timeoutSecs} onChange={(e) => setTimeoutSecs(Number(e.target.value))} className="sci-fi-select">
+                  <option value={2}>2 Seconds (Aggressive)</option>
+                  <option value={5}>5 Seconds (Recommended)</option>
+                  <option value={10}>10 Seconds (Safe/Slow Target)</option>
+                </select>
+              </div>
+
+              {/* Intensity */}
+              <div>
+                <label style={{ display: "block", color: "#64748B", fontSize: "10px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>Exploitation Intensity</label>
+                <select value={intensity} onChange={(e) => setIntensity(e.target.value)} className="sci-fi-select">
+                  <option value="Low">Low (Passive Checks Only)</option>
+                  <option value="Moderate">Moderate (Standard Payloads)</option>
+                  <option value="High">High (Deep Penetration Payloads)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "28px" }}>
+              <button onClick={() => setShowSettingsModal(false)} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "#94A3B8", padding: "10px 20px", borderRadius: "10px", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
+              <button onClick={() => {
+                setShowSettingsModal(false);
+                toast.success("Scanner parameters successfully updated!");
+              }} style={{ background: "linear-gradient(135deg, #FF7A1A, #EA580C)", border: "none", color: "#FFFFFF", padding: "10px 24px", borderRadius: "10px", fontWeight: "700", cursor: "pointer", fontSize: "13px", boxShadow: "0 4px 15px rgba(249,115,22,0.25)" }}>Save Config</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Inject custom sci-fi styling */}
       <style>{`

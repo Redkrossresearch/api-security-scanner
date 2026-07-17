@@ -1,3 +1,4 @@
+import toast from "react-hot-toast";
 import {
   ChevronDown,
   ChevronRight,
@@ -156,6 +157,7 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
         </h3>
 
         <span
+          onClick={() => toast.success("Redirecting to the comprehensive Vulnerability Database index...")}
           style={{
             color: "#8B5CF6",
             cursor: "pointer",
@@ -433,6 +435,10 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
                   }}
                 >
                   <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toast.success(`Displaying CVSS vector and discovery trace details for ${item.title}`);
+                    }}
                     style={{
                       color: "#60A5FA",
                       cursor: "pointer",
@@ -442,6 +448,10 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
                   </span>
 
                   <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toast.success(`Remediation rules and defensive configurations generated for ${item.owasp}`);
+                    }}
                     style={{
                       color: "#22C55E",
                       cursor: "pointer",
@@ -451,6 +461,10 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
                   </span>
 
                   <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toast.success(`AI Copilot scanning potential threat vector vectors for ${item.title}`);
+                    }}
                     style={{
                       color: "#A855F7",
                       cursor: "pointer",

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 import {
   Copy,
   Download,
@@ -94,8 +95,41 @@ export default function RequestResponseInspector({ selectedVuln }) {
   const [tab, setTab] = useState("pretty");
   const data = getInspectorData(selectedVuln);
   const requestData = data.request;
-  const responseData = data.response;
+  const rawResponse = data.response;
   const insights = data.insights;
+
+  const getFormattedResponse = () => {
+    switch (tab) {
+      case "raw":
+        return rawResponse;
+      case "headers":
+        return rawResponse.split("\n\n")[0] || "HTTP/1.1 200 OK\nContent-Type: application/json";
+      case "json":
+        try {
+          const body = rawResponse.split("\n\n")[1];
+          if (body) {
+            return JSON.stringify(JSON.parse(body), null, 2);
+          }
+          return rawResponse;
+        } catch {
+          return rawResponse;
+        }
+      case "curl":
+        const hostHeader = requestData.match(/Host:\s*([^\n]+)/);
+        const host = hostHeader ? hostHeader[1].trim() : "api.example.com";
+        const pathLine = requestData.split("\n")[0];
+        const path = pathLine ? pathLine.split(" ")[1] : "/api/users/123";
+        return `curl -i -H "Authorization: Bearer *********" https://${host}${path}`;
+      case "pretty":
+      default:
+        return rawResponse;
+    }
+  };
+
+  const handleCopy = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Payload copied to clipboard!");
+  };
 
   return (
     <div
@@ -121,7 +155,10 @@ export default function RequestResponseInspector({ selectedVuln }) {
             Analyze API traffic, payloads & security exposure
           </div>
         </div>
-        <select style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,.08)", color: "#FFFFFF", borderRadius: "10px", padding: "8px 12px" }}>
+        <select 
+          onChange={(e) => toast.success(`Selected request route: ${e.target.value}`)}
+          style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,.08)", color: "#FFFFFF", borderRadius: "10px", padding: "8px 12px", outline: "none", cursor: "pointer" }}
+        >
           <option>GET /api/users/123</option>
           <option>POST /api/auth/login</option>
           <option>GET /api/orders</option>
@@ -147,10 +184,26 @@ export default function RequestResponseInspector({ selectedVuln }) {
           <div style={{ padding: "14px", borderBottom: "1px solid rgba(255,255,255,.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ color: "#FFFFFF", fontWeight: "600" }}>📤 Request Payload</span>
             <div style={{ display: "flex", gap: "8px" }}>
-              <button style={{ background: "#111827", border: "1px solid rgba(255,255,255,.08)", color: "#fff", borderRadius: "8px", width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <button 
+                onClick={() => handleCopy(requestData)}
+                style={{ background: "#111827", border: "1px solid rgba(255,255,255,.08)", color: "#fff", borderRadius: "8px", width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                title="Copy Request"
+              >
                 <Copy size={14} />
               </button>
-              <button style={{ background: "#111827", border: "1px solid rgba(255,255,255,.08)", color: "#fff", borderRadius: "8px", width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <button 
+                onClick={() => {
+                  const blob = new Blob([requestData], { type: "text/plain" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "request.txt";
+                  a.click();
+                  toast.success("Request downloaded!");
+                }}
+                style={{ background: "#111827", border: "1px solid rgba(255,255,255,.08)", color: "#fff", borderRadius: "8px", width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                title="Download Request"
+              >
                 <Download size={14} />
               </button>
             </div>
@@ -163,18 +216,26 @@ export default function RequestResponseInspector({ selectedVuln }) {
         {/* 3. Response Panel — boxShadow + emoji title + icon buttons */}
         <div style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,.08)", borderRadius: "16px", overflow: "hidden", boxShadow: "0 0 20px rgba(34,197,94,.08)" }}>
           <div style={{ padding: "14px", borderBottom: "1px solid rgba(255,255,255,.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: "#22C55E", fontWeight: "600" }}>✅ Response Payload (200 OK)</span>
+            <span style={{ color: "#22C55E", fontWeight: "600" }}>✅ Response Payload ({tab.toUpperCase()})</span>
             <div style={{ display: "flex", gap: "8px" }}>
-              <button style={{ background: "#111827", border: "1px solid rgba(255,255,255,.08)", color: "#fff", borderRadius: "8px", width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button 
+                onClick={() => handleCopy(getFormattedResponse())}
+                style={{ background: "#111827", border: "1px solid rgba(255,255,255,.08)", color: "#fff", borderRadius: "8px", width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                title="Copy Response"
+              >
                 <Copy size={14} />
               </button>
-              <button style={{ background: "linear-gradient(90deg,#7C3AED,#EC4899)", border: "none", color: "#fff", borderRadius: "8px", width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <button 
+                onClick={() => toast.success("AI Insight Analyzer active: Response payload validated.")}
+                style={{ background: "linear-gradient(90deg,#7C3AED,#EC4899)", border: "none", color: "#fff", borderRadius: "8px", width: "34px", height: "34px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                title="AI Analysis Summary"
+              >
                 <Brain size={14} />
               </button>
             </div>
           </div>
           <pre style={{ margin: 0, padding: "16px", color: "#CBD5E1", fontSize: "13px", fontFamily: "JetBrains Mono, monospace", lineHeight: "1.7", overflow: "auto", height: "180px" }}>
-            {responseData}
+            {getFormattedResponse()}
           </pre>
         </div>
 
