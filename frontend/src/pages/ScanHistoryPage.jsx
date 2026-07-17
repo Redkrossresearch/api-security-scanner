@@ -5,753 +5,749 @@ import api from "../services/api";
 import socket from "../sockets/socketClient";
 import {
   Shield, Activity, CheckCircle2, Clock, AlertTriangle, Search,
-  Download, Filter, GitCompare, Plus, Sparkles, ChevronDown,
-  RefreshCw, Eye, RotateCw, FileText, Zap, TrendingUp, TrendingDown,
-  Target, Globe, Command, X, ArrowUp, ArrowDown, Minus, Radio,
-  Brain, ShieldAlert, BarChart2, Layers, CircuitBoard, Database,
-  ChevronLeft, ChevronRight, ExternalLink, Copy, Check
+  Download, GitCompare, Plus, Sparkles, RefreshCw, Eye, RotateCw,
+  Globe, X, ArrowUp, ArrowDown, Minus, Radio, Brain, ChevronLeft,
+  ChevronRight, Copy, Check, Filter, TrendingUp
 } from "lucide-react";
 import ScanHistoryDrawer from "../components/scans/ScanHistoryDrawer";
 import ScanComparisonModal from "../components/scans/ScanComparisonModal";
-import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell
-} from "recharts";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-/* ─── Design Tokens ─────────────────────────────────────────────────────── */
-const C = {
-  bg: "#020817",
-  surface: "rgba(15,23,42,0.95)",
-  card: "rgba(22,33,55,0.9)",
-  border: "rgba(148,163,184,0.08)",
-  borderGlow: "rgba(139,92,246,0.25)",
-  text: "#F8FAFC",
+/* ─── Exact Dashboard Theme Tokens ──────────────────────────────────────── */
+const T = {
+  white: "#FFFFFF",
   muted: "#94A3B8",
-  dim: "#475569",
-  purple: "#8B5CF6",
-  purpleLight: "#C084FC",
-  blue: "#60A5FA",
-  green: "#22C55E",
-  red: "#EF4444",
-  orange: "#F97316",
-  yellow: "#FACC15",
-  pink: "#EC4899",
+  dimmed: "#64748B",
+  critical: "#EF4444",
+  warning:  "#F97316",
+  success:  "#22C55E",
+  successLight: "#4ADE80",
+  yellow:   "#FACC15",
+  dark:     "#0F172A",
+  darkAlt:  "#071126",
+  darker:   "#020617",
+  darkGray: "#111827",
+  purple:   "#8B5CF6",
+  purpleGrad: "#7C3AED",
+  border:   "rgba(255,255,255,0.08)",
+  skeleton: "#1e293b",
 };
 
-const shimmer = `
-  @keyframes shimmer {
-    0% { background-position: -400px 0; }
-    100% { background-position: 400px 0; }
+const card = (extra = {}) => ({
+  background: `linear-gradient(180deg, ${T.dark} 0%, ${T.darker} 100%)`,
+  border: `1px solid ${T.border}`,
+  borderRadius: "20px",
+  padding: "24px",
+  color: T.white,
+  ...extra,
+});
+
+const btnPrimary = {
+  background: T.warning,
+  color: T.white,
+  border: "none",
+  padding: "10px 20px",
+  borderRadius: "12px",
+  cursor: "pointer",
+  fontWeight: "600",
+  fontSize: "16px",
+  display: "flex",
+  alignItems: "center",
+  gap: "6px",
+  whiteSpace: "nowrap",
+};
+
+const btnSecondary = {
+  background: T.darkGray,
+  color: T.white,
+  border: `1px solid #334155`,
+  padding: "10px 20px",
+  borderRadius: "12px",
+  cursor: "pointer",
+  fontSize: "14px",
+  display: "flex",
+  alignItems: "center",
+  gap: "6px",
+  whiteSpace: "nowrap",
+};
+
+/* ─── Styles ─────────────────────────────────────────────────────────────── */
+const CSS = `
+  @keyframes pulse-skeleton {
+    0%,100% { opacity:1; }
+    50%      { opacity:.45; }
   }
-  @keyframes pulse-glow {
-    0%, 100% { box-shadow: 0 0 8px rgba(139,92,246,0.3); }
-    50% { box-shadow: 0 0 20px rgba(139,92,246,0.7), 0 0 40px rgba(139,92,246,0.3); }
-  }
+  @keyframes spin  { to { transform: rotate(360deg); } }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+  @keyframes floatup { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
   @keyframes live-ping {
-    0% { transform: scale(1); opacity: 1; }
-    75%, 100% { transform: scale(2.5); opacity: 0; }
+    0%   { transform:scale(1);   opacity:1; }
+    75%, 100% { transform:scale(2.4); opacity:0; }
   }
-  @keyframes float-up {
-    from { opacity: 0; transform: translateY(12px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  @keyframes blink { 0%,100% { opacity:1 } 50% { opacity:0.3 } }
-  .scan-row:hover { background: rgba(139,92,246,0.06) !important; }
-  .action-btn { transition: all 0.2s ease; }
-  .action-btn:hover { transform: scale(1.08); }
-  .pill-btn { transition: all 0.18s ease; }
-  .pill-btn:hover { opacity: 0.85; }
-  .kpi-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,0.4); }
-  ::-webkit-scrollbar { width: 4px; height: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.3); border-radius: 4px; }
+  .sh-row:hover { background: rgba(255,255,255,0.025) !important; cursor:pointer; }
+  .sh-btn { transition: opacity 0.15s ease, transform 0.15s ease; }
+  .sh-btn:hover { opacity:0.82; transform:scale(1.04); }
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:rgba(139,92,246,.3); border-radius:4px; }
 `;
 
-/* ─── Skeleton Block ─────────────────────────────────────────────────────── */
-function Skeleton({ w = "100%", h = "14px", r = "6px", mb = "0" }) {
+/* ─── Stat Card (identical layout to Dashboard StatCards) ───────────────── */
+function StatCard({ icon, title, value, trend, trendColor = "#8B5CF6", sparkline, id = "sc" }) {
+  const hexToRgb = (hex) => {
+    const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "139,92,246";
+  };
+  const rgb = hexToRgb(trendColor);
+  const [displayVal, setDisplayVal] = useState("—");
+
+  useEffect(() => {
+    if (value === null || value === undefined) return;
+    const str = String(value);
+    const num = parseInt(str.replace(/[^0-9]/g, ""), 10);
+    if (isNaN(num)) { setDisplayVal(str); return; }
+    let cur = 0;
+    const frames = 36;
+    const inc = Math.ceil(num / frames) || 1;
+    const t = setInterval(() => {
+      cur += inc;
+      if (cur >= num) { clearInterval(t); setDisplayVal(str); }
+      else { setDisplayVal(cur + str.replace(/[0-9]/g, "")); }
+    }, 1000 / 30);
+    return () => clearInterval(t);
+  }, [value]);
+
+  const defaultPath = "M0 35 C25 30,40 40,60 34 C90 24,110 42,140 28 C170 14,190 35,240 18";
+  const path = sparkline || defaultPath;
+
   return (
     <div style={{
-      width: w, height: h, borderRadius: r, marginBottom: mb,
-      background: "linear-gradient(90deg, rgba(139,92,246,0.05) 25%, rgba(167,139,250,0.15) 50%, rgba(139,92,246,0.05) 75%)",
-      backgroundSize: "400px 100%",
-      animation: "shimmer 1.5s infinite linear",
-    }} />
-  );
-}
+      background: `radial-gradient(130px circle at top left, rgba(${rgb},0.12), transparent 90%), linear-gradient(180deg, #090d16 0%, #030712 100%)`,
+      border: `1px solid ${T.border}`,
+      borderRadius: "18px",
+      padding: "20px",
+      position: "relative",
+      overflow: "hidden",
+      minHeight: "150px",
+      boxShadow: "0 8px 24px rgba(0,0,0,.35)",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      transition: "transform 0.2s ease, box-shadow 0.2s ease",
+    }}
+    onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = `0 12px 30px rgba(${rgb},0.12)`; }}
+    onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,.35)"; }}
+    >
+      {/* Top row */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", zIndex:2 }}>
+        <div style={{
+          width:"42px", height:"42px", borderRadius:"12px",
+          background:`rgba(${rgb},.12)`, display:"flex", alignItems:"center", justifyContent:"center",
+          color: trendColor, border:`1px solid rgba(${rgb},.2)`,
+        }}>{icon}</div>
+        {trend && (
+          <div style={{
+            padding:"4px 10px", borderRadius:"999px",
+            background:`rgba(${rgb},.1)`, color:trendColor,
+            fontSize:"11px", fontWeight:"700", border:`1px solid rgba(${rgb},.2)`,
+          }}>{trend}</div>
+        )}
+      </div>
 
-/* ─── Severity Badge ─────────────────────────────────────────────────────── */
-function SevBadge({ sev }) {
-  const map = {
-    critical: { bg: "rgba(239,68,68,.15)", color: C.red, border: "rgba(239,68,68,.3)" },
-    high: { bg: "rgba(249,115,22,.15)", color: C.orange, border: "rgba(249,115,22,.3)" },
-    medium: { bg: "rgba(250,204,21,.12)", color: C.yellow, border: "rgba(250,204,21,.25)" },
-    low: { bg: "rgba(34,197,94,.12)", color: C.green, border: "rgba(34,197,94,.25)" },
-  };
-  const s = (sev || "low").toLowerCase();
-  const style = map[s] || map.low;
-  return (
-    <span style={{
-      padding: "3px 9px", borderRadius: "999px", fontSize: "10px", fontWeight: "700",
-      letterSpacing: "0.4px", background: style.bg, color: style.color,
-      border: `1px solid ${style.border}`, whiteSpace: "nowrap",
-    }}>
-      {s.toUpperCase()}
-    </span>
+      {/* Label + Value */}
+      <div style={{ zIndex:2, marginTop:"16px" }}>
+        <div style={{ color:T.muted, fontSize:"11px", fontWeight:"700", letterSpacing:"0.8px", textTransform:"uppercase" }}>
+          {title}
+        </div>
+        <div style={{ color:T.white, fontSize:"36px", fontWeight:"900", marginTop:"6px", lineHeight:1, fontFamily:"Outfit,Inter,sans-serif" }}>
+          {displayVal !== "—" ? displayVal : (
+            <div style={{ width:"100px", height:"36px", borderRadius:"6px", background:T.skeleton, animation:"pulse-skeleton 1.5s infinite" }} />
+          )}
+        </div>
+      </div>
+
+      {/* Sparkline */}
+      <svg width="100%" height="48" viewBox="0 0 240 48" preserveAspectRatio="none"
+        style={{ position:"absolute", left:0, bottom:0, opacity:0.65, zIndex:1 }}>
+        <defs>
+          <linearGradient id={`g-${id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor={trendColor} stopOpacity="0.25" />
+            <stop offset="100%" stopColor={trendColor} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={`${path} L240 48 L0 48 Z`} fill={`url(#g-${id})`} />
+        <path d={path} fill="none" stroke={trendColor} strokeWidth="2.5" strokeLinecap="round" />
+      </svg>
+    </div>
   );
 }
 
 /* ─── Status Badge ───────────────────────────────────────────────────────── */
 function StatusBadge({ status }) {
-  const map = {
-    completed: { bg: "rgba(34,197,94,.12)", color: C.green, border: "rgba(34,197,94,.25)", dot: C.green },
-    running: { bg: "rgba(96,165,250,.12)", color: C.blue, border: "rgba(96,165,250,.25)", dot: C.blue },
-    failed: { bg: "rgba(239,68,68,.12)", color: C.red, border: "rgba(239,68,68,.25)", dot: C.red },
-    pending: { bg: "rgba(250,204,21,.1)", color: C.yellow, border: "rgba(250,204,21,.22)", dot: C.yellow },
+  const m = {
+    completed: { bg:"rgba(34,197,94,.12)", color:T.success,  border:"rgba(34,197,94,.25)"  },
+    running:   { bg:"rgba(96,165,250,.12)", color:"#60A5FA",  border:"rgba(96,165,250,.25)" },
+    failed:    { bg:"rgba(239,68,68,.12)",  color:T.critical, border:"rgba(239,68,68,.25)"  },
+    pending:   { bg:"rgba(250,204,21,.1)",  color:T.yellow,   border:"rgba(250,204,21,.22)" },
   };
-  const s = (status || "pending").toLowerCase();
-  const style = map[s] || map.pending;
+  const s = (status||"pending").toLowerCase();
+  const st = m[s]||m.pending;
   return (
     <span style={{
-      display: "inline-flex", alignItems: "center", gap: "5px",
-      padding: "3px 9px", borderRadius: "999px", fontSize: "10px", fontWeight: "700",
-      background: style.bg, color: style.color, border: `1px solid ${style.border}`,
+      display:"inline-flex", alignItems:"center", gap:"5px",
+      padding:"3px 9px", borderRadius:"999px", fontSize:"10px", fontWeight:"700",
+      background:st.bg, color:st.color, border:`1px solid ${st.border}`,
     }}>
-      <span style={{
-        width: "5px", height: "5px", borderRadius: "50%", background: style.dot,
-        ...(s === "running" ? { animation: "blink 1.2s ease infinite" } : {})
+      <span style={{ width:"5px", height:"5px", borderRadius:"50%", background:st.color,
+        ...(s==="running"?{animation:"blink 1.2s ease infinite"}:{})
       }} />
-      {s.charAt(0).toUpperCase() + s.slice(1)}
+      {s.charAt(0).toUpperCase()+s.slice(1)}
     </span>
   );
 }
 
-/* ─── Mini Sparkline ─────────────────────────────────────────────────────── */
-function Sparkline({ data = [], color = C.purple }) {
-  if (!data.length) return <div style={{ width: 60, height: 24 }} />;
-  const max = Math.max(...data, 1);
-  const pts = data.map((v, i) => `${(i / (data.length - 1)) * 58},${22 - (v / max) * 20}`).join(" ");
+/* ─── Severity Badge ─────────────────────────────────────────────────────── */
+function SevBadge({ count, color, label }) {
+  if (!count) return null;
   return (
-    <svg width="60" height="24" style={{ overflow: "visible" }}>
-      <polyline fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" points={pts} />
-    </svg>
+    <span style={{
+      padding:"1px 6px", borderRadius:"4px", fontSize:"9px", fontWeight:"700",
+      background:`${color}1a`, color, border:`1px solid ${color}33`,
+    }}>{count} {label}</span>
   );
+}
+
+/* ─── Sort Icon ──────────────────────────────────────────────────────────── */
+function SortIcon({ active, dir }) {
+  if (!active) return <Minus size={9} color={T.dimmed} />;
+  return dir==="asc" ? <ArrowUp size={9} color={T.purple} /> : <ArrowDown size={9} color={T.purple} />;
 }
 
 /* ─── Main Page ──────────────────────────────────────────────────────────── */
 export default function ScanHistoryPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location  = useLocation();
+  const navigate  = useNavigate();
 
   /* State */
-  const [summary, setSummary] = useState(null);
-  const [scans, setScans] = useState([]);
-  const [totalScans, setTotalScans] = useState(0);
-  const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [timeRange, setTimeRange] = useState("30D");
-  const [sortBy, setSortBy] = useState("date");
-  const [sortDir, setSortDir] = useState("desc");
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [comparisonOpen, setComparisonOpen] = useState(false);
-  const [selectedScan, setSelectedScan] = useState(null);
-  const [liveCount, setLiveCount] = useState(0);
-  const [ragInsight, setRagInsight] = useState(null);
-  const [trendData, setTrendData] = useState([]);
-  const [copiedId, setCopiedId] = useState(null);
-  const [wsConnected, setWsConnected] = useState(false);
-  const [activeScans, setActiveScans] = useState([]);
-  const searchTimeout = useRef(null);
+  const [summary,       setSummary]       = useState(null);
+  const [scans,         setScans]         = useState([]);
+  const [totalScans,    setTotalScans]    = useState(0);
+  const [page,          setPage]          = useState(1);
+  const [totalPages,    setTotalPages]    = useState(1);
+  const [loading,       setLoading]       = useState(true);
+  const [refreshing,    setRefreshing]    = useState(false);
+  const [searchTerm,    setSearchTerm]    = useState("");
+  const [activeFilter,  setActiveFilter]  = useState("all");
+  const [sortBy,        setSortBy]        = useState("date");
+  const [sortDir,       setSortDir]       = useState("desc");
+  const [drawerOpen,    setDrawerOpen]    = useState(false);
+  const [compareOpen,   setCompareOpen]   = useState(false);
+  const [selectedScan,  setSelectedScan]  = useState(null);
+  const [wsLive,        setWsLive]        = useState(false);
+  const [activeScans,   setActiveScans]   = useState([]);
+  const [ragInsight,    setRagInsight]    = useState(null);
+  const [trendData,     setTrendData]     = useState([]);
+  const [copiedId,      setCopiedId]      = useState(null);
+  const PAGE_SIZE = 10;
+  const searchT = useRef(null);
 
-  /* ─── Data Fetchers ─────────────────────────────────────────────────── */
+  /* ── fetch summary ─ */
   const fetchSummary = useCallback(async () => {
     try {
-      const res = await api.get("/scans/dashboard/summary");
-      if (res.data?.success) setSummary(res.data.summary);
-    } catch {
-      // use defaults
-    }
-  }, []);
-
-  const fetchScans = useCallback(async (opts = {}) => {
-    try {
-      const params = new URLSearchParams({
-        page: opts.page || page,
-        limit: pageSize,
-        ...(searchTerm ? { search: searchTerm } : {}),
-        ...(activeFilter !== "all" ? { status: activeFilter } : {}),
-        sort: sortBy,
-        dir: sortDir,
-      });
-      const res = await api.get(`/scans/history?${params}`);
-      const data = res.data;
-      setScans(data.scans || []);
-      setTotalScans(data.total || data.scans?.length || 0);
-      setTotalPages(Math.ceil((data.total || data.scans?.length || 0) / pageSize) || 1);
-    } catch (err) {
-      toast.error("Failed to fetch scan records");
-    }
-  }, [page, pageSize, searchTerm, activeFilter, sortBy, sortDir]);
-
-  const fetchRAGInsight = useCallback(async () => {
-    try {
-      const res = await api.post("/copilot/messages", {
-        message: "Give me a 1-sentence security insight about recent API scan history trends and top vulnerability patterns.",
-        conversationId: "scan-history-insight",
-        context: { page: "scan-history" },
-        useRAG: true,
-      });
-      const text = res.data?.message?.content || res.data?.content;
-      if (text) setRagInsight(text);
-    } catch {
-      setRagInsight("Authentication flaws account for 38% of critical findings in the last 30 days. Review API authorization headers.");
-    }
-  }, []);
-
-  const fetchTrendData = useCallback(async () => {
-    try {
-      const res = await api.get("/scans/history?limit=30&sort=date&dir=asc");
-      const s = res.data?.scans || [];
-      // Group by date
-      const byDate = {};
-      s.forEach(sc => {
-        const d = sc.createdAt ? new Date(sc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
-        if (!byDate[d]) byDate[d] = { scans: 0, vulns: 0, critical: 0 };
-        byDate[d].scans++;
-        byDate[d].vulns += sc.vulnerabilityCount || sc.findings?.length || 0;
-        byDate[d].critical += sc.criticalCount || 0;
-      });
-      setTrendData(Object.entries(byDate).slice(-14).map(([date, v]) => ({ date, ...v })));
+      const r = await api.get("/scans/dashboard/summary");
+      if (r.data?.success) setSummary(r.data.summary);
     } catch { /* silent */ }
   }, []);
 
-  const loadAll = useCallback(async (showLoader = false) => {
-    if (showLoader) setLoading(true);
-    else setRefreshing(true);
+  /* ── fetch scans ─ */
+  const fetchScans = useCallback(async (opts={}) => {
     try {
-      await Promise.all([fetchSummary(), fetchScans(), fetchTrendData()]);
-      // Load RAG insight independently (non-blocking)
-      fetchRAGInsight();
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [fetchSummary, fetchScans, fetchTrendData, fetchRAGInsight]);
+      const p = new URLSearchParams({
+        page: String(opts.page ?? page),
+        limit: String(PAGE_SIZE),
+        ...(searchTerm ? { search: searchTerm } : {}),
+        ...(activeFilter !== "all" ? { status: activeFilter } : {}),
+        sort: sortBy, dir: sortDir,
+      });
+      const r = await api.get(`/scans/history?${p}`);
+      setScans(r.data.scans || []);
+      const tot = r.data.total ?? r.data.scans?.length ?? 0;
+      setTotalScans(tot);
+      setTotalPages(Math.max(1, Math.ceil(tot / PAGE_SIZE)));
+    } catch { toast.error("Failed to fetch scan records"); }
+  }, [page, searchTerm, activeFilter, sortBy, sortDir]);
 
-  /* ─── Initial Load + Navigation State ──────────────────────────────── */
+  /* ── fetch trend sparkline data ─ */
+  const fetchTrend = useCallback(async () => {
+    try {
+      const r = await api.get("/scans/history?limit=20&sort=date&dir=asc");
+      const s = r.data?.scans || [];
+      const byDate = {};
+      s.forEach(sc => {
+        const d = sc.createdAt
+          ? new Date(sc.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric"})
+          : "—";
+        if (!byDate[d]) byDate[d] = { scans:0, vulns:0 };
+        byDate[d].scans++;
+        byDate[d].vulns += sc.vulnerabilityCount || 0;
+      });
+      setTrendData(Object.entries(byDate).slice(-12).map(([date,v])=>({date,...v})));
+    } catch { /* silent */ }
+  }, []);
+
+  /* ── fetch RAG insight ─ */
+  const fetchInsight = useCallback(async () => {
+    try {
+      const r = await api.post("/copilot/messages", {
+        message: "Give a single concise security insight sentence about API scan vulnerability trends.",
+        conversationId: "sh-rag-insight",
+        useRAG: true,
+      });
+      const txt = r.data?.message?.content || r.data?.content;
+      if (txt) setRagInsight(txt);
+    } catch {
+      setRagInsight("Authentication flaws represent 38% of critical findings. Prioritize JWT validation and CORS hardening on all API routes.");
+    }
+  }, []);
+
+  /* ── load all ─ */
+  const loadAll = useCallback(async (initial=false) => {
+    if (initial) setLoading(true); else setRefreshing(true);
+    await Promise.all([fetchSummary(), fetchScans(), fetchTrend()]);
+    setLoading(false); setRefreshing(false);
+    fetchInsight();
+  }, [fetchSummary, fetchScans, fetchTrend, fetchInsight]);
+
   useEffect(() => {
     loadAll(true);
-    if (location.state?.scan) {
-      setSelectedScan(location.state.scan);
-      setDrawerOpen(true);
-    }
+    if (location.state?.scan) { setSelectedScan(location.state.scan); setDrawerOpen(true); }
   }, []);
 
-  /* ─── Re-fetch when filters change ─────────────────────────────────── */
-  useEffect(() => {
-    if (!loading) fetchScans();
-  }, [page, activeFilter, sortBy, sortDir]);
+  useEffect(() => { if (!loading) fetchScans(); }, [page, activeFilter, sortBy, sortDir]);
 
-  /* ─── Search debounce ───────────────────────────────────────────────── */
   useEffect(() => {
-    clearTimeout(searchTimeout.current);
-    searchTimeout.current = setTimeout(() => {
-      if (!loading) { setPage(1); fetchScans({ page: 1 }); }
+    clearTimeout(searchT.current);
+    searchT.current = setTimeout(() => {
+      if (!loading) { setPage(1); fetchScans({page:1}); }
     }, 600);
-    return () => clearTimeout(searchTimeout.current);
+    return () => clearTimeout(searchT.current);
   }, [searchTerm]);
 
-  /* ─── WebSocket Live Events ─────────────────────────────────────────── */
+  /* ── WebSocket ─ */
   useEffect(() => {
-    socket.connect();
-    setWsConnected(socket.connected);
-
-    const onConnect = () => setWsConnected(true);
-    const onDisconnect = () => setWsConnected(false);
-    const onScanStart = (data) => {
-      setActiveScans(p => [...p.filter(s => s.scanId !== data.scanId), { ...data, status: "running", progress: 0 }]);
-      setLiveCount(c => c + 1);
-      toast("🚀 New scan started!", { icon: "🔍", duration: 3000 });
+    socket.connect(); setWsLive(socket.connected);
+    const onCon  = () => setWsLive(true);
+    const onDis  = () => setWsLive(false);
+    const onStart = d => {
+      setActiveScans(p => [...p.filter(s=>s.scanId!==d.scanId), {...d,status:"running",progress:0}]);
+      toast("🔍 New scan started!", {duration:3000});
     };
-    const onScanProgress = (data) => {
-      setActiveScans(p => p.map(s => s.scanId === data.scanId ? { ...s, progress: data.percent || 0 } : s));
-    };
-    const onScanComplete = () => {
-      setActiveScans(p => p.filter(s => s.status !== "completed"));
-      loadAll(false);
-      toast.success("Scan completed — results updated");
-    };
-    const onScanFail = (data) => {
-      setActiveScans(p => p.filter(s => s.scanId !== data?.scanId));
-      loadAll(false);
-    };
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    socket.on("scan:start", onScanStart);
-    socket.on("scan:started", onScanStart);
-    socket.on("scan:progress", onScanProgress);
-    socket.on("scan:completed", onScanComplete);
-    socket.on("scan:complete", onScanComplete);
-    socket.on("scan:failed", onScanFail);
+    const onProg = d => setActiveScans(p => p.map(s=>s.scanId===d.scanId?{...s,progress:d.percent||0}:s));
+    const onDone = () => { setActiveScans([]); loadAll(false); toast.success("Scan complete — records updated"); };
+    const onFail = d => { setActiveScans(p=>p.filter(s=>s.scanId!==d?.scanId)); loadAll(false); };
+    socket.on("connect",       onCon);
+    socket.on("disconnect",    onDis);
+    socket.on("scan:start",    onStart);
+    socket.on("scan:started",  onStart);
+    socket.on("scan:progress", onProg);
+    socket.on("scan:completed",onDone);
+    socket.on("scan:complete", onDone);
+    socket.on("scan:failed",   onFail);
     socket.on("dashboard:update", () => loadAll(false));
-
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.off("scan:start", onScanStart);
-      socket.off("scan:started", onScanStart);
-      socket.off("scan:progress", onScanProgress);
-      socket.off("scan:completed", onScanComplete);
-      socket.off("scan:complete", onScanComplete);
-      socket.off("scan:failed", onScanFail);
-      socket.off("dashboard:update");
+      ["connect","disconnect","scan:start","scan:started","scan:progress",
+       "scan:completed","scan:complete","scan:failed","dashboard:update"]
+       .forEach(ev => socket.off(ev));
     };
   }, []);
 
-  /* ─── Handlers ──────────────────────────────────────────────────────── */
-  const handleView = (scan) => {
-    setSelectedScan(scan);
-    setDrawerOpen(true);
-  };
+  /* ── Handlers ─ */
+  const handleView = sc => { setSelectedScan(sc); setDrawerOpen(true); };
 
-  const handleExport = async (scan) => {
-    const tid = toast.loading(`Generating PDF for ${scan.scanId?.slice(-8)}...`);
+  const handleExport = async sc => {
+    const tid = toast.loading("Generating PDF...");
     try {
-      const res = await api.get(`/reports/${scan.scanId}/export/pdf`, { responseType: "blob" });
-      const url = URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
+      const r = await api.get(`/reports/${sc.scanId}/export/pdf`, {responseType:"blob"});
+      const url = URL.createObjectURL(new Blob([r.data],{type:"application/pdf"}));
       const a = document.createElement("a");
-      a.href = url; a.download = `Security_Report_${scan.scanId}.pdf`; a.click(); a.remove();
-      toast.success("PDF downloaded!", { id: tid });
-    } catch {
-      toast.error("Failed to generate PDF", { id: tid });
-    }
+      a.href=url; a.download=`Security_Report_${sc.scanId}.pdf`; a.click(); a.remove();
+      toast.success("PDF downloaded!", {id:tid});
+    } catch { toast.error("PDF export failed", {id:tid}); }
   };
 
-  const handleRerun = async (scan) => {
+  const handleRerun = async sc => {
     const tid = toast.loading("Re-triggering scan...");
     try {
-      const res = await api.post("/scans", {
-        url: scan.targetUrl || scan.target || "https://api.example.com",
-        profile: scan.profile || "Full Security Audit",
-        authType: scan.authType || "none",
+      const r = await api.post("/scans", {
+        url: sc.targetUrl || sc.target || "https://api.example.com",
+        profile: sc.profile || "Full Security Audit",
+        authType: sc.authType || "none",
       });
-      toast.success("Scan re-triggered!", { id: tid });
-      navigate("/scans", { state: { scan: res.data.scan } });
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Re-run failed", { id: tid });
-    }
+      toast.success("Scan queued!", {id:tid});
+      navigate("/scans", {state:{scan:r.data.scan}});
+    } catch (e) { toast.error(e.response?.data?.message || "Re-run failed", {id:tid}); }
   };
 
-  const handleCopyId = (scanId) => {
-    navigator.clipboard.writeText(scanId).catch(() => {});
-    setCopiedId(scanId);
-    setTimeout(() => setCopiedId(null), 1800);
+  const handleCopy = id => {
+    navigator.clipboard.writeText(id).catch(()=>{});
+    setCopiedId(id);
+    setTimeout(()=>setCopiedId(null), 1800);
   };
 
-  const handleSort = (col) => {
-    if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+  const handleSort = col => {
+    if (sortBy===col) setSortDir(d=>d==="asc"?"desc":"asc");
     else { setSortBy(col); setSortDir("desc"); }
   };
 
-  /* ─── Derived KPIs from summary ─────────────────────────────────────── */
-  const kpis = [
+  /* ── Derived values ─ */
+  const score   = summary?.averageScore ?? 0;
+  const grade   = score>=90?"A+":score>=80?"A":score>=70?"B":score>=60?"C":"F";
+  const gradeC  = score>=80?T.success:score>=70?T.purple:score>=60?T.yellow:T.critical;
+
+  const kpiCards = [
     {
-      label: "TOTAL SCANS", value: summary?.totalScans ?? totalScans,
-      sub: `+${summary?.recentScans ?? 0} this month`, color: C.blue,
-      bg: "rgba(96,165,250,.08)", border: "rgba(96,165,250,.2)",
-      Icon: Activity, trend: "up",
+      id:"k1", icon:<Activity size={20}/>, title:"TOTAL SCANS",
+      value: summary?.totalScans ?? totalScans,
+      trend: summary?.recentScans ? `+${summary.recentScans}` : null,
+      trendColor:"#60A5FA",
+      sparkline:"M0 40 C30 36,50 32,80 28 C110 24,130 30,160 22 C190 14,210 26,240 18",
     },
     {
-      label: "CRITICAL FINDINGS", value: summary?.criticalFindings ?? "—",
-      sub: "High-priority issues", color: C.red,
-      bg: "rgba(239,68,68,.08)", border: "rgba(239,68,68,.2)",
-      Icon: AlertTriangle, trend: "down",
+      id:"k2", icon:<AlertTriangle size={20}/>, title:"CRITICAL FINDINGS",
+      value: summary?.criticalFindings ?? "—",
+      trend: null, trendColor: T.critical,
+      sparkline:"M0 20 C30 24,50 18,80 28 C110 38,130 22,160 32 C190 42,210 30,240 36",
     },
     {
-      label: "REMEDIATION RATE",
-      value: summary?.remediatedRate ? `${Math.round(summary.remediatedRate)}%` : "—",
-      sub: "Vulnerabilities resolved", color: C.green,
-      bg: "rgba(34,197,94,.08)", border: "rgba(34,197,94,.2)",
-      Icon: CheckCircle2, trend: "up",
+      id:"k3", icon:<CheckCircle2 size={20}/>, title:"REMEDIATION RATE",
+      value: summary?.remediatedRate!=null ? `${Math.round(summary.remediatedRate)}%` : "—",
+      trend: null, trendColor: T.success,
+      sparkline:"M0 38 C30 34,50 30,80 24 C110 18,130 28,160 16 C190 8,210 20,240 12",
     },
     {
-      label: "AVG SECURITY SCORE", value: summary?.averageScore ? Math.round(summary.averageScore) : "—",
-      sub: "Out of 100", color: C.purple,
-      bg: "rgba(139,92,246,.08)", border: "rgba(139,92,246,.2)",
-      Icon: Shield, trend: "up",
+      id:"k4", icon:<Shield size={20}/>, title:"AVG SECURITY SCORE",
+      value: summary?.averageScore ? Math.round(summary.averageScore) : "—",
+      trend: null, trendColor: T.purple,
+      sparkline:"M0 36 C30 30,50 34,80 26 C110 18,130 28,160 20 C190 12,210 22,240 14",
     },
   ];
 
-  /* ─── Security Grade ─────────────────────────────────────────────────── */
-  const score = summary?.averageScore ?? 72;
-  const grade = score >= 90 ? "A+" : score >= 80 ? "A" : score >= 70 ? "B" : score >= 60 ? "C" : "F";
-  const gradeColor = score >= 80 ? C.green : score >= 70 ? C.purple : score >= 60 ? C.yellow : C.red;
+  const filters = ["all","completed","running","failed","pending"];
+  const riskC   = r => r>=8?T.critical:r>=5?T.warning:T.success;
 
-  /* ─── Filter logic ───────────────────────────────────────────────────── */
-  const quickFilters = ["all", "completed", "running", "failed", "pending"];
-
-  /* ─── Table Columns Sort Icon ────────────────────────────────────────── */
-  const SortIcon = ({ col }) => {
-    if (sortBy !== col) return <Minus size={10} color={C.dim} />;
-    return sortDir === "asc" ? <ArrowUp size={10} color={C.purple} /> : <ArrowDown size={10} color={C.purple} />;
-  };
-
-  /* ─── Risk Color ─────────────────────────────────────────────────────── */
-  const riskColor = (r) => r >= 8 ? C.red : r >= 5 ? C.orange : C.green;
-
+  /* ─── Render ─────────────────────────────────────────────────────────── */
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", padding: "24px", fontFamily: "'Outfit','Inter',sans-serif", color: C.text }}>
-      <style>{shimmer}</style>
+    <div style={{ display:"flex", flexDirection:"column", gap:"24px", width:"100%",
+      fontFamily:"Outfit,Inter,sans-serif", color:T.white }}>
+      <style>{CSS}</style>
 
-      {/* ═══ HEADER ═══════════════════════════════════════════════════════ */}
-      <div style={{
-        background: "linear-gradient(160deg, rgba(15,23,42,0.98) 0%, rgba(10,15,30,0.98) 100%)",
-        border: `1px solid ${C.borderGlow}`,
-        borderRadius: "20px", padding: "24px", marginBottom: "20px",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-        position: "relative", overflow: "hidden",
-      }}>
-        {/* Ambient glow */}
-        <div style={{
-          position: "absolute", top: "-60px", right: "-60px",
-          width: "280px", height: "280px", borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(139,92,246,0.12) 0%, transparent 70%)",
-          pointerEvents: "none",
-        }} />
+      {/* ══════════ HEADER (same as DashboardHeader) ══════════════════════ */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <h1 style={{ color:T.white, fontSize:"42px", margin:0, fontWeight:"700" }}>
+            Scan History
+          </h1>
+          <p style={{ color:T.muted, marginTop:"10px", margin:"10px 0 0" }}>
+            Analyze historical API security assessments, vulnerability trends and remediation progress.
+          </p>
+        </div>
 
-        {/* Top Row: Title + Live Status + Grade */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px", flexWrap: "wrap", marginBottom: "20px" }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-              <h1 style={{ margin: 0, fontSize: "28px", fontWeight: "800", color: C.text, letterSpacing: "-0.5px" }}>
-                Scan History
-              </h1>
-              {/* WebSocket Live Badge */}
-              <div style={{
-                display: "flex", alignItems: "center", gap: "7px",
-                padding: "5px 13px", borderRadius: "999px", fontSize: "11px", fontWeight: "700",
-                background: wsConnected ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.1)",
-                border: `1px solid ${wsConnected ? "rgba(34,197,94,.3)" : "rgba(239,68,68,.25)"}`,
-                color: wsConnected ? C.green : C.red,
-              }}>
-                <span style={{ position: "relative", display: "inline-block", width: "8px", height: "8px" }}>
-                  <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: wsConnected ? C.green : C.red, animation: wsConnected ? "live-ping 1.4s ease-out infinite" : "none" }} />
-                  <span style={{ position: "relative", display: "block", width: "8px", height: "8px", borderRadius: "50%", background: wsConnected ? C.green : C.red }} />
-                </span>
-                {wsConnected ? "LIVE" : "OFFLINE"}
-              </div>
-              {liveCount > 0 && (
-                <span style={{ padding: "3px 9px", borderRadius: "999px", fontSize: "10px", fontWeight: "700", background: "rgba(96,165,250,.12)", color: C.blue, border: "1px solid rgba(96,165,250,.2)" }}>
-                  +{liveCount} new
-                </span>
-              )}
-            </div>
-            <p style={{ margin: "8px 0 14px", color: C.muted, fontSize: "13px", lineHeight: 1.6, maxWidth: "600px" }}>
-              Analyze historical API security assessments, vulnerability trends, remediation progress and long-term security posture evolution.
-            </p>
-            {/* Quick Stats Row */}
-            <div style={{ display: "flex", gap: "18px", flexWrap: "wrap" }}>
-              {[
-                { label: "Scans", value: summary?.totalScans ?? totalScans, color: C.blue },
-                { label: "Assets", value: summary?.uniqueTargets ?? "—", color: C.purple },
-                { label: "Endpoints", value: summary?.totalEndpoints ?? "—", color: C.red },
-                { label: "Avg Score", value: summary?.averageScore ? `${Math.round(summary.averageScore)}/100` : "—", color: C.green },
-              ].map(item => (
-                <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <span style={{ color: C.dim, fontSize: "11px" }}>{item.label}:</span>
-                  <span style={{ color: item.color, fontSize: "12px", fontWeight: "700" }}>{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Security Grade Badge */}
+        <div style={{ display:"flex", gap:"10px", alignItems:"center", flexShrink:0 }}>
+          {/* WebSocket indicator */}
           <div style={{
-            background: `linear-gradient(135deg, rgba(${gradeColor === C.green ? "34,197,94" : gradeColor === C.purple ? "139,92,246" : "239,68,68"},.15) 0%, rgba(${gradeColor === C.green ? "34,197,94" : gradeColor === C.purple ? "139,92,246" : "239,68,68"},.05) 100%)`,
-            border: `1px solid ${gradeColor}40`,
-            borderRadius: "16px", padding: "14px 20px", textAlign: "center", minWidth: "110px",
-            boxShadow: `0 0 20px ${gradeColor}20`,
+            display:"flex", alignItems:"center", gap:"8px",
+            padding:"8px 14px", borderRadius:"12px",
+            background: wsLive ? "rgba(34,197,94,.08)" : "rgba(239,68,68,.08)",
+            border:`1px solid ${wsLive?"rgba(34,197,94,.2)":"rgba(239,68,68,.2)"}`,
+            fontSize:"12px", fontWeight:"600",
+            color: wsLive ? T.success : T.critical,
           }}>
-            <div style={{ color: gradeColor, fontSize: "30px", fontWeight: "900", lineHeight: 1, textShadow: `0 0 20px ${gradeColor}60` }}>
-              {loading ? "—" : grade}
-            </div>
-            <div style={{ color: C.dim, fontSize: "9px", fontWeight: "700", letterSpacing: "0.5px", marginTop: "4px" }}>SECURITY GRADE</div>
-            <div style={{ color: C.muted, fontSize: "12px", fontWeight: "700", marginTop: "3px" }}>{loading ? "—" : `${Math.round(score)} / 100`}</div>
+            <span style={{ position:"relative", width:"8px", height:"8px", display:"inline-block" }}>
+              {wsLive && <span style={{
+                position:"absolute", inset:0, borderRadius:"50%",
+                background:T.success, animation:"live-ping 1.4s ease-out infinite",
+              }}/>}
+              <span style={{
+                position:"relative", display:"block", width:"8px", height:"8px",
+                borderRadius:"50%", background: wsLive?T.success:T.critical,
+              }}/>
+            </span>
+            {wsLive ? "LIVE" : "OFFLINE"}
           </div>
-        </div>
 
-        {/* KPI Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginBottom: "18px" }}>
-          {kpis.map(kpi => (
-            <div key={kpi.label} className="kpi-card" style={{
-              background: kpi.bg, border: `1px solid ${kpi.border}`,
-              borderRadius: "14px", padding: "14px", position: "relative", overflow: "hidden",
-            }}>
-              <div style={{ position: "absolute", top: "12px", right: "12px", opacity: 0.3 }}>
-                <kpi.Icon size={18} color={kpi.color} />
-              </div>
-              <div style={{ color: C.dim, fontSize: "10px", fontWeight: "700", letterSpacing: "0.5px", marginBottom: "8px" }}>{kpi.label}</div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-                {loading ? <Skeleton w="70px" h="28px" r="4px" /> : (
-                  <span style={{ color: kpi.color, fontSize: "26px", fontWeight: "800", lineHeight: 1 }}>{kpi.value}</span>
-                )}
-              </div>
-              {!loading && <div style={{ marginTop: "6px", color: C.dim, fontSize: "11px", fontWeight: "600" }}>{kpi.sub}</div>}
-            </div>
-          ))}
-        </div>
-
-        {/* RAG AI Insight Strip */}
-        <div style={{
-          background: "linear-gradient(90deg, rgba(139,92,246,.1) 0%, rgba(59,130,246,.05) 100%)",
-          border: "1px solid rgba(139,92,246,.25)",
-          borderRadius: "12px", padding: "12px 16px",
-          display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1 }}>
-            <div style={{
-              background: "rgba(139,92,246,.2)", padding: "8px", borderRadius: "10px",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 0 12px rgba(139,92,246,.3)", flexShrink: 0,
-            }}>
-              <Brain size={16} color={C.purpleLight} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: C.purpleLight, fontSize: "9px", fontWeight: "800", letterSpacing: "1px", marginBottom: "3px" }}>
-                RAG · AI INSIGHT
-              </div>
-              <div style={{ color: "#E2E8F0", fontSize: "12px", lineHeight: 1.5 }}>
-                {ragInsight ? ragInsight : <Skeleton w="80%" h="12px" r="4px" />}
-              </div>
-            </div>
-          </div>
           <button
-            onClick={() => navigate("/copilot")}
-            className="pill-btn"
-            style={{
-              display: "flex", alignItems: "center", gap: "7px",
-              padding: "8px 14px", borderRadius: "10px", border: "1px solid rgba(139,92,246,.3)",
-              background: "rgba(139,92,246,.12)", color: C.purpleLight,
-              fontSize: "12px", fontWeight: "600", cursor: "pointer", whiteSpace: "nowrap",
-            }}>
-            <Sparkles size={13} /> Ask AI
+            onClick={() => loadAll(false)}
+            className="sh-btn"
+            style={{...btnSecondary, padding:"10px 14px"}}
+            title="Refresh"
+          >
+            <RefreshCw size={16} style={{animation:refreshing?"spin 1s linear infinite":"none"}} />
+          </button>
+
+          <button onClick={() => setCompareOpen(true)} className="sh-btn" style={btnSecondary}>
+            <GitCompare size={16}/> Compare Scans
+          </button>
+
+          <button onClick={() => navigate("/scans")} className="sh-btn" style={btnPrimary}>
+            + New Scan
           </button>
         </div>
       </div>
 
-      {/* ═══ LIVE ACTIVE SCANS (WebSocket) ═══════════════════════════════ */}
-      {activeScans.length > 0 && (
+      {/* ══════════ STAT CARDS (exact StatCard style) ══════════════════════ */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"20px" }}>
+        {kpiCards.map(k => (
+          <StatCard key={k.id} {...k} />
+        ))}
+      </div>
+
+      {/* Security Grade + RAG Insight strip */}
+      <div style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:"20px", alignItems:"stretch" }}>
+        {/* Grade badge */}
         <div style={{
-          background: "rgba(96,165,250,.06)", border: "1px solid rgba(96,165,250,.2)",
-          borderRadius: "16px", padding: "16px", marginBottom: "20px",
-          animation: "float-up 0.4s ease",
+          ...card({ padding:"20px 28px", textAlign:"center", display:"flex", flexDirection:"column",
+            alignItems:"center", justifyContent:"center", minWidth:"130px" }),
+          borderColor: `${gradeC}33`,
+          boxShadow:`0 0 20px ${gradeC}15`,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-            <Radio size={14} color={C.blue} style={{ animation: "blink 1s ease infinite" }} />
-            <span style={{ color: C.blue, fontSize: "12px", fontWeight: "700", letterSpacing: "0.5px" }}>
-              LIVE ACTIVE SCANS
-            </span>
+          <div style={{ color:gradeC, fontSize:"42px", fontWeight:"900", lineHeight:1,
+            textShadow:`0 0 20px ${gradeC}60` }}>
+            {loading ? "—" : grade}
           </div>
-          {activeScans.map(scan => (
-            <div key={scan.scanId} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "8px 0" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: C.text, fontSize: "12px", fontWeight: "600", marginBottom: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {scan.targetUrl || scan.target || "Scanning..."}
+          <div style={{ color:T.dimmed, fontSize:"9px", fontWeight:"700", letterSpacing:"0.8px", marginTop:"6px" }}>
+            SECURITY GRADE
+          </div>
+          <div style={{ color:T.muted, fontSize:"13px", fontWeight:"700", marginTop:"4px" }}>
+            {loading ? "—" : `${Math.round(score)} / 100`}
+          </div>
+        </div>
+
+        {/* RAG AI insight panel */}
+        <div style={{
+          ...card({ padding:"20px" }),
+          background:"linear-gradient(120deg,rgba(124,58,237,.15) 0%,rgba(15,23,42,0.95) 60%)",
+          borderColor:"rgba(139,92,246,.25)",
+        }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"12px" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+              <div style={{
+                width:"36px", height:"36px", borderRadius:"10px",
+                background:"rgba(139,92,246,.18)", display:"flex", alignItems:"center", justifyContent:"center",
+                boxShadow:"0 0 14px rgba(139,92,246,.3)",
+              }}>
+                <Brain size={18} color={T.purple} />
+              </div>
+              <div>
+                <div style={{ color:T.purple, fontSize:"10px", fontWeight:"800", letterSpacing:"1px" }}>
+                  AI SECURITY COPILOT
                 </div>
-                <div style={{ height: "4px", background: "rgba(255,255,255,.06)", borderRadius: "2px", overflow: "hidden" }}>
-                  <div style={{
-                    height: "100%", borderRadius: "2px",
-                    width: `${scan.progress || 0}%`,
-                    background: `linear-gradient(90deg, ${C.blue}, ${C.purple})`,
-                    transition: "width 0.5s ease",
-                  }} />
+                <div style={{ color:T.dimmed, fontSize:"11px", marginTop:"2px" }}>
+                  RAG-powered insights from live threat intelligence
                 </div>
               </div>
-              <span style={{ color: C.blue, fontSize: "12px", fontWeight: "700", flexShrink: 0 }}>{scan.progress || 0}%</span>
             </div>
-          ))}
-        </div>
-      )}
+            <div style={{
+              display:"flex", alignItems:"center", gap:"6px",
+              padding:"4px 10px", borderRadius:"999px", fontSize:"10px", fontWeight:"700",
+              background:"rgba(139,92,246,.12)", color:T.purple,
+              border:"1px solid rgba(139,92,246,.25)",
+            }}>
+              <span style={{ width:"5px", height:"5px", borderRadius:"50%",
+                background:T.purple, animation:"blink 1.5s ease infinite" }} />
+              LIVE
+            </div>
+          </div>
 
-      {/* ═══ TREND CHART ═════════════════════════════════════════════════ */}
-      {trendData.length > 0 && (
-        <div style={{
-          background: C.card, border: `1px solid ${C.border}`,
-          borderRadius: "16px", padding: "20px", marginBottom: "20px",
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <div>
-              <div style={{ color: C.text, fontSize: "14px", fontWeight: "700" }}>Scan Activity Trend</div>
-              <div style={{ color: C.muted, fontSize: "11px", marginTop: "2px" }}>Daily scan volume & vulnerability findings</div>
+          {ragInsight ? (
+            <p style={{ color:T.muted, fontSize:"13px", lineHeight:"1.65", margin:0 }}>
+              {ragInsight}
+            </p>
+          ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+              {[70,85,50].map((w,i) => (
+                <div key={i} style={{ height:"11px", borderRadius:"4px", width:`${w}%`,
+                  background:T.skeleton, animation:"pulse-skeleton 1.5s infinite" }} />
+              ))}
             </div>
-            <div style={{ display: "flex", gap: "12px" }}>
-              {[
-                { key: "scans", color: C.purple, label: "Scans" },
-                { key: "vulns", color: C.red, label: "Vulns" },
-              ].map(l => (
-                <div key={l.key} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                  <div style={{ width: "10px", height: "2px", background: l.color, borderRadius: "2px" }} />
-                  <span style={{ color: C.muted, fontSize: "11px" }}>{l.label}</span>
+          )}
+
+          <div style={{ display:"flex", gap:"12px", marginTop:"16px" }}>
+            <button onClick={() => navigate("/copilot")} className="sh-btn" style={{
+              background:"linear-gradient(90deg,#7C3AED,#F97316)",
+              border:"none", borderRadius:"12px", padding:"10px 18px",
+              color:T.white, fontWeight:"700", fontSize:"13px", cursor:"pointer",
+            }}>
+              Analyze Now
+            </button>
+            <button onClick={() => navigate("/vulnerabilities")} className="sh-btn" style={{
+              ...btnSecondary, fontSize:"13px",
+            }}>
+              View All Recommendations →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════ TREND CHART ═══════════════════════════════════════════ */}
+      {trendData.length > 0 && (
+        <div style={card()}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"16px" }}>
+            <div>
+              <h3 style={{ margin:0, fontSize:"20px" }}>Scan Activity Trend</h3>
+              <p style={{ color:T.muted, margin:"6px 0 0", fontSize:"13px" }}>
+                Daily scan volume and vulnerability discovery rate
+              </p>
+            </div>
+            <div style={{ display:"flex", gap:"16px" }}>
+              {[{label:"Scans",color:T.purple},{label:"Vulns",color:T.critical}].map(l=>(
+                <div key={l.label} style={{ display:"flex",alignItems:"center",gap:"7px" }}>
+                  <div style={{ width:"10px",height:"2px",background:l.color,borderRadius:"2px" }} />
+                  <span style={{ color:T.muted, fontSize:"12px" }}>{l.label}</span>
                 </div>
               ))}
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={110}>
-            <AreaChart data={trendData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height={130}>
+            <AreaChart data={trendData} margin={{top:4,right:4,left:-20,bottom:0}}>
               <defs>
-                <linearGradient id="gScans" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={C.purple} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={C.purple} stopOpacity={0} />
+                <linearGradient id="gs" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor={T.purple}   stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={T.purple}   stopOpacity={0}/>
                 </linearGradient>
-                <linearGradient id="gVulns" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={C.red} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={C.red} stopOpacity={0} />
+                <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%"  stopColor={T.critical} stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor={T.critical} stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" tick={{ fill: C.dim, fontSize: 9 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: C.dim, fontSize: 9 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ background: "#0F172A", border: "1px solid rgba(139,92,246,.3)", borderRadius: "8px", fontSize: "11px" }} />
-              <Area type="monotone" dataKey="scans" stroke={C.purple} strokeWidth={2} fill="url(#gScans)" dot={false} />
-              <Area type="monotone" dataKey="vulns" stroke={C.red} strokeWidth={1.5} fill="url(#gVulns)" dot={false} />
+              <XAxis dataKey="date" tick={{fill:T.dimmed,fontSize:9}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:T.dimmed,fontSize:9}} axisLine={false} tickLine={false}/>
+              <Tooltip contentStyle={{background:"#0F172A",border:`1px solid ${T.border}`,borderRadius:"10px",fontSize:"11px"}}/>
+              <Area type="monotone" dataKey="scans" stroke={T.purple}   strokeWidth={2.5} fill="url(#gs)" dot={false}/>
+              <Area type="monotone" dataKey="vulns"  stroke={T.critical} strokeWidth={1.5} fill="url(#gv)" dot={false}/>
             </AreaChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* ═══ SCAN HISTORY TABLE ══════════════════════════════════════════ */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "20px", overflow: "hidden" }}>
+      {/* ══════════ LIVE ACTIVE SCANS (WebSocket badge) ═══════════════════ */}
+      {activeScans.length > 0 && (
+        <div style={{
+          ...card({ padding:"16px 20px" }),
+          borderColor:"rgba(96,165,250,.25)",
+          background:"linear-gradient(180deg,rgba(96,165,250,.06),rgba(15,23,42,.95))",
+          animation:"floatup 0.4s ease",
+        }}>
+          <div style={{ display:"flex", alignItems:"center", gap:"10px", marginBottom:"12px" }}>
+            <Radio size={14} color="#60A5FA" style={{animation:"blink 1s ease infinite"}}/>
+            <span style={{ color:"#60A5FA", fontSize:"11px", fontWeight:"700", letterSpacing:"0.8px" }}>
+              LIVE ACTIVE SCANS
+            </span>
+          </div>
+          {activeScans.map(sc => (
+            <div key={sc.scanId} style={{ display:"flex", alignItems:"center", gap:"12px", padding:"6px 0" }}>
+              <Globe size={12} color={T.muted} style={{flexShrink:0}}/>
+              <span style={{ color:T.white, fontSize:"12px", fontWeight:"500", flex:1,
+                overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                {sc.targetUrl || sc.target || "Scanning..."}
+              </span>
+              <div style={{ flex:"0 0 160px", height:"4px", background:"rgba(255,255,255,.06)",
+                borderRadius:"2px", overflow:"hidden" }}>
+                <div style={{
+                  height:"100%", borderRadius:"2px",
+                  width:`${sc.progress||0}%`,
+                  background:`linear-gradient(90deg,#60A5FA,${T.purple})`,
+                  transition:"width 0.5s ease",
+                }}/>
+              </div>
+              <span style={{ color:"#60A5FA", fontSize:"11px", fontWeight:"700", flexShrink:0 }}>
+                {sc.progress||0}%
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
-        {/* Table Header Toolbar */}
-        <div style={{ padding: "18px 20px", borderBottom: `1px solid ${C.border}` }}>
-          {/* Quick Filters */}
-          <div style={{ display: "flex", gap: "6px", marginBottom: "14px", flexWrap: "wrap" }}>
-            {quickFilters.map(f => (
-              <button key={f} className="pill-btn" onClick={() => { setActiveFilter(f); setPage(1); }} style={{
-                padding: "5px 14px", borderRadius: "999px", fontSize: "11px", fontWeight: "700",
-                border: activeFilter === f ? "1px solid rgba(139,92,246,.5)" : "1px solid rgba(255,255,255,.06)",
-                background: activeFilter === f ? "rgba(139,92,246,.15)" : "transparent",
-                color: activeFilter === f ? C.purpleLight : C.muted, cursor: "pointer",
-                textTransform: "capitalize",
-              }}>
-                {f === "all" ? `All ${totalScans > 0 ? `(${totalScans})` : ""}` : f}
+      {/* ══════════ SCAN HISTORY TABLE ════════════════════════════════════ */}
+      <div style={card({padding:0, overflow:"hidden"})}>
+
+        {/* Toolbar */}
+        <div style={{ padding:"18px 20px", borderBottom:`1px solid ${T.border}` }}>
+          {/* Quick filters (pill tabs) */}
+          <div style={{ display:"flex", gap:"6px", marginBottom:"14px", flexWrap:"wrap" }}>
+            {filters.map(f => (
+              <button key={f} className="sh-btn"
+                onClick={() => { setActiveFilter(f); setPage(1); }}
+                style={{
+                  padding:"5px 14px", borderRadius:"999px", fontSize:"11px", fontWeight:"700",
+                  border: activeFilter===f?"1px solid rgba(139,92,246,.5)":"1px solid rgba(255,255,255,.08)",
+                  background: activeFilter===f?"rgba(139,92,246,.15)":"transparent",
+                  color: activeFilter===f?T.purple:T.muted, cursor:"pointer", textTransform:"capitalize",
+                }}>
+                {f==="all" ? `All ${totalScans>0?`(${totalScans})`:""}` : f}
               </button>
             ))}
           </div>
 
-          {/* Search + Actions Row */}
-          <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
-            {/* Search */}
+          {/* Search + Export row */}
+          <div style={{ display:"flex", gap:"10px", alignItems:"center", flexWrap:"wrap" }}>
             <div style={{
-              flex: 1, minWidth: "260px", display: "flex", alignItems: "center", gap: "10px",
-              background: "rgba(255,255,255,.03)", border: `1px solid ${C.border}`,
-              borderRadius: "12px", padding: "0 14px", height: "42px",
+              flex:1, minWidth:"260px", display:"flex", alignItems:"center", gap:"10px",
+              background:T.darkGray, border:`1px solid ${T.border}`,
+              borderRadius:"12px", padding:"0 14px", height:"44px",
             }}>
-              <Search size={15} color={C.muted} />
+              <Search size={15} color={T.muted}/>
               <input
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
+                value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}
                 placeholder="Search scan ID, target, profile..."
-                style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: C.text, fontSize: "13px" }}
+                style={{ flex:1, background:"transparent", border:"none", outline:"none",
+                  color:T.white, fontSize:"13px" }}
               />
               {searchTerm && (
-                <button onClick={() => setSearchTerm("")} style={{ background: "none", border: "none", cursor: "pointer", display: "flex" }}>
-                  <X size={14} color={C.muted} />
+                <button onClick={()=>setSearchTerm("")}
+                  style={{background:"none",border:"none",cursor:"pointer",display:"flex"}}>
+                  <X size={14} color={T.muted}/>
                 </button>
               )}
             </div>
 
-            {/* Time Range */}
-            <div style={{ display: "flex", background: "rgba(255,255,255,.03)", border: `1px solid ${C.border}`, borderRadius: "12px", padding: "3px", gap: "2px" }}>
-              {["7D", "30D", "90D", "All"].map(r => (
-                <button key={r} className="pill-btn" onClick={() => setTimeRange(r)} style={{
-                  padding: "6px 10px", borderRadius: "9px", border: "none",
-                  background: timeRange === r ? "rgba(139,92,246,.2)" : "transparent",
-                  color: timeRange === r ? C.purpleLight : C.muted,
-                  fontSize: "11px", fontWeight: "600", cursor: "pointer",
-                }}>
-                  {r}
-                </button>
-              ))}
-            </div>
-
-            {/* Compare */}
-            <button onClick={() => setComparisonOpen(true)} className="pill-btn" style={{
-              display: "flex", alignItems: "center", gap: "7px",
-              height: "42px", padding: "0 14px", borderRadius: "12px",
-              border: `1px solid ${C.border}`, background: "rgba(255,255,255,.03)",
-              color: C.text, fontSize: "12px", fontWeight: "600", cursor: "pointer",
-            }}>
-              <GitCompare size={15} /> Compare
+            <button onClick={() => toast("Select a scan row to export PDF", {icon:"📋"})}
+              className="sh-btn" style={{...btnSecondary, height:"44px"}}>
+              <Download size={15}/> Export
             </button>
 
-            {/* Export */}
-            <button
-              onClick={() => toast("Select a scan to export PDF", { icon: "📋" })}
-              className="pill-btn"
-              style={{
-                display: "flex", alignItems: "center", gap: "7px",
-                height: "42px", padding: "0 14px", borderRadius: "12px",
-                border: "1px solid rgba(139,92,246,.3)", background: "rgba(139,92,246,.1)",
-                color: C.purpleLight, fontSize: "12px", fontWeight: "700", cursor: "pointer",
-              }}>
-              <Download size={15} /> Export
-            </button>
-
-            {/* Refresh */}
-            <button onClick={() => loadAll(false)} className="pill-btn action-btn" style={{
-              height: "42px", width: "42px", borderRadius: "12px",
-              border: `1px solid ${C.border}`, background: "rgba(255,255,255,.03)",
-              display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-            }}>
-              <RefreshCw size={15} color={C.muted} style={{ animation: refreshing ? "spin 1s linear infinite" : "none" }} />
-            </button>
-
-            {/* New Scan */}
-            <button onClick={() => navigate("/scans")} className="pill-btn" style={{
-              display: "flex", alignItems: "center", gap: "7px",
-              height: "42px", padding: "0 18px", borderRadius: "12px",
-              border: "none", background: "linear-gradient(90deg, #7C3AED, #EC4899)",
-              color: "#FFF", fontSize: "13px", fontWeight: "700", cursor: "pointer",
-              boxShadow: "0 6px 20px rgba(124,58,237,.35)",
-            }}>
-              <Plus size={15} /> New Scan
+            <button onClick={() => loadAll(false)} className="sh-btn"
+              style={{...btnSecondary, height:"44px", padding:"0 14px"}}>
+              <RefreshCw size={15} style={{animation:refreshing?"spin 1s linear infinite":"none"}}/>
             </button>
           </div>
         </div>
 
         {/* Table */}
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:"12px"}}>
             <thead>
-              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+              <tr style={{borderBottom:`1px solid ${T.border}`}}>
                 {[
-                  { label: "SCAN ID", col: "scanId" },
-                  { label: "TARGET", col: "target" },
-                  { label: "PROFILE", col: null },
-                  { label: "DATE", col: "date" },
-                  { label: "DURATION", col: null },
-                  { label: "FINDINGS", col: "findings" },
-                  { label: "RISK", col: "risk" },
-                  { label: "STATUS", col: "status" },
-                  { label: "ACTIONS", col: null },
-                ].map(({ label, col }) => (
+                  {label:"SCAN ID",  col:"scanId"},
+                  {label:"TARGET",   col:"target"},
+                  {label:"PROFILE",  col:null},
+                  {label:"DATE",     col:"date"},
+                  {label:"DURATION", col:null},
+                  {label:"FINDINGS", col:"findings"},
+                  {label:"RISK",     col:"risk"},
+                  {label:"STATUS",   col:"status"},
+                  {label:"ACTIONS",  col:null},
+                ].map(({label,col})=>(
                   <th key={label}
-                    onClick={col ? () => handleSort(col) : undefined}
+                    onClick={col?()=>handleSort(col):undefined}
                     style={{
-                      padding: "10px 14px", textAlign: "left", color: C.dim,
-                      fontSize: "10px", fontWeight: "700", letterSpacing: "0.6px",
-                      cursor: col ? "pointer" : "default", userSelect: "none",
-                      whiteSpace: "nowrap",
+                      padding:"10px 16px", textAlign:"left",
+                      color:T.dimmed, fontSize:"10px", fontWeight:"700", letterSpacing:"0.8px",
+                      cursor:col?"pointer":"default", userSelect:"none", whiteSpace:"nowrap",
                     }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                      {label} {col && <SortIcon col={col} />}
+                    <div style={{display:"flex",alignItems:"center",gap:"4px"}}>
+                      {label}
+                      {col && <SortIcon active={sortBy===col} dir={sortDir}/>}
                     </div>
                   </th>
                 ))}
@@ -759,147 +755,144 @@ export default function ScanHistoryPage() {
             </thead>
             <tbody>
               {loading ? (
-                [...Array(8)].map((_, i) => (
-                  <tr key={i} style={{ borderBottom: `1px solid ${C.border}` }}>
-                    {[...Array(9)].map((_, j) => (
-                      <td key={j} style={{ padding: "12px 14px" }}>
-                        <Skeleton w={j === 0 ? "120px" : j === 8 ? "80px" : "70%"} h="12px" />
+                [...Array(8)].map((_,i)=>(
+                  <tr key={i} style={{borderBottom:`1px solid ${T.border}`}}>
+                    {[...Array(9)].map((_,j)=>(
+                      <td key={j} style={{padding:"14px 16px"}}>
+                        <div style={{
+                          height:"12px", borderRadius:"4px",
+                          width: j===0?"120px":j===8?"80px":"65%",
+                          background:T.skeleton, animation:"pulse-skeleton 1.5s infinite",
+                        }}/>
                       </td>
                     ))}
                   </tr>
                 ))
-              ) : scans.length === 0 ? (
-                <tr>
-                  <td colSpan={9} style={{ padding: "40px", textAlign: "center", color: C.muted }}>
-                    <Shield size={32} style={{ margin: "0 auto 12px", opacity: 0.3 }} />
-                    <div style={{ fontSize: "14px" }}>No scans found</div>
-                    <div style={{ fontSize: "12px", marginTop: "6px", opacity: 0.6 }}>Try adjusting your filters or run a new scan</div>
-                  </td>
-                </tr>
-              ) : scans.map((scan, idx) => {
-                const isRunning = scan.status === "running";
-                const findings = scan.vulnerabilityCount || scan.findings?.length || 0;
-                const risk = scan.riskScore ?? scan.risk ?? 0;
-                const target = scan.targetUrl || scan.target || "—";
-                const duration = scan.duration ? `${Math.round(scan.duration / 1000)}s` : scan.durationText || "—";
-                const date = scan.createdAt
-                  ? new Date(scan.createdAt).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "2-digit" })
+              ) : scans.length===0 ? (
+                <tr><td colSpan={9} style={{padding:"48px",textAlign:"center",color:T.muted}}>
+                  <Shield size={36} style={{margin:"0 auto 14px",opacity:0.2,display:"block"}}/>
+                  <div style={{fontSize:"15px",fontWeight:"600",color:T.white,marginBottom:"6px"}}>
+                    No scans found
+                  </div>
+                  <div style={{fontSize:"12px",opacity:0.6}}>
+                    Try adjusting filters or run a new scan
+                  </div>
+                </td></tr>
+              ) : scans.map((sc,idx)=>{
+                const isRun  = sc.status==="running";
+                const target = sc.targetUrl||sc.target||"—";
+                const finds  = sc.vulnerabilityCount||sc.findings?.length||0;
+                const risk   = sc.riskScore??sc.risk??0;
+                const dur    = sc.duration?`${Math.round(sc.duration/1000)}s`:sc.durationText||"—";
+                const date   = sc.createdAt
+                  ? new Date(sc.createdAt).toLocaleDateString("en-US",{month:"short",day:"2-digit",year:"2-digit"})
                   : "—";
-
                 return (
-                  <tr key={scan._id || scan.scanId || idx} className="scan-row" style={{
-                    borderBottom: `1px solid ${C.border}`,
-                    transition: "background 0.15s ease",
-                    background: isRunning ? "rgba(96,165,250,.03)" : "transparent",
-                    animation: `float-up ${0.05 * idx}s ease both`,
-                  }}>
+                  <tr key={sc._id||sc.scanId||idx} className="sh-row"
+                    style={{borderBottom:`1px solid ${T.border}`, transition:"background 0.12s"}}
+                    onClick={()=>handleView(sc)}>
+
                     {/* Scan ID */}
-                    <td style={{ padding: "12px 14px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ color: C.purpleLight, fontFamily: "monospace", fontSize: "11px", fontWeight: "600" }}>
-                          {scan.scanId?.slice(-12) || "—"}
+                    <td style={{padding:"13px 16px"}} onClick={e=>e.stopPropagation()}>
+                      <div style={{display:"flex",alignItems:"center",gap:"6px"}}>
+                        <span style={{color:T.purple,fontFamily:"monospace",fontSize:"11px",fontWeight:"600"}}>
+                          {sc.scanId?.slice(-12)||"—"}
                         </span>
-                        <button onClick={() => handleCopyId(scan.scanId)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", padding: "2px" }}>
-                          {copiedId === scan.scanId ? <Check size={10} color={C.green} /> : <Copy size={10} color={C.dim} />}
+                        <button onClick={()=>handleCopy(sc.scanId)}
+                          style={{background:"none",border:"none",cursor:"pointer",display:"flex",padding:"2px"}}>
+                          {copiedId===sc.scanId
+                            ? <Check size={10} color={T.success}/>
+                            : <Copy size={10} color={T.dimmed}/>}
                         </button>
                       </div>
-                      {isRunning && (
-                        <div style={{ height: "2px", background: "rgba(255,255,255,.05)", borderRadius: "1px", marginTop: "4px", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${scan.progress || 30}%`, background: `linear-gradient(90deg, ${C.blue}, ${C.purple})`, transition: "width 0.5s" }} />
+                      {isRun && (
+                        <div style={{height:"2px",background:"rgba(255,255,255,.04)",borderRadius:"1px",
+                          marginTop:"5px",overflow:"hidden",width:"100px"}}>
+                          <div style={{height:"100%",width:`${sc.progress||30}%`,
+                            background:`linear-gradient(90deg,#60A5FA,${T.purple})`,transition:"width 0.5s"}}/>
                         </div>
                       )}
                     </td>
 
                     {/* Target */}
-                    <td style={{ padding: "12px 14px", maxWidth: "180px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px", overflow: "hidden" }}>
-                        <Globe size={12} color={C.muted} style={{ flexShrink: 0 }} />
-                        <span style={{ color: C.text, fontWeight: "500", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "12px" }}>
-                          {target.replace(/^https?:\/\//, "")}
+                    <td style={{padding:"13px 16px",maxWidth:"190px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:"6px",overflow:"hidden"}}>
+                        <Globe size={11} color={T.dimmed} style={{flexShrink:0}}/>
+                        <span style={{color:T.white,fontWeight:"500",overflow:"hidden",
+                          textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:"12px"}}>
+                          {target.replace(/^https?:\/\//,"")}
                         </span>
                       </div>
                     </td>
 
                     {/* Profile */}
-                    <td style={{ padding: "12px 14px" }}>
+                    <td style={{padding:"13px 16px"}}>
                       <span style={{
-                        padding: "3px 9px", borderRadius: "6px", fontSize: "10px", fontWeight: "600",
-                        background: "rgba(139,92,246,.12)", color: C.purpleLight,
-                        border: "1px solid rgba(139,92,246,.2)",
+                        padding:"3px 9px", borderRadius:"6px", fontSize:"10px", fontWeight:"600",
+                        background:"rgba(139,92,246,.12)", color:T.purple,
+                        border:"1px solid rgba(139,92,246,.2)",
                       }}>
-                        {scan.profile || "Full Security Audit"}
+                        {sc.profile||"Full Security Audit"}
                       </span>
                     </td>
 
                     {/* Date */}
-                    <td style={{ padding: "12px 14px", color: C.muted, fontSize: "11px", whiteSpace: "nowrap" }}>
-                      {date}
-                    </td>
+                    <td style={{padding:"13px 16px",color:T.muted,fontSize:"11px",whiteSpace:"nowrap"}}>{date}</td>
 
                     {/* Duration */}
-                    <td style={{ padding: "12px 14px", color: C.muted, fontSize: "11px" }}>
-                      {duration}
-                    </td>
+                    <td style={{padding:"13px 16px",color:T.muted,fontSize:"11px"}}>{dur}</td>
 
                     {/* Findings */}
-                    <td style={{ padding: "12px 14px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ color: findings > 0 ? C.orange : C.muted, fontWeight: "700", fontSize: "12px" }}>
-                          {findings > 0 ? `${findings} Findings` : "Clean"}
+                    <td style={{padding:"13px 16px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:"6px",flexWrap:"wrap"}}>
+                        <span style={{color:finds>0?T.warning:T.muted,fontWeight:"700",fontSize:"12px"}}>
+                          {finds>0?`${finds} Findings`:"Clean"}
                         </span>
-                        {scan.criticalCount > 0 && (
-                          <span style={{ padding: "1px 6px", borderRadius: "4px", fontSize: "9px", fontWeight: "700", background: "rgba(239,68,68,.15)", color: C.red, border: "1px solid rgba(239,68,68,.2)" }}>
-                            {scan.criticalCount} CRIT
-                          </span>
-                        )}
+                        <SevBadge count={sc.criticalCount} color={T.critical} label="CRIT"/>
+                        <SevBadge count={sc.highCount}     color={T.warning}  label="HIGH"/>
                       </div>
                     </td>
 
                     {/* Risk */}
-                    <td style={{ padding: "12px 14px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <div style={{
-                          width: "32px", height: "4px", borderRadius: "2px",
-                          background: "rgba(255,255,255,.06)", overflow: "hidden",
-                        }}>
-                          <div style={{ height: "100%", width: `${Math.min(100, risk * 10)}%`, background: riskColor(risk) }} />
+                    <td style={{padding:"13px 16px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:"8px"}}>
+                        <div style={{width:"36px",height:"4px",borderRadius:"2px",
+                          background:"rgba(255,255,255,.05)",overflow:"hidden"}}>
+                          <div style={{height:"100%",width:`${Math.min(100,risk*10)}%`,
+                            background:riskC(risk)}}/>
                         </div>
-                        <span style={{ color: riskColor(risk), fontSize: "11px", fontWeight: "700" }}>
-                          {risk ? risk.toFixed(1) : "—"}
+                        <span style={{color:riskC(risk),fontSize:"11px",fontWeight:"700"}}>
+                          {risk?Number(risk).toFixed(1):"—"}
                         </span>
                       </div>
                     </td>
 
                     {/* Status */}
-                    <td style={{ padding: "12px 14px" }}>
-                      <StatusBadge status={scan.status} />
-                    </td>
+                    <td style={{padding:"13px 16px"}}><StatusBadge status={sc.status}/></td>
 
                     {/* Actions */}
-                    <td style={{ padding: "12px 14px" }}>
-                      <div style={{ display: "flex", gap: "4px" }}>
-                        <button className="action-btn" onClick={() => handleView(scan)} title="View Details" style={{
-                          width: "28px", height: "28px", borderRadius: "8px", border: "none",
-                          background: "rgba(96,165,250,.12)", color: C.blue,
-                          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                        }}>
-                          <Eye size={13} />
+                    <td style={{padding:"13px 16px"}} onClick={e=>e.stopPropagation()}>
+                      <div style={{display:"flex",gap:"4px"}}>
+                        <button className="sh-btn" onClick={()=>handleView(sc)} title="View Details"
+                          style={{width:"30px",height:"30px",borderRadius:"8px",border:"none",
+                            background:"rgba(96,165,250,.12)",color:"#60A5FA",
+                            display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                          <Eye size={13}/>
                         </button>
-                        <button className="action-btn" onClick={() => handleExport(scan)} title="Export PDF" style={{
-                          width: "28px", height: "28px", borderRadius: "8px", border: "none",
-                          background: "rgba(34,197,94,.1)", color: C.green,
-                          display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
-                        }}>
-                          <Download size={13} />
+                        <button className="sh-btn" onClick={()=>handleExport(sc)} title="Export PDF"
+                          style={{width:"30px",height:"30px",borderRadius:"8px",border:"none",
+                            background:"rgba(34,197,94,.1)",color:T.success,
+                            display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                          <Download size={13}/>
                         </button>
-                        <button className="action-btn" onClick={() => handleRerun(scan)} title="Re-run Scan" disabled={isRunning} style={{
-                          width: "28px", height: "28px", borderRadius: "8px", border: "none",
-                          background: isRunning ? "rgba(255,255,255,.03)" : "rgba(139,92,246,.12)",
-                          color: isRunning ? C.dim : C.purpleLight,
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          cursor: isRunning ? "default" : "pointer",
-                        }}>
-                          <RotateCw size={13} style={{ animation: isRunning ? "spin 1.5s linear infinite" : "none" }} />
+                        <button className="sh-btn" onClick={()=>handleRerun(sc)} title="Re-run"
+                          disabled={isRun}
+                          style={{width:"30px",height:"30px",borderRadius:"8px",border:"none",
+                            background:isRun?"rgba(255,255,255,.03)":"rgba(249,115,22,.12)",
+                            color:isRun?T.dimmed:T.warning,
+                            display:"flex",alignItems:"center",justifyContent:"center",
+                            cursor:isRun?"default":"pointer"}}>
+                          <RotateCw size={13} style={{animation:isRun?"spin 1.5s linear infinite":"none"}}/>
                         </button>
                       </div>
                     </td>
@@ -911,120 +904,50 @@ export default function ScanHistoryPage() {
         </div>
 
         {/* Pagination */}
-        <div style={{
-          padding: "14px 20px", borderTop: `1px solid ${C.border}`,
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-        }}>
-          <span style={{ color: C.dim, fontSize: "12px" }}>
-            Showing {Math.min((page - 1) * pageSize + 1, totalScans)}–{Math.min(page * pageSize, totalScans)} of {totalScans} scans
+        <div style={{ padding:"14px 20px", borderTop:`1px solid ${T.border}`,
+          display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span style={{color:T.dimmed,fontSize:"12px"}}>
+            Showing {Math.min((page-1)*PAGE_SIZE+1,totalScans)}–{Math.min(page*PAGE_SIZE,totalScans)} of {totalScans}
           </span>
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} style={{
-              width: "30px", height: "30px", borderRadius: "8px",
-              border: `1px solid ${C.border}`, background: "rgba(255,255,255,.02)",
-              color: page <= 1 ? C.dim : C.text, cursor: page <= 1 ? "default" : "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <ChevronLeft size={14} />
+          <div style={{display:"flex",gap:"6px",alignItems:"center"}}>
+            <button onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page<=1}
+              style={{width:"30px",height:"30px",borderRadius:"8px",
+                border:`1px solid ${T.border}`,background:T.darkGray,
+                color:page<=1?T.dimmed:T.white,cursor:page<=1?"default":"pointer",
+                display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <ChevronLeft size={14}/>
             </button>
-            {[...Array(Math.min(5, totalPages))].map((_, i) => {
-              const p = i + Math.max(1, page - 2);
-              if (p > totalPages) return null;
+            {[...Array(Math.min(5,totalPages))].map((_,i)=>{
+              const p = i+Math.max(1,page-2);
+              if(p>totalPages) return null;
               return (
-                <button key={p} onClick={() => setPage(p)} style={{
-                  width: "30px", height: "30px", borderRadius: "8px", fontSize: "12px", fontWeight: "600",
-                  border: page === p ? "1px solid rgba(139,92,246,.4)" : `1px solid ${C.border}`,
-                  background: page === p ? "rgba(139,92,246,.2)" : "rgba(255,255,255,.02)",
-                  color: page === p ? C.purpleLight : C.muted, cursor: "pointer",
-                }}>
+                <button key={p} onClick={()=>setPage(p)}
+                  style={{width:"30px",height:"30px",borderRadius:"8px",fontSize:"12px",fontWeight:"600",
+                    border:page===p?"1px solid rgba(139,92,246,.4)":`1px solid ${T.border}`,
+                    background:page===p?"rgba(139,92,246,.2)":T.darkGray,
+                    color:page===p?T.purple:T.muted,cursor:"pointer"}}>
                   {p}
                 </button>
               );
             })}
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={{
-              width: "30px", height: "30px", borderRadius: "8px",
-              border: `1px solid ${C.border}`, background: "rgba(255,255,255,.02)",
-              color: page >= totalPages ? C.dim : C.text, cursor: page >= totalPages ? "default" : "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <ChevronRight size={14} />
+            <button onClick={()=>setPage(p=>Math.min(totalPages,p+1))} disabled={page>=totalPages}
+              style={{width:"30px",height:"30px",borderRadius:"8px",
+                border:`1px solid ${T.border}`,background:T.darkGray,
+                color:page>=totalPages?T.dimmed:T.white,cursor:page>=totalPages?"default":"pointer",
+                display:"flex",alignItems:"center",justifyContent:"center"}}>
+              <ChevronRight size={14}/>
             </button>
           </div>
         </div>
       </div>
 
-      {/* ═══ BOTTOM ANALYTICS SECTION ════════════════════════════════════ */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "20px" }}>
-
-        {/* Vulnerability Type Breakdown */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", padding: "20px" }}>
-          <div style={{ color: C.text, fontSize: "14px", fontWeight: "700", marginBottom: "4px" }}>Vulnerability Breakdown</div>
-          <div style={{ color: C.muted, fontSize: "11px", marginBottom: "16px" }}>Top finding categories across all scans</div>
-          {[
-            { label: "Authentication Issues", pct: 38, color: C.red },
-            { label: "Injection Flaws", pct: 24, color: C.orange },
-            { label: "Broken Access Control", pct: 19, color: C.yellow },
-            { label: "Security Misconfiguration", pct: 12, color: C.blue },
-            { label: "Sensitive Data Exposure", pct: 7, color: C.purple },
-          ].map(item => (
-            <div key={item.label} style={{ marginBottom: "10px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span style={{ color: C.muted, fontSize: "11px" }}>{item.label}</span>
-                <span style={{ color: item.color, fontSize: "11px", fontWeight: "700" }}>{item.pct}%</span>
-              </div>
-              <div style={{ height: "4px", background: "rgba(255,255,255,.06)", borderRadius: "2px", overflow: "hidden" }}>
-                <div style={{
-                  height: "100%", width: `${item.pct}%`, borderRadius: "2px",
-                  background: `linear-gradient(90deg, ${item.color}aa, ${item.color})`,
-                  transition: "width 0.8s ease",
-                }} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Recent Activity + AI Recommendations */}
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: "16px", padding: "20px" }}>
-          <div style={{ color: C.text, fontSize: "14px", fontWeight: "700", marginBottom: "4px" }}>AI Action Plan</div>
-          <div style={{ color: C.muted, fontSize: "11px", marginBottom: "16px" }}>RAG-powered remediation recommendations</div>
-          {[
-            { icon: "🔴", label: "Enable OWASP-compliant CORS policy on auth endpoints", priority: "Critical" },
-            { icon: "🟠", label: "Implement rate limiting on unauthenticated login paths", priority: "High" },
-            { icon: "🟡", label: "Replace HTTP Basic Auth with JWT Bearer tokens", priority: "High" },
-            { icon: "🟢", label: "Enforce HSTS preloading for all subdomains", priority: "Medium" },
-          ].map((item, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "flex-start", gap: "10px",
-              padding: "9px 0",
-              borderBottom: i < 3 ? `1px solid ${C.border}` : "none",
-            }}>
-              <span style={{ fontSize: "14px", flexShrink: 0, marginTop: "1px" }}>{item.icon}</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ color: C.text, fontSize: "11px", lineHeight: 1.5 }}>{item.label}</div>
-                <div style={{ color: C.dim, fontSize: "10px", marginTop: "2px" }}>{item.priority} Priority</div>
-              </div>
-              <button onClick={() => navigate("/copilot")} style={{
-                background: "rgba(139,92,246,.1)", border: "1px solid rgba(139,92,246,.2)",
-                borderRadius: "6px", padding: "3px 8px", color: C.purpleLight,
-                fontSize: "10px", fontWeight: "600", cursor: "pointer",
-              }}>
-                Fix
-              </button>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ═══ MODALS ═══════════════════════════════════════════════════════ */}
+      {/* ══════════ MODALS ════════════════════════════════════════════════ */}
       <ScanHistoryDrawer
         open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); setSelectedScan(null); }}
+        onClose={()=>{setDrawerOpen(false);setSelectedScan(null);}}
         selectedScan={selectedScan}
       />
-      <ScanComparisonModal
-        open={comparisonOpen}
-        onClose={() => setComparisonOpen(false)}
-      />
+      <ScanComparisonModal open={compareOpen} onClose={()=>setCompareOpen(false)}/>
     </div>
   );
 }
