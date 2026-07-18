@@ -15,13 +15,20 @@ class GeminiAdapter extends BaseAdapter {
     }
 
     return this.executeResilient(async () => {
+      const payload = {
+        model: modelName,
+        messages,
+        temperature: options.temperature || 0.7,
+      };
+
+      if (options.tools && options.tools.length > 0) {
+        payload.tools = options.tools;
+        payload.tool_choice = options.tool_choice || "auto";
+      }
+
       const response = await axios.post(
         "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        {
-          model: modelName,
-          messages,
-          temperature: options.temperature || 0.7,
-        },
+        payload,
         {
           headers: {
             Authorization: `Bearer ${apiKey}`,
@@ -31,13 +38,17 @@ class GeminiAdapter extends BaseAdapter {
         }
       );
 
-      const content = response.data?.choices?.[0]?.message?.content;
-      if (!content) {
+      const message = response.data?.choices?.[0]?.message;
+      const content = message?.content || "";
+      const toolCalls = message?.tool_calls;
+
+      if (!content && !toolCalls) {
         throw new Error("Empty response from Gemini");
       }
 
       return {
         content,
+        toolCalls,
         usage: {
           promptTokens: response.data.usage?.prompt_tokens || 0,
           completionTokens: response.data.usage?.completion_tokens || 0,

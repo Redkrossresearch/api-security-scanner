@@ -20,6 +20,7 @@ const queueRoutes = require("./modules/queue/queue.routes");
 const teamRoutes = require("./modules/teams/team.routes");
 const autonomousRoutes = require("./modules/llm/autonomous/autonomous.routes");
 const workflowRoutes = require("./modules/workflows/workflow.routes");
+const mcpRoutes = require("./modules/mcp/mcp.routes");
 const requestLogger = require("./middleware/requestLogger");
 
 const app = express();
@@ -104,6 +105,7 @@ app.use("/api/queue", queueRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/autonomous", autonomousRoutes);
 app.use("/api/workflows", workflowRoutes);
+app.use("/api/mcp", mcpRoutes);
 
 // 🟡 Recommended 2 — 404 Handler (Express 5 compatible - no "*" wildcard)
 app.use((req, res) => {

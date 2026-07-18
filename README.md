@@ -112,6 +112,60 @@ sequenceDiagram
 
 ---
 
+## 🔌 Model Context Protocol (MCP) Integration
+
+The platform integrates full support for the **Model Context Protocol (MCP)**, bridging the gap between autonomous AI agents, security scanner operations, and developer IDEs.
+
+```mermaid
+graph TD
+    subgraph Inbound Connection (IDE integration)
+        IDE[Claude Desktop / VS Code] -->|SSE HTTP Link| SSE_End[Express Gateway: /api/mcp/sse]
+        SSE_End -->|Token Verification| Auth[JWT Auth Middleware]
+        Auth -->|Read/Write Operations| CoreTools[list_scans, start_scan, get_scan_progress, list_vulnerabilities]
+    end
+
+    subgraph Outbound Connection (Copilot Extensions)
+        Chat[Copilot Drawer] -->|User Input| Adapter[LLM Adapter Loop]
+        Adapter -->|Tool Call Request| Mgr[Outbound Client Manager]
+        Mgr -->|Stdio Spawner| LocalSrv[Local CLI Servers e.g. filesystem]
+        Mgr -->|SSE Web Request| RemoteSrv[Remote SSE Servers]
+    end
+```
+
+### 1. Inbound Scanner Server (Exposing Scanner to IDEs)
+Developers can plug this application's scanner capabilities directly into their local LLM clients (like Claude Desktop). This enables starting scans, listing vulnerabilities, and looking up remediation steps directly inside their workspace coding window.
+
+* **Tool Declarations:**
+  - `list_scans`: Returns target endpoints, status, and findings summary.
+  - `start_scan`: Triggers a new live scan for a specified target URL.
+  - `get_scan_progress`: Returns real-time percentage progress of running tasks.
+  - `list_vulnerabilities`: Returns threat logs filterable by scanId or severity levels.
+  - `get_vulnerability_details`: Retrieves recommendations, CVSS vectors, and code remediation advisories.
+
+### 2. Outbound Client Manager (Giving Copilot Agent Capabilities)
+The Copilot Chat drawer is capable of loading external MCP servers. Once connected, the AI agent can invoke tools like reading local project structures, executing shell scripts, or auditing system files to diagnose security alerts.
+
+### 3. Production Readiness & Deployment Matrix
+To guarantee that the codebase runs seamlessly in production environments without local limitations:
+
+| Transport Type | Deployment Suitability | Production Recommendations |
+| :--- | :--- | :--- |
+| **Inbound SSE Link** | **Cloud Deployed & Local** | Exposes the scanner tools via standard Express router paths (`/api/mcp/sse` & `/api/mcp/messages`). Authenticated via JWT parameter passes (`?token=JWT`), allowing developers to query production scan states from their local Claude client. |
+| **Outbound Stdio** | **Containers & Dedicated VMs** | Spawns standard OS CLI subprocesses. Supported in container environments (e.g. AWS ECS, Kubernetes, Docker) provided the target CLI binaries (e.g. `npx`, `python`) are pre-installed in the Docker image. |
+| **Outbound SSE** | **Serverless Platforms** | Connects to remote endpoints via standard HTTP requests. Recommended for serverless deployments (e.g. Vercel, AWS Lambda) as it eliminates server-side process spawning, ensuring stateless execution and horizontal scaling. |
+
+> [!IMPORTANT]
+> **Outbound Stdio CLI Restrictions:** If deploying to serverless platforms with ephemeral, read-only filesystems (like Vercel), disable Stdio connections in settings and register external tools using **SSE connection transports** instead.
+
+### 4. Running Validation Tests
+To run the automated, end-to-end integration test verifying the local stdio runner connection, database handshakes, and tool reflection:
+```bash
+cd backend
+node src/modules/mcp/test-mcp.js
+```
+
+---
+
 ## 🛠️ Installation & Setup
 
 ### Prerequisites

@@ -3,6 +3,7 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const config = require("../../config/env");
+const mcpClientManager = require("../mcp/mcp.client.manager");
 const {
   CopilotConversation,
   CopilotMessage,
@@ -1247,6 +1248,183 @@ Assistant: ${aiReplyText}`;
   }
 };
 
+// Helper function to manage the MCP tool execution loop in-memory
+const executeToolCallingLoop = async (userId, conversationId, selectedModel, uniqueModels, messageHistory, temperature, socketEmitter) => {
+  // Fetch active external MCP tools
+  let mcpTools = [];
+  try {
+    mcpTools = await mcpClientManager.getConnectedTools(userId);
+  } catch (err) {
+    console.warn("[copilot-mcp] Failed to load external tools:", err.message);
+    return null;
+  }
+
+  if (!mcpTools || mcpTools.length === 0) {
+    return null; // Fallback to standard flow if no tools are registered/enabled
+  }
+
+  // Convert MCP tools schemas to OpenAI completions format
+  const tools = mcpTools.map((t) => ({
+    type: "function",
+    function: {
+      name: `${t.serverName}__${t.name}`.replace(/[^a-zA-Z0-9_-]/g, "_"),
+      description: t.description,
+      parameters: t.inputSchema || { type: "object", properties: {} }
+    }
+  }));
+
+  const localHistory = [...messageHistory];
+  let currentModelIdx = 0;
+  let activeModel = uniqueModels[currentModelIdx] || selectedModel;
+
+  // Maximum loops to prevent runaway infinite tool execution
+  const maxIterations = 6;
+  for (let i = 0; i < maxIterations; i++) {
+    try {
+      const adapter = llmRegistry.getAdapter(activeModel);
+      console.log(`[MCP Client Manager] Iteration ${i + 1}: querying model '${activeModel}'...`);
+
+      const result = await adapter.generate(localHistory, {
+        model: activeModel,
+        temperature: temperature || 0.7,
+        tools
+      });
+
+      if (result.toolCalls && result.toolCalls.length > 0) {
+        console.log(`[MCP Client Manager] Model requested ${result.toolCalls.length} tool calls.`);
+
+        if (socketEmitter) {
+          socketEmitter.emitAiStream(userId, {
+            conversationId,
+            text: `\n\n*[AI Copilot is executing tools...]*`
+          });
+        }
+
+        // Push assistant's message with tool calls requested
+        localHistory.push({
+          role: "assistant",
+          content: result.content || null,
+          tool_calls: result.toolCalls
+        });
+
+        // Execute each tool in sequence
+        for (const tc of result.toolCalls) {
+          const funcName = tc.function.name;
+          let args = {};
+          try {
+            args = typeof tc.function.arguments === "string" ? JSON.parse(tc.function.arguments) : tc.function.arguments;
+          } catch (e) {
+            console.error(`[MCP Client Manager] Failed to parse arguments for tool ${funcName}:`, e.message);
+          }
+
+          // Locate matching tool
+          const matchedTool = mcpTools.find((t) =>
+            `${t.serverName}__${t.name}`.replace(/[^a-zA-Z0-9_-]/g, "_") === funcName
+          );
+
+          if (!matchedTool) {
+            localHistory.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content: `Error: Tool '${funcName}' does not exist.`
+            });
+            continue;
+          }
+
+          if (socketEmitter) {
+            socketEmitter.emitAiStream(userId, {
+              conversationId,
+              text: `\n> *Running tool:* **${matchedTool.serverName}:${matchedTool.name}**...`
+            });
+            socketEmitter.emitAiThinking(userId, {
+              conversationId,
+              toolExecuting: {
+                name: matchedTool.name,
+                server: matchedTool.serverName,
+                arguments: args,
+                status: "running"
+              }
+            });
+          }
+
+          try {
+            console.log(`[MCP Client Manager] Invoking tool '${matchedTool.name}' on server '${matchedTool.serverName}'...`);
+            const executionOutput = await mcpClientManager.executeTool(
+              matchedTool.serverId,
+              matchedTool.name,
+              args
+            );
+
+            if (socketEmitter) {
+              socketEmitter.emitAiStream(userId, {
+                conversationId,
+                text: ` Done.`
+              });
+              socketEmitter.emitAiThinking(userId, {
+                conversationId,
+                toolExecuting: {
+                  name: matchedTool.name,
+                  server: matchedTool.serverName,
+                  status: "completed",
+                  output: executionOutput
+                }
+              });
+            }
+
+            localHistory.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content: JSON.stringify(executionOutput)
+            });
+          } catch (execError) {
+            console.error(`[MCP Client Manager] Execution failed for tool ${matchedTool.name}:`, execError.message);
+            if (socketEmitter) {
+              socketEmitter.emitAiStream(userId, {
+                conversationId,
+                text: ` Failed (Error: ${execError.message}).`
+              });
+              socketEmitter.emitAiThinking(userId, {
+                conversationId,
+                toolExecuting: {
+                  name: matchedTool.name,
+                  server: matchedTool.serverName,
+                  status: "failed",
+                  error: execError.message
+                }
+              });
+            }
+
+            localHistory.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content: `Error executing tool: ${execError.message}`
+            });
+          }
+        }
+
+        // Loop again to feed tool execution results back to LLM
+        continue;
+      }
+
+      // No tool calls requested: we have the final generated answer!
+      return {
+        content: result.content,
+        model: activeModel,
+        history: localHistory
+      };
+    } catch (err) {
+      console.warn(`[MCP Client Manager] Execution failed using model adapter ${activeModel}:`, err.message);
+      currentModelIdx++;
+      if (currentModelIdx >= uniqueModels.length) {
+        throw new Error(`All fallback models failed during tool executions: ${err.message}`);
+      }
+      activeModel = uniqueModels[currentModelIdx];
+    }
+  }
+
+  throw new Error("Max tool execution iterations (6) exceeded");
+};
+
 // POST /api/copilot/conversations/:id/messages — Main AI Brain
 const handleChatRequest = async (req, res) => {
   try {
@@ -1464,31 +1642,58 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
           let finalReply = "";
           let finalModel = selectedModel;
 
-          for (const currentTryModel of uniqueModels) {
-            try {
-              console.log(`[copilot-stream] Querying model adapter for ${currentTryModel}`);
-              const adapter = llmRegistry.getAdapter(currentTryModel);
-              const result = await adapter.stream(
-                messageHistory,
-                (token) => {
-                  finalReply += token;
-                  aiEmitter.emitAiStream(userId, {
-                    conversationId: id,
-                    text: token,
-                  });
-                },
-                {
-                  model: currentTryModel,
-                  temperature: temperature || 0.7,
-                }
-              );
-              finalModel = result.model || currentTryModel;
-              break;
-            } catch (apiErr) {
-              console.warn(
-                `[copilot-stream] Model adapter ${currentTryModel} stream failed:`,
-                apiErr.message,
-              );
+          // 1. Try running external MCP tool execution loop first
+          const toolLoopResult = await executeToolCallingLoop(
+            userId,
+            id,
+            selectedModel,
+            uniqueModels,
+            messageHistory,
+            temperature,
+            aiEmitter
+          );
+
+          if (toolLoopResult) {
+            finalReply = toolLoopResult.content;
+            finalModel = toolLoopResult.model;
+
+            // Stream final resolved content text to the client chunk-by-chunk
+            const chunks = finalReply.match(/.{1,4}/g) || [finalReply];
+            for (const chunk of chunks) {
+              aiEmitter.emitAiStream(userId, {
+                conversationId: id,
+                text: chunk,
+              });
+              await new Promise((resolve) => setTimeout(resolve, 15));
+            }
+          } else {
+            // 2. Standard Native Stream Fallback (no tools configured/available)
+            for (const currentTryModel of uniqueModels) {
+              try {
+                console.log(`[copilot-stream] Querying model adapter for ${currentTryModel}`);
+                const adapter = llmRegistry.getAdapter(currentTryModel);
+                const result = await adapter.stream(
+                  messageHistory,
+                  (token) => {
+                    finalReply += token;
+                    aiEmitter.emitAiStream(userId, {
+                      conversationId: id,
+                      text: token,
+                    });
+                  },
+                  {
+                    model: currentTryModel,
+                    temperature: temperature || 0.7,
+                  }
+                );
+                finalModel = result.model || currentTryModel;
+                break;
+              } catch (apiErr) {
+                console.warn(
+                  `[copilot-stream] Model adapter ${currentTryModel} stream failed:`,
+                  apiErr.message,
+                );
+              }
             }
           }
 
@@ -1546,10 +1751,29 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
     let usedModel = selectedModel;
     let error = null;
 
+    // Try running external MCP tool execution loop first
+    try {
+      const toolLoopResult = await executeToolCallingLoop(
+        userId,
+        id,
+        selectedModel,
+        uniqueModels,
+        messageHistory,
+        temperature,
+        null
+      );
+      if (toolLoopResult) {
+        aiReplyText = toolLoopResult.content;
+        usedModel = toolLoopResult.model;
+      }
+    } catch (err) {
+      console.warn("[copilot] Non-streaming tool loop execution failed:", err.message);
+    }
+
     let attempts = 0;
     const funnelMode = req.body.funnelMode || process.env.FUNNEL_MODE || "single"; // parallel | consensus | debate | single
 
-    if (funnelMode === "parallel") {
+    if (!aiReplyText && funnelMode === "parallel") {
       try {
         const result = await require("../llm/router/llm.funnel").executeFunnel(
           uniqueModels.slice(0, 2),
@@ -1561,7 +1785,7 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
       } catch (err) {
         console.warn("[copilot-funnel] Parallel execution failed, falling back to sequential:", err.message);
       }
-    } else if (funnelMode === "consensus") {
+    } else if (!aiReplyText && funnelMode === "consensus") {
       try {
         const result = await require("../llm/consensus/consensus.engine").runConsensus(
           messageHistory,
@@ -1572,7 +1796,7 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
       } catch (err) {
         console.warn("[copilot-consensus] Consensus evaluation failed, falling back to sequential:", err.message);
       }
-    } else if (funnelMode === "debate" || (userQuery && userQuery.toLowerCase().includes("/debate"))) {
+    } else if (!aiReplyText && (funnelMode === "debate" || (userQuery && userQuery.toLowerCase().includes("/debate")))) {
       try {
         const result = await require("../llm/consensus/consensus.engine").runDebate(
           userQuery,

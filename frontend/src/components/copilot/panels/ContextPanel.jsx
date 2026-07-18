@@ -1,12 +1,13 @@
 import React, { useState } from "react";
-import { Brain, Shield, Link2, Cpu } from "lucide-react";
+import { Brain, Shield, Link2, Cpu, Wrench } from "lucide-react";
 import MemoryPanel from "./MemoryPanel";
 import ScannerPanel from "./ScannerPanel";
 import SourcesPanel from "./SourcesPanel";
 import TrainingPanel from "./TrainingPanel";
+import ToolsPanel from "./ToolsPanel";
 
 export default function ContextPanel() {
-  const [activeTab, setActiveTab] = useState("memory"); // memory, scanner, sources, training
+  const [activeTab, setActiveTab] = useState("memory"); // memory, scanner, sources, training, tools
 
   return (
     <>
@@ -84,6 +85,14 @@ export default function ContextPanel() {
             <Cpu size={12} />
             Train
           </button>
+          <button
+            onClick={() => setActiveTab("tools")}
+            className={`tab-btn ${activeTab === "tools" ? "active" : ""}`}
+            title="MCP Tools & Logs"
+          >
+            <Wrench size={12} />
+            Tools
+          </button>
         </div>
 
         {/* Tab Contents */}
@@ -92,6 +101,7 @@ export default function ContextPanel() {
           {activeTab === "scanner" && <ScannerPanel />}
           {activeTab === "sources" && <SourcesPanel />}
           {activeTab === "training" && <TrainingPanel />}
+          {activeTab === "tools" && <ToolsPanel />}
         </div>
       </div>
     </>

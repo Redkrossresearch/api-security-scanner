@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Play, Activity, CheckCircle, AlertTriangle, RefreshCw, Terminal, Eye } from "lucide-react";
 import { scanService } from "../../../services/scanService";
+import useSocketEvent from "../../../sockets/useSocketEvent";
 import toast from "react-hot-toast";
 
 export default function ScannerPanel() {
@@ -9,20 +10,59 @@ export default function ScannerPanel() {
   const [scanStatus, setScanStatus] = useState("idle"); // idle, scanning, completed, failed
   const [findings, setFindings] = useState([]);
   const [logs, setLogs] = useState([]);
-  const pollingIntervalRef = useRef(null);
-  const logsIntervalRef = useRef(null);
+  const [activeScanId, setActiveScanId] = useState(null);
 
-  const mockLogStatements = [
-    "Initializing crawler...",
-    "Crawling endpoints in parallel...",
-    "Scanning headers for missing policies...",
-    "Probing parameters for SQL injections...",
-    "Testing for BOLA vulnerabilities on routes...",
-    "Checking CORS origin rules...",
-    "Running JWT signature attacks...",
-    "Validating secure cookie flags...",
-    "Compiling threat report...",
-  ];
+  // 1. Listen to real scan logs
+  useSocketEvent("scan:log", (data) => {
+    if (activeScanId && (data.scanId === activeScanId)) {
+      setLogs((prev) => [...prev, `[${data.level.toUpperCase()}] ${data.message}`]);
+    }
+  });
+
+  // 2. Listen to real progress percent updates
+  useSocketEvent("scan:progress", (data) => {
+    if (activeScanId && (data.scanId === activeScanId)) {
+      setLogs((prev) => [...prev, `[INFO] Scan Progress: ${data.percent}% (${data.currentScanner || "crawling"})`]);
+    }
+  });
+
+  // 3. Listen to real-time vulnerabilities discovered
+  useSocketEvent("scan:vulnerability", (data) => {
+    if (activeScanId && (data.scanId === activeScanId)) {
+      setFindings((prev) => {
+        if (prev.some((v) => v.title === data.finding.title)) return prev;
+        return [...prev, data.finding];
+      });
+      setLogs((prev) => [...prev, `[ALERT] Vulnerability detected: ${data.finding.title} (${data.finding.severity.toUpperCase()})`]);
+    }
+  });
+
+  // 4. Listen to real scan completion
+  useSocketEvent("scan:completed", async (data) => {
+    if (activeScanId && (data.scanId === activeScanId)) {
+      setScanStatus("completed");
+      setIsScanning(false);
+      setLogs((prev) => [...prev, "[SUCCESS] Scan completed successfully."]);
+      toast.success("Scan completed!");
+      
+      try {
+        const scanData = await scanService.getScanById(activeScanId);
+        setFindings(scanData.vulnerabilities || []);
+      } catch (err) {
+        console.error("Failed to fetch final scan findings:", err);
+      }
+    }
+  });
+
+  // 5. Listen to real scan failures
+  useSocketEvent("scan:failed", (data) => {
+    if (activeScanId && (data.scanId === activeScanId)) {
+      setScanStatus("failed");
+      setIsScanning(false);
+      setLogs((prev) => [...prev, `[ERROR] Scan failed: ${data.error || "Execution terminated"}`]);
+      toast.error("Scan failed");
+    }
+  });
 
   const handleStartScan = async () => {
     if (!targetUrl) {
@@ -37,47 +77,8 @@ export default function ScannerPanel() {
     try {
       const scanRes = await scanService.createScan(targetUrl);
       const scanId = scanRes._id;
-
-      // Start log simulation
-      let logIndex = 0;
-      logsIntervalRef.current = setInterval(() => {
-        if (logIndex < mockLogStatements.length) {
-          setLogs((prev) => [...prev, `[INFO] ${mockLogStatements[logIndex]}`]);
-          logIndex++;
-        }
-      }, 1500);
-
-      // Start status polling
-      pollingIntervalRef.current = setInterval(async () => {
-        try {
-          const statusRes = await scanService.getScanStatus(scanId);
-          if (statusRes.status === "completed") {
-            clearInterval(pollingIntervalRef.current);
-            clearInterval(logsIntervalRef.current);
-            
-            const scanData = await scanService.getScanById(scanId);
-            setFindings(scanData.vulnerabilities || []);
-            setScanStatus("completed");
-            setIsScanning(false);
-            setLogs((prev) => [
-              ...prev, 
-              "[SUCCESS] Scan completed successfully.", 
-              `[SUMMARY] Found ${scanData.vulnerabilities?.length || 0} vulnerability findings.`
-            ]);
-            toast.success("Scan completed!");
-          } else if (statusRes.status === "failed") {
-            clearInterval(pollingIntervalRef.current);
-            clearInterval(logsIntervalRef.current);
-            setScanStatus("failed");
-            setIsScanning(false);
-            setLogs((prev) => [...prev, "[ERROR] Scan failed."]);
-            toast.error("Scan failed");
-          }
-        } catch (err) {
-          console.error("Polling error", err);
-        }
-      }, 2000);
-
+      setActiveScanId(scanId);
+      setLogs((prev) => [...prev, `[INFO] Scan ID created: ${scanId}. Awaiting worker assignment...`]);
     } catch (err) {
       setScanStatus("failed");
       setIsScanning(false);
@@ -123,8 +124,7 @@ export default function ScannerPanel() {
 
   useEffect(() => {
     return () => {
-      if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
-      if (logsIntervalRef.current) clearInterval(logsIntervalRef.current);
+      // Cleanup hooks if any
     };
   }, []);
 

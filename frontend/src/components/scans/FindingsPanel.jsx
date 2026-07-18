@@ -36,62 +36,7 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
     };
   });
 
-  const mockFindings = [
-    {
-      id: "ATHX-001",
-      severity: "Critical",
-      status: "Open",
-      owasp: "API1:2023",
-      title: "Broken Object Level Authorization (BOLA)",
-      endpoint: "GET /api/users/{id}",
-      impact:
-        "Attacker can access other users' data by manipulating the user ID.",
-      evidence: "The API does not verify ownership before returning user data.",
-      cvss: 9.8,
-      expanded: true,
-    },
-    {
-      id: "ATHX-002",
-      severity: "High",
-      status: "Open",
-      owasp: "API1:2023",
-      title: "IDOR in User Profile",
-      endpoint: "/api/profile/{id}",
-      cvss: 8.1,
-      expanded: false,
-    },
-    {
-      id: "ATHX-003",
-      severity: "Medium",
-      status: "Open",
-      owasp: "API9:2023",
-      title: "Swagger UI Exposure",
-      endpoint: "/swagger",
-      cvss: 5.3,
-      expanded: false,
-    },
-    {
-      id: "ATHX-004",
-      severity: "Medium",
-      status: "Fixed",
-      owasp: "API8:2023",
-      title: "Verbose Error Messages",
-      endpoint: "/api/*",
-      cvss: 4.7,
-      expanded: false,
-    },
-  ];
-
-  const mockFindingsWithRaw = mockFindings.map((m, idx) => {
-    const isSelected = selectedVuln ? (selectedVuln.id === m.id || selectedVuln.title === m.title) : idx === 0;
-    return {
-      ...m,
-      expanded: isSelected,
-      raw: m
-    };
-  });
-
-  const findings = formattedFindings.length > 0 ? formattedFindings : mockFindingsWithRaw;
+  const findings = formattedFindings;
 
   const getColor = (severity) => {
     switch (severity.toLowerCase()) {
@@ -178,10 +123,10 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
           fontWeight: "600",
         }}
       >
-        <span style={{ color: "#EF4444" }}>{scan ? criticalCount : 5} Critical</span>
-        <span style={{ color: "#F97316" }}>{scan ? highCount : 12} High</span>
-        <span style={{ color: "#FACC15" }}>{scan ? mediumCount : 27} Medium</span>
-        <span style={{ color: "#22C55E" }}>{scan ? lowCount : 6} Low</span>
+        <span style={{ color: "#EF4444" }}>{scan ? criticalCount : 0} Critical</span>
+        <span style={{ color: "#F97316" }}>{scan ? highCount : 0} High</span>
+        <span style={{ color: "#FACC15" }}>{scan ? mediumCount : 0} Medium</span>
+        <span style={{ color: "#22C55E" }}>{scan ? lowCount : 0} Low</span>
       </div>
 
       {/* Findings */}
@@ -197,286 +142,258 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
           minHeight: 0,
         }}
       >
-        {findings.map((item) => (
-          <div
-            key={item.id}
-            onClick={() => onSelectVuln && onSelectVuln(item.raw)}
-            style={{
-              cursor: "pointer",
-              border: item.expanded
-                ? `1px solid ${getColor(item.severity)}`
-                : "1px solid rgba(255,255,255,.06)",
-
-              background: "#0B1220",
-              borderRadius: "14px",
-              padding: "14px",
-
-              transition: "all .25s ease",
-
-              boxShadow: item.expanded
-                ? `0 0 18px ${getColor(item.severity)}18`
-                : "none",
-            }}
-          >
+        {!scan ? (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            textAlign: "center",
+            padding: "40px 20px",
+            color: "rgba(255,255,255,0.4)"
+          }}>
+            <Bug size={48} color="#8B5CF6" style={{ marginBottom: "16px", opacity: 0.6 }} />
+            <h4 style={{ margin: "0 0 8px 0", color: "#FFF", fontSize: "15px", fontWeight: "750" }}>
+              No Scan Target Selected
+            </h4>
+            <p style={{ margin: 0, fontSize: "12px", lineHeight: "1.5" }}>
+              Select a previous assessment from the Scan History list or run a new scan to load findings.
+            </p>
+          </div>
+        ) : findings.length === 0 ? (
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            textAlign: "center",
+            padding: "40px 20px",
+            color: "rgba(255,255,255,0.4)"
+          }}>
+            <ShieldCheck size={48} color="#22C55E" style={{ marginBottom: "16px", filter: "drop-shadow(0 0 10px rgba(34,197,94,0.2))" }} />
+            <h4 style={{ margin: "0 0 8px 0", color: "#FFF", fontSize: "15px", fontWeight: "750" }}>
+              Workspace Secure
+            </h4>
+            <p style={{ margin: 0, fontSize: "12px", lineHeight: "1.5" }}>
+              API scan completed with a clean security posture. No active threat vectors were detected.
+            </p>
+          </div>
+        ) : (
+          findings.map((item) => (
             <div
+              key={item.id}
+              onClick={() => onSelectVuln && onSelectVuln(item.raw)}
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
+                cursor: "pointer",
+                border: item.expanded
+                  ? `1px solid ${getColor(item.severity)}`
+                  : "1px solid rgba(255,255,255,.06)",
+
+                background: "#0B1220",
+                borderRadius: "14px",
+                padding: "14px",
+
+                transition: "all .25s ease",
+
+                boxShadow: item.expanded
+                  ? `0 0 18px ${getColor(item.severity)}18`
+                  : "none",
               }}
             >
               <div
                 style={{
                   display: "flex",
+                  justifyContent: "space-between",
                   alignItems: "flex-start",
-                  gap: "12px",
                 }}
               >
-                {item.expanded ? (
-                  <ChevronDown
-                    size={16}
-                    color="#64748B"
-                    style={{ marginTop: "4px" }}
-                  />
-                ) : (
-                  <ChevronRight
-                    size={16}
-                    color="#64748B"
-                    style={{ marginTop: "4px" }}
-                  />
-                )}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "12px",
+                  }}
+                >
+                  {item.expanded ? (
+                    <ChevronDown
+                      size={16}
+                      color="#64748B"
+                      style={{ marginTop: "4px" }}
+                    />
+                  ) : (
+                    <ChevronRight
+                      size={16}
+                      color="#64748B"
+                      style={{ marginTop: "4px" }}
+                    />
+                  )}
 
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    {getSeverityIcon(item.severity)}
-
-                    <span
+                  <div>
+                    <div
                       style={{
-                        background: `${getColor(item.severity)}20`,
-                        color: getColor(item.severity),
-                        padding: "4px 10px",
-                        borderRadius: "999px",
-                        fontSize: "11px",
-                        fontWeight: "700",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
                       }}
                     >
-                      {item.severity}
-                    </span>
-                  </div>
+                      {getSeverityIcon(item.severity)}
 
-                  <div
-                    style={{
-                      marginTop: "10px",
-                      color: "#FFFFFF",
-                      fontWeight: "600",
-                      fontSize: "15px",
-                    }}
-                  >
-                    {item.title}
-                    {/* CVSS badge */}
-                    <span style={{
-                      backgroundColor: `${getColor(item.severity)}20`,
-                      color: getColor(item.severity),
-                      padding: "2px 6px",
-                      borderRadius: "4px",
-                      fontSize: "12px",
-                      fontWeight: "600",
-                      marginLeft: "8px",
-                    }}>{`CVSS ${item.cvss}/10`}</span>
-                  </div>
+                      <span
+                        style={{
+                          background: `${getColor(item.severity)}20`,
+                          color: getColor(item.severity),
+                          padding: "4px 10px",
+                          borderRadius: "999px",
+                          fontSize: "11px",
+                          fontWeight: "700",
+                        }}
+                      >
+                        {item.severity}
+                      </span>
+                    </div>
 
-                  <div
-                    style={{
-                      marginTop: "4px",
-                      color: "#8B5CF6",
-                      fontSize: "11px",
-                      fontWeight: "600",
-                    }}
-                  >
-                    {item.id}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      color: "#94A3B8",
-                      fontSize: "12px",
-                    }}
-                  >
-                    <Link2 size={12} />
-                    {item.endpoint}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: "8px",
-                    }}
-                  >
-                    <span
+                    <div
                       style={{
-                        background: "rgba(96,165,250,.12)",
-                        border: "1px solid rgba(96,165,250,.25)",
-                        color: "#60A5FA",
-                        padding: "3px 8px",
-                        borderRadius: "8px",
+                        marginTop: "10px",
+                        color: "#FFFFFF",
+                        fontWeight: "600",
+                        fontSize: "15px",
+                      }}
+                    >
+                      {item.title}
+                      {/* CVSS badge */}
+                      <span style={{
+                        backgroundColor: `${getColor(item.severity)}20`,
+                        color: getColor(item.severity),
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontSize: "12px",
+                        fontWeight: "600",
+                        marginLeft: "8px",
+                      }}>{`CVSS ${item.cvss}/10`}</span>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: "4px",
+                        color: "#8B5CF6",
                         fontSize: "11px",
                         fontWeight: "600",
                       }}
                     >
-                      {item.owasp}
-                    </span>
+                      {item.endpoint}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div
-                style={{
-                  textAlign: "right",
-                }}
-              >
-                <div
-                  style={{
-                    background: "rgba(239,68,68,.12)",
-                    border: "1px solid rgba(239,68,68,.25)",
-                    color: "#FFFFFF",
-                    padding: "6px 10px",
-                    borderRadius: "10px",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                  }}
-                >
-                  CVSS {item.cvss}
-                </div>
-
-                <div
-                  style={{
-                    marginTop: "8px",
-                    color: item.status === "Fixed" ? "#22C55E" : "#F97316",
-                    fontSize: "11px",
-                    fontWeight: "700",
-                  }}
-                >
-                  {item.status}
-                </div>
-              </div>
-            </div>
-
-            {item.expanded && (
-              <>
-                <div
-                  style={{
-                    marginTop: "12px",
-                    color: "#94A3B8",
-                    fontSize: "13px",
-                    lineHeight: "1.7",
-                  }}
-                >
-                  <div>
-                    <strong>Impact:</strong> {item.impact}
+              {item.expanded && (
+                <>
+                  <div
+                    style={{
+                      marginTop: "14px",
+                      paddingTop: "14px",
+                      borderTop: "1px solid rgba(255,255,255,.06)",
+                      color: "#94A3B8",
+                      fontSize: "13px",
+                      lineHeight: "1.6",
+                    }}
+                  >
+                    <p style={{ margin: "0 0 10px 0" }}>
+                      <strong style={{ color: "#E2E8F0" }}>Impact:</strong> {item.impact}
+                    </p>
+                    <p style={{ margin: 0 }}>
+                      <strong style={{ color: "#E2E8F0" }}>Evidence:</strong> {item.evidence}
+                    </p>
                   </div>
 
-                  <div>
-                    <strong>Evidence:</strong> {item.evidence}
-                  </div>
-                </div>
+                  <div style={{ marginTop: "14px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginBottom: "6px",
+                        color: "#94A3B8",
+                        fontSize: "12px",
+                      }}
+                    >
+                      <span>Risk Score</span>
+                      <span>{item.cvss}/10</span>
+                    </div>
 
-                <div
-                  style={{
-                    marginTop: "14px",
-                  }}
-                >
+                    <div
+                      style={{
+                        height: "6px",
+                        background: "#1E293B",
+                        borderRadius: "999px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${item.cvss * 10}%`,
+                          height: "100%",
+                          background: getColor(item.severity),
+                          borderRadius: "999px",
+                        }}
+                      />
+                    </div>
+                  </div>
+
                   <div
                     style={{
                       display: "flex",
-                      justifyContent: "space-between",
-                      marginBottom: "6px",
-                      color: "#94A3B8",
-                      fontSize: "12px",
+                      gap: "18px",
+                      marginTop: "14px",
+                      fontSize: "13px",
+                      fontWeight: "600",
                     }}
                   >
-                    <span>Risk Score</span>
-                    <span>{item.cvss}/10</span>
-                  </div>
-
-                  <div
-                    style={{
-                      height: "6px",
-                      background: "#1E293B",
-                      borderRadius: "999px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${item.cvss * 10}%`,
-                        height: "100%",
-                        background: getColor(item.severity),
-                        borderRadius: "999px",
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toast.success(`Displaying CVSS vector and discovery trace details for ${item.title}`);
                       }}
-                    />
+                      style={{
+                        color: "#60A5FA",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Details →
+                    </span>
+
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toast.success(`Remediation rules and defensive configurations generated for ${item.owasp}`);
+                      }}
+                      style={{
+                        color: "#22C55E",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Remediation →
+                    </span>
+
+                    <span
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toast.success(`AI Copilot scanning potential threat vector vectors for ${item.title}`);
+                      }}
+                      style={{
+                        color: "#A855F7",
+                        cursor: "pointer",
+                      }}
+                    >
+                      AI Analysis →
+                    </span>
                   </div>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "18px",
-                    marginTop: "14px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                  }}
-                >
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toast.success(`Displaying CVSS vector and discovery trace details for ${item.title}`);
-                    }}
-                    style={{
-                      color: "#60A5FA",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Details →
-                  </span>
-
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toast.success(`Remediation rules and defensive configurations generated for ${item.owasp}`);
-                    }}
-                    style={{
-                      color: "#22C55E",
-                      cursor: "pointer",
-                    }}
-                  >
-                    Remediation →
-                  </span>
-
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toast.success(`AI Copilot scanning potential threat vector vectors for ${item.title}`);
-                    }}
-                    style={{
-                      color: "#A855F7",
-                      cursor: "pointer",
-                    }}
-                  >
-                    AI Analysis →
-                  </span>
-                </div>
-              </>
-            )}
-          </div>
-        ))}
+                </>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

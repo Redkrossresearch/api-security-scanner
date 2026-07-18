@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import Sidebar from "../components/layouts/Sidebar";
+import ParticleBackground from "../components/layouts/ParticleBackground";
 import { Outlet, useLocation } from "react-router-dom";
 import SocketProvider from "../sockets/SocketProvider";
 import useSocketEvent from "../sockets/useSocketEvent";
@@ -69,6 +70,7 @@ export default function MainLayout() {
   return (
     <SocketProvider>
       <GlobalSocketListener />
+      <ParticleBackground />
       <div
         ref={layoutRef}
         style={{

@@ -24,7 +24,11 @@ import {
   Eye,
   EyeOff,
   Users,
-  ClipboardList
+  ClipboardList,
+  Cpu,
+  Database,
+  Network,
+  Sliders
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -222,6 +226,21 @@ export default function SettingsPage() {
   const [creatingTeam, setCreatingTeam] = useState(false);
   const [invitingMember, setInvitingMember] = useState(false);
 
+  // MCP Configuration states
+  const [mcpConfigs, setMcpConfigs] = useState([]);
+  const [loadingMcp, setLoadingMcp] = useState(false);
+  const [mcpActiveTab, setMcpActiveTab] = useState("server"); // "server" | "client"
+  const [mcpName, setMcpName] = useState("");
+  const [mcpType, setMcpType] = useState("stdio"); // "stdio" | "sse"
+  const [mcpCommand, setMcpCommand] = useState("");
+  const [mcpArgs, setMcpArgs] = useState("");
+  const [mcpEnv, setMcpEnv] = useState("");
+  const [mcpSseUrl, setMcpSseUrl] = useState("");
+  const [mcpEnabled, setMcpEnabled] = useState(true);
+  const [editingMcpId, setEditingMcpId] = useState(null);
+  const [testingMcp, setTestingMcp] = useState(false);
+  const [testResults, setTestResults] = useState(null);
+
   // Demo Simulation states
   const [isDemoMode, setIsDemoMode] = useState(true);
   const [showMockAuthModal, setShowMockAuthModal] = useState(false);
@@ -246,6 +265,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setIntegrationToken(localStorage.getItem("token") || "");
+    fetchMcpConfigs();
   }, []);
 
   // Fetch branches when repository changes
@@ -679,6 +699,175 @@ export default function SettingsPage() {
         error: "Validation failed."
       }
     );
+  };
+
+  // Fetch MCP configurations from backend
+  const fetchMcpConfigs = async () => {
+    try {
+      setLoadingMcp(true);
+      const res = await api.get("/mcp/configs");
+      if (res.data?.success) {
+        setMcpConfigs(res.data.configs || []);
+      }
+    } catch (err) {
+      console.error("Failed to load MCP configurations:", err);
+    } finally {
+      setLoadingMcp(false);
+    }
+  };
+
+  // Reset MCP form inputs
+  const resetMcpForm = () => {
+    setMcpName("");
+    setMcpType("stdio");
+    setMcpCommand("");
+    setMcpArgs("");
+    setMcpEnv("");
+    setMcpSseUrl("");
+    setMcpEnabled(true);
+    setEditingMcpId(null);
+    setTestResults(null);
+  };
+
+  // Test external MCP connection
+  const handleTestMcp = async () => {
+    if (mcpType === "stdio" && !mcpCommand) {
+      toast.error("Command is required for stdio transport");
+      return;
+    }
+    if (mcpType === "sse" && !mcpSseUrl) {
+      toast.error("SSE URL is required for sse transport");
+      return;
+    }
+
+    setTestingMcp(true);
+    setTestResults(null);
+    const toastId = toast.loading("Testing connection to external MCP server...");
+
+    try {
+      let parsedEnv = {};
+      if (mcpEnv.trim()) {
+        try {
+          parsedEnv = JSON.parse(mcpEnv);
+        } catch (e) {
+          toast.error("Invalid Environment JSON format", { id: toastId });
+          setTestingMcp(false);
+          return;
+        }
+      }
+
+      const parsedArgs = mcpArgs.trim() ? mcpArgs.split(" ").filter(a => a.trim() !== "") : [];
+
+      const res = await api.post("/mcp/configs/test", {
+        type: mcpType,
+        command: mcpCommand,
+        args: parsedArgs,
+        env: parsedEnv,
+        sseUrl: mcpSseUrl
+      });
+
+      if (res.data?.success) {
+        setTestResults({
+          success: true,
+          tools: res.data.tools || []
+        });
+        toast.success("External MCP Server connected successfully!", { id: toastId });
+      }
+    } catch (err) {
+      setTestResults({
+        success: false,
+        error: err.response?.data?.message || err.message
+      });
+      toast.error(`Connection failed: ${err.response?.data?.message || err.message}`, { id: toastId });
+    } finally {
+      setTestingMcp(false);
+    }
+  };
+
+  // Save (Create/Update) MCP server config
+  const handleSaveMcp = async (e) => {
+    e.preventDefault();
+    if (!mcpName.trim()) {
+      toast.error("MCP Server Name is required");
+      return;
+    }
+    if (mcpType === "stdio" && !mcpCommand) {
+      toast.error("Command is required for stdio transport");
+      return;
+    }
+    if (mcpType === "sse" && !mcpSseUrl) {
+      toast.error("SSE URL is required for sse transport");
+      return;
+    }
+
+    const toastId = toast.loading(editingMcpId ? "Updating MCP server configuration..." : "Adding MCP server configuration...");
+    try {
+      let parsedEnv = {};
+      if (mcpEnv.trim()) {
+        try {
+          parsedEnv = JSON.parse(mcpEnv);
+        } catch (e) {
+          toast.error("Environment variables must be valid JSON", { id: toastId });
+          return;
+        }
+      }
+
+      const parsedArgs = mcpArgs.trim() ? mcpArgs.split(" ").filter(a => a.trim() !== "") : [];
+
+      const payload = {
+        name: mcpName,
+        type: mcpType,
+        command: mcpCommand,
+        args: parsedArgs,
+        env: parsedEnv,
+        sseUrl: mcpSseUrl,
+        enabled: mcpEnabled
+      };
+
+      let res;
+      if (editingMcpId) {
+        res = await api.put(`/mcp/configs/${editingMcpId}`, payload);
+      } else {
+        res = await api.post("/mcp/configs", payload);
+      }
+
+      if (res.data?.success) {
+        toast.success(editingMcpId ? "Configuration updated successfully!" : "Configuration added successfully!", { id: toastId });
+        resetMcpForm();
+        fetchMcpConfigs();
+      }
+    } catch (err) {
+      toast.error(`Failed to save configuration: ${err.response?.data?.message || err.message}`, { id: toastId });
+    }
+  };
+
+  // Delete MCP config
+  const handleDeleteMcp = async (id) => {
+    if (!window.confirm("Are you sure you want to remove this MCP server configuration?")) return;
+    const toastId = toast.loading("Removing configuration...");
+    try {
+      const res = await api.delete(`/mcp/configs/${id}`);
+      if (res.data?.success) {
+        toast.success("Configuration removed!", { id: toastId });
+        fetchMcpConfigs();
+        if (editingMcpId === id) resetMcpForm();
+      }
+    } catch (err) {
+      toast.error(`Failed to remove configuration: ${err.response?.data?.message || err.message}`, { id: toastId });
+    }
+  };
+
+  // Populate form for editing
+  const handleEditMcp = (config) => {
+    setEditingMcpId(config._id);
+    setMcpName(config.name);
+    setMcpType(config.type);
+    setMcpCommand(config.command || "");
+    setMcpArgs(config.args ? config.args.join(" ") : "");
+    setMcpEnv(config.env ? JSON.stringify(config.env, null, 2) : "");
+    setMcpSseUrl(config.sseUrl || "");
+    setMcpEnabled(config.enabled !== false);
+    setTestResults(null);
   };
 
   if (loading) {
@@ -1779,6 +1968,388 @@ GITHUB_CLIENT_SECRET=your_secret_here`}
               </div>
             )}
           </div>
+        </div>
+
+        {/* MCP Server & Agent Integrations */}
+        <div style={{
+          ...styles.card,
+          gridColumn: "span 2",
+          border: "1px solid rgba(139, 92, 246, 0.22)",
+          background: "linear-gradient(180deg, rgba(139, 92, 246, 0.02) 0%, rgba(9, 13, 22, 0.6) 100%)",
+          boxShadow: "0 15px 35px rgba(0,0,0,0.4)"
+        }}>
+          <div style={styles.cardHeader}>
+            <Cpu style={{ width: "18px", height: "18px", color: "#A78BFA" }} />
+            <h3 style={{ ...styles.cardTitle, background: "linear-gradient(90deg, #E2E8F0, #A78BFA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Model Context Protocol (MCP) Integration
+            </h3>
+          </div>
+
+          <p style={{ fontSize: "13px", color: COLORS.muted, lineHeight: "1.6", margin: 0 }}>
+            Configure inbound connections to run this security scanner as a local or remote MCP server, or add outbound client connections to external MCP servers to give your Copilot agent custom capabilities.
+          </p>
+
+          {/* Sub-tabs switch */}
+          <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.06)", gap: "16px", paddingBottom: "2px" }}>
+            <button
+              type="button"
+              onClick={() => { setMcpActiveTab("server"); resetMcpForm(); }}
+              style={{
+                background: "transparent",
+                border: "none",
+                borderBottom: mcpActiveTab === "server" ? "2px solid #8B5CF6" : "2px solid transparent",
+                color: mcpActiveTab === "server" ? "#FFF" : COLORS.muted,
+                padding: "8px 4px",
+                fontSize: "12.5px",
+                fontWeight: "700",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              📥 Local Scanner Server (Inbound)
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMcpActiveTab("client"); resetMcpForm(); }}
+              style={{
+                background: "transparent",
+                border: "none",
+                borderBottom: mcpActiveTab === "client" ? "2px solid #8B5CF6" : "2px solid transparent",
+                color: mcpActiveTab === "client" ? "#FFF" : COLORS.muted,
+                padding: "8px 4px",
+                fontSize: "12.5px",
+                fontWeight: "700",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              📤 External MCP Servers (Outbound)
+            </button>
+          </div>
+
+          {/* Tab 1: Scanner Server (Inbound) */}
+          {mcpActiveTab === "server" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ background: "rgba(56, 189, 248, 0.03)", border: "1px solid rgba(56, 189, 248, 0.12)", borderRadius: "10px", padding: "16px" }}>
+                <h4 style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#38BDF8", fontWeight: "750" }}>
+                  Connect Security Scanner to Local IDE Clients
+                </h4>
+                <p style={{ margin: 0, fontSize: "12px", color: COLORS.muted, lineHeight: "1.5" }}>
+                  Expose this application's scanner database and execution pipelines directly to external LLM clients. Paste the following configuration block into your Claude Desktop settings file (located at <code>%APPDATA%\Claude\claude_desktop_config.json</code> on Windows or <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> on macOS).
+                </p>
+              </div>
+
+              {/* Code configuration view */}
+              <div style={{ position: "relative", background: "#020617", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "8px", padding: "12px", fontFamily: "monospace", fontSize: "11.5px", color: "#38BDF8" }}>
+                <pre style={{ margin: 0, overflowX: "auto", whiteSpace: "pre-wrap" }}>
+{`{
+  "mcpServers": {
+    "api-security-scanner": {
+      "command": "node",
+      "args": [
+        "c:/Users/athar/api-security-scanner/backend/src/modules/mcp/mcp-stdio.mjs"
+      ]
+    }
+  }
+}`}
+                </pre>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify({
+                      mcpServers: {
+                        "api-security-scanner": {
+                          command: "node",
+                          args: ["c:/Users/athar/api-security-scanner/backend/src/modules/mcp/mcp-stdio.mjs"]
+                        }
+                      }
+                    }, null, 2));
+                    toast.success("Claude Desktop config copied!");
+                  }}
+                  style={{
+                    position: "absolute",
+                    top: "8px",
+                    right: "8px",
+                    background: "rgba(56,189,248,0.1)",
+                    border: "1px solid rgba(56,189,248,0.25)",
+                    color: "#38BDF8",
+                    fontSize: "10px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    padding: "4px 8px",
+                    borderRadius: "4px"
+                  }}
+                >
+                  Copy Config
+                </button>
+              </div>
+
+              <div style={{ fontSize: "11px", color: COLORS.muted }}>
+                ⚠️ <strong>Note:</strong> Ensure you run the backend using <code>npm run dev</code> or similar, as the stdio MCP server requires a running database and environment configurations.
+              </div>
+            </div>
+          )}
+
+          {/* Tab 2: External Servers (Outbound) */}
+          {mcpActiveTab === "client" && (
+            <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "24px" }}>
+              {/* Left Column: Form to Add/Edit Servers */}
+              <form onSubmit={handleSaveMcp} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <h4 style={{ margin: 0, fontSize: "13px", color: "#FFF", fontWeight: "750" }}>
+                  {editingMcpId ? "Edit MCP Server" : "Add External MCP Server"}
+                </h4>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Server Name</label>
+                  <input
+                    type="text"
+                    value={mcpName}
+                    onChange={(e) => setMcpName(e.target.value)}
+                    placeholder="e.g. Filesystem Explorer"
+                    style={{ ...styles.input, width: "100%" }}
+                  />
+                </div>
+
+                <div style={styles.fieldGroup}>
+                  <label style={styles.label}>Transport Connection Type</label>
+                  <select
+                    value={mcpType}
+                    onChange={(e) => setMcpType(e.target.value)}
+                    style={{ ...styles.select, width: "100%" }}
+                  >
+                    <option value="stdio">Local Command Executable (Stdio)</option>
+                    <option value="sse">Remote Server-Sent Events (SSE)</option>
+                  </select>
+                </div>
+
+                {mcpType === "stdio" ? (
+                  <>
+                    <div style={styles.fieldGroup}>
+                      <label style={styles.label}>CLI Command</label>
+                      <input
+                        type="text"
+                        value={mcpCommand}
+                        onChange={(e) => setMcpCommand(e.target.value)}
+                        placeholder="e.g. npx, node, python"
+                        style={{ ...styles.input, width: "100%" }}
+                      />
+                    </div>
+
+                    <div style={styles.fieldGroup}>
+                      <label style={styles.label}>Arguments (Space separated)</label>
+                      <input
+                        type="text"
+                        value={mcpArgs}
+                        onChange={(e) => setMcpArgs(e.target.value)}
+                        placeholder="e.g. @modelcontextprotocol/server-filesystem c:/Users/athar"
+                        style={{ ...styles.input, width: "100%" }}
+                      />
+                    </div>
+
+                    <div style={styles.fieldGroup}>
+                      <label style={styles.label}>Environment Variables (JSON Format)</label>
+                      <textarea
+                        value={mcpEnv}
+                        onChange={(e) => setMcpEnv(e.target.value)}
+                        placeholder='e.g. { "API_KEY": "secret_xyz" }'
+                        style={{
+                          ...styles.input,
+                          width: "100%",
+                          height: "80px",
+                          fontFamily: "monospace",
+                          resize: "none"
+                        }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.label}>SSE Server URL</label>
+                    <input
+                      type="text"
+                      value={mcpSseUrl}
+                      onChange={(e) => setMcpSseUrl(e.target.value)}
+                      placeholder="e.g. http://localhost:3001/sse"
+                      style={{ ...styles.input, width: "100%" }}
+                    />
+                  </div>
+                )}
+
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input
+                    type="checkbox"
+                    checked={mcpEnabled}
+                    onChange={(e) => setMcpEnabled(e.target.checked)}
+                    id="mcp-enabled-checkbox"
+                    style={{ cursor: "pointer" }}
+                  />
+                  <label htmlFor="mcp-enabled-checkbox" style={{ fontSize: "12px", color: "#FFF", fontWeight: "600", cursor: "pointer" }}>
+                    Enable this server config for Copilot reasoning
+                  </label>
+                </div>
+
+                <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                  <button
+                    type="submit"
+                    style={{ ...styles.saveBtn, flex: 1, padding: "8px 16px", fontSize: "12.5px" }}
+                  >
+                    {editingMcpId ? "Update Server" : "Add Server"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleTestMcp}
+                    disabled={testingMcp}
+                    style={{
+                      background: "rgba(56,189,248,0.1)",
+                      border: "1px solid rgba(56,189,248,0.2)",
+                      borderRadius: "12px",
+                      color: "#38BDF8",
+                      fontSize: "12.5px",
+                      fontWeight: "700",
+                      padding: "8px 16px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    {testingMcp ? "Testing..." : "Test Connection"}
+                  </button>
+                  {editingMcpId && (
+                    <button
+                      type="button"
+                      onClick={resetMcpForm}
+                      style={{
+                        background: "transparent",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: "12px",
+                        color: COLORS.muted,
+                        fontSize: "12.5px",
+                        fontWeight: "600",
+                        padding: "8px 16px",
+                        cursor: "pointer"
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
+
+              {/* Right Column: Connection List & Test Output */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Connection Test Output box */}
+                {testResults && (
+                  <div style={{
+                    padding: "12px 16px",
+                    borderRadius: "12px",
+                    background: testResults.success ? "rgba(16, 185, 129, 0.05)" : "rgba(239, 68, 68, 0.05)",
+                    border: testResults.success ? "1px solid rgba(16, 185, 129, 0.15)" : "1px solid rgba(239, 68, 68, 0.15)"
+                  }}>
+                    <h5 style={{ margin: "0 0 6px 0", fontSize: "12px", color: testResults.success ? "#34D399" : "#F87171", fontWeight: "750" }}>
+                      {testResults.success ? "✓ CONNECTION SUCCESSFUL" : "✗ CONNECTION FAILED"}
+                    </h5>
+                    <div style={{ fontSize: "11px", color: COLORS.muted, overflowY: "auto", maxHeight: "100px" }}>
+                      {testResults.success ? (
+                        <>
+                          <div style={{ marginBottom: "4px" }}>Discovered {testResults.tools.length} tool(s):</div>
+                          {testResults.tools.map((t, idx) => (
+                            <div key={idx} style={{ fontFamily: "monospace", color: "#34D399", paddingLeft: "8px" }}>
+                              • {t.name}
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <div style={{ color: "#F87171", fontFamily: "monospace" }}>{testResults.error}</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Active configs list */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <h4 style={{ margin: 0, fontSize: "12px", color: "#64748B", fontWeight: "800", textTransform: "uppercase" }}>
+                    Registered External Servers ({mcpConfigs.length})
+                  </h4>
+
+                  {loadingMcp ? (
+                    <div style={{ color: COLORS.muted, fontSize: "12px" }}>Loading server directory...</div>
+                  ) : mcpConfigs.length === 0 ? (
+                    <div style={{
+                      padding: "20px",
+                      background: "rgba(255,255,255,0.01)",
+                      border: "1px dashed rgba(255,255,255,0.06)",
+                      borderRadius: "12px",
+                      textAlign: "center",
+                      color: COLORS.muted,
+                      fontSize: "12px"
+                    }}>
+                      No external servers registered. Configure one using the form on the left.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {mcpConfigs.map((config) => (
+                        <div key={config._id} style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          background: "rgba(255,255,255,0.02)",
+                          border: "1px solid rgba(255,255,255,0.05)",
+                          borderRadius: "10px",
+                          padding: "10px 14px"
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div style={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              background: config.enabled ? "#10B981" : "#64748B"
+                            }} />
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                              <span style={{ fontSize: "12.5px", fontWeight: "700", color: "#FFF" }}>{config.name}</span>
+                              <span style={{ fontSize: "10px", color: COLORS.muted, fontFamily: "monospace" }}>
+                                {config.type.toUpperCase()} • {config.type === "stdio" ? config.command : config.sseUrl}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: "flex", gap: "8px" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleEditMcp(config)}
+                              style={{
+                                background: "rgba(139,92,246,0.08)",
+                                border: "1px solid rgba(139,92,246,0.18)",
+                                color: "#A78BFA",
+                                fontSize: "11px",
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                cursor: "pointer"
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMcp(config._id)}
+                              style={{
+                                background: "rgba(239,68,68,0.08)",
+                                border: "1px solid rgba(239,68,68,0.18)",
+                                color: "#F87171",
+                                fontSize: "11px",
+                                padding: "4px 8px",
+                                borderRadius: "6px",
+                                cursor: "pointer"
+                              }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Multi-Tenant Team & Workspace Configurations */}
