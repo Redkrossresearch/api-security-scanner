@@ -29,7 +29,7 @@ function DashboardKPIs({ dashboardData }) {
       <StatCard
         icon={<AlertTriangle size={20} />}
         title="Critical Issues"
-        value={dashboardData.severityDistribution?.critical || 0}
+        value={dashboardData.riskMetrics?.critical || 0}
         trend="-18%"
         trendColor="#EF4444"
         sparklinePath="M0 8 C40 10, 80 18, 120 28 C160 38, 200 40, 240 42"
