@@ -1422,6 +1422,9 @@ const executeToolCallingLoop = async (userId, conversationId, selectedModel, uni
     }
   }
 
+  throw new Error("Max tool execution iterations (6) exceeded");
+};
+
 // Helper function to execute LLM mode (parallel, consensus, debate, single)
 const executeChatMode = async (mode, messageHistory, userQuery, temperature, uniqueModels, selectedModel) => {
   let aiReplyText = "";
