@@ -9,13 +9,14 @@ class OpenRouterAdapter extends BaseAdapter {
 
   resolveModel(model) {
     const shorthandMap = {
-      openai: config.openRouterModel || "meta-llama/llama-3.1-8b-instruct:free",
-      claude: config.openRouterModel || "meta-llama/llama-3.1-8b-instruct:free",
-      deepseek: config.openRouterModel || "meta-llama/llama-3.1-8b-instruct:free",
-      llama: config.openRouterModel || "meta-llama/llama-3.1-8b-instruct:free",
-      qwen: config.openRouterModel || "meta-llama/llama-3.1-8b-instruct:free",
-      pollinations: config.openRouterModel || "meta-llama/llama-3.1-8b-instruct:free",
-      mock: config.openRouterModel || "meta-llama/llama-3.1-8b-instruct:free",
+      openai: "openai/gpt-oss-20b:free",
+      claude: "tencent/hy3:free",
+      deepseek: "poolside/laguna-xs-2.1:free",
+      gemini: "cohere/north-mini-code:free",
+      llama: "openrouter/free",
+      qwen: "poolside/laguna-xs-2.1:free",
+      pollinations: "openrouter/free",
+      mock: "openrouter/free",
     };
     const key = model?.toLowerCase();
     return shorthandMap[key] || model || config.openRouterModel || this.defaultModel;

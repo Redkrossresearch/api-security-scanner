@@ -6,8 +6,23 @@ class PollinationsAdapter extends BaseAdapter {
     super("pollinations", "openai");
   }
 
+  resolveModel(model) {
+    const shorthandMap = {
+      openai: "openai",
+      claude: "mistral",
+      deepseek: "qwen",
+      gemini: "llama",
+      llama: "llama",
+      qwen: "qwen",
+      mistral: "mistral",
+      mock: "openai",
+    };
+    const key = model?.toLowerCase();
+    return shorthandMap[key] || model || this.defaultModel;
+  }
+
   async generate(messages, options = {}) {
-    const modelName = options.model || this.defaultModel;
+    const modelName = this.resolveModel(options.model);
     const temp = Math.min(Math.max(parseFloat(options.temperature) || 0.7, 0.1), 1.5);
 
     return this.executeResilient(async () => {
@@ -47,7 +62,7 @@ class PollinationsAdapter extends BaseAdapter {
   }
 
   async stream(messages, onToken, options = {}) {
-    const modelName = options.model || this.defaultModel;
+    const modelName = this.resolveModel(options.model);
     const temp = Math.min(Math.max(parseFloat(options.temperature) || 0.7, 0.1), 1.5);
 
     return this.executeResilient(async () => {
