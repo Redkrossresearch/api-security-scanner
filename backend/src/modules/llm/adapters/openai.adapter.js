@@ -12,7 +12,20 @@ class OpenAIAdapter extends BaseAdapter {
     const apiKey = options.apiKey || process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      throw new Error("OpenAI API key is missing");
+      const llmRegistry = require("../llm.registry");
+      if (process.env.OPENROUTER_API_KEY) {
+        console.log(`[openai-adapter] Native key missing. Delegating to OpenRouter.`);
+        return llmRegistry.adapters.openrouter.generate(messages, {
+          ...options,
+          model: "openai"
+        });
+      } else {
+        console.log(`[openai-adapter] Native and OpenRouter keys missing. Delegating to Pollinations.`);
+        return llmRegistry.adapters.pollinations.generate(messages, {
+          ...options,
+          model: "openai"
+        });
+      }
     }
 
     return this.executeResilient(async () => {
@@ -64,7 +77,20 @@ class OpenAIAdapter extends BaseAdapter {
     const apiKey = options.apiKey || process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      throw new Error("OpenAI API key is missing");
+      const llmRegistry = require("../llm.registry");
+      if (process.env.OPENROUTER_API_KEY) {
+        console.log(`[openai-adapter] Native key missing. Delegating streaming to OpenRouter.`);
+        return llmRegistry.adapters.openrouter.stream(messages, onToken, {
+          ...options,
+          model: "openai"
+        });
+      } else {
+        console.log(`[openai-adapter] Native and OpenRouter keys missing. Delegating streaming to Pollinations.`);
+        return llmRegistry.adapters.pollinations.stream(messages, onToken, {
+          ...options,
+          model: "openai"
+        });
+      }
     }
 
     return this.executeResilient(async () => {

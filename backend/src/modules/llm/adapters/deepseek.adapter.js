@@ -11,7 +11,20 @@ class DeepSeekAdapter extends BaseAdapter {
     const apiKey = options.apiKey || process.env.DEEPSEEK_API_KEY;
 
     if (!apiKey) {
-      throw new Error("DeepSeek API key is missing");
+      const llmRegistry = require("../llm.registry");
+      if (process.env.OPENROUTER_API_KEY) {
+        console.log(`[deepseek-adapter] Native key missing. Delegating to OpenRouter.`);
+        return llmRegistry.adapters.openrouter.generate(messages, {
+          ...options,
+          model: "deepseek"
+        });
+      } else {
+        console.log(`[deepseek-adapter] Native and OpenRouter keys missing. Delegating to Pollinations.`);
+        return llmRegistry.adapters.pollinations.generate(messages, {
+          ...options,
+          model: "deepseek"
+        });
+      }
     }
 
     return this.executeResilient(async () => {
@@ -52,7 +65,20 @@ class DeepSeekAdapter extends BaseAdapter {
     const apiKey = options.apiKey || process.env.DEEPSEEK_API_KEY;
 
     if (!apiKey) {
-      throw new Error("DeepSeek API key is missing");
+      const llmRegistry = require("../llm.registry");
+      if (process.env.OPENROUTER_API_KEY) {
+        console.log(`[deepseek-adapter] Native key missing. Delegating streaming to OpenRouter.`);
+        return llmRegistry.adapters.openrouter.stream(messages, onToken, {
+          ...options,
+          model: "deepseek"
+        });
+      } else {
+        console.log(`[deepseek-adapter] Native and OpenRouter keys missing. Delegating streaming to Pollinations.`);
+        return llmRegistry.adapters.pollinations.stream(messages, onToken, {
+          ...options,
+          model: "deepseek"
+        });
+      }
     }
 
     return this.executeResilient(async () => {

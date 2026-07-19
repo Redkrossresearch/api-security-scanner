@@ -37,33 +37,9 @@ class LLMRegistry {
    * Check if a given provider is configured in environment config
    */
   isProviderConfigured(provider) {
-    switch (provider) {
-      case "openai":
-        return !!config.openaiApiKey;
-      case "claude":
-        return !!config.anthropicApiKey;
-      case "gemini":
-        return !!config.geminiApiKey;
-      case "openrouter":
-        return !!config.openRouterApiKey;
-      case "groq":
-        return !!config.groqApiKey;
-      case "deepseek":
-        return !!config.deepseekApiKey;
-      case "together":
-        return !!config.togetherApiKey;
-      case "mistral":
-        return !!config.mistralApiKey;
-      case "cohere":
-        return !!config.cohereApiKey;
-      case "ollama":
-      case "lmstudio":
-      case "pollinations":
-      case "mock":
-        return true; // Local, keyless, or mock systems are always structurally active
-      default:
-        return false;
-    }
+    // We always return true because all provider adapters are equipped with dynamic
+    // keyless/OpenRouter free fallbacks when their native API keys are missing.
+    return true;
   }
 
   /**
