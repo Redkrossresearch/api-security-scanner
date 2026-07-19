@@ -1642,57 +1642,114 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
           let finalReply = "";
           let finalModel = selectedModel;
 
-          // 1. Try running external MCP tool execution loop first
-          const toolLoopResult = await executeToolCallingLoop(
-            userId,
-            id,
-            selectedModel,
-            uniqueModels,
-            messageHistory,
-            temperature,
-            aiEmitter
-          );
+          let mode = req.body.mode || req.body.funnelMode || process.env.FUNNEL_MODE || "single";
+          if (userQuery && userQuery.toLowerCase().includes("/debate")) {
+            mode = "debate";
+          }
 
-          if (toolLoopResult) {
-            finalReply = toolLoopResult.content;
-            finalModel = toolLoopResult.model;
-
-            // Stream final resolved content text to the client chunk-by-chunk
-            const chunks = finalReply.match(/.{1,4}/g) || [finalReply];
-            for (const chunk of chunks) {
-              aiEmitter.emitAiStream(userId, {
-                conversationId: id,
-                text: chunk,
-              });
-              await new Promise((resolve) => setTimeout(resolve, 15));
-            }
-          } else {
-            // 2. Standard Native Stream Fallback (no tools configured/available)
-            for (const currentTryModel of uniqueModels) {
+          if (mode !== "single") {
+            if (mode === "parallel") {
               try {
-                console.log(`[copilot-stream] Querying model adapter for ${currentTryModel}`);
-                const adapter = llmRegistry.getAdapter(currentTryModel);
-                const result = await adapter.stream(
+                const result = await require("../llm/router/llm.funnel").executeFunnel(
+                  uniqueModels.slice(0, 2),
                   messageHistory,
-                  (token) => {
-                    finalReply += token;
-                    aiEmitter.emitAiStream(userId, {
-                      conversationId: id,
-                      text: token,
-                    });
-                  },
-                  {
-                    model: currentTryModel,
-                    temperature: temperature || 0.7,
-                  }
+                  { temperature: temperature || 0.7 }
                 );
-                finalModel = result.model || currentTryModel;
-                break;
-              } catch (apiErr) {
-                console.warn(
-                  `[copilot-stream] Model adapter ${currentTryModel} stream failed:`,
-                  apiErr.message,
+                finalReply = result.content;
+                finalModel = result.model;
+              } catch (err) {
+                console.warn("[copilot-stream-funnel] Parallel execution failed:", err.message);
+              }
+            } else if (mode === "consensus") {
+              try {
+                const result = await require("../llm/consensus/consensus.engine").runConsensus(
+                  messageHistory,
+                  { temperature: temperature || 0.7 }
                 );
+                finalReply = result.content;
+                finalModel = result.model;
+              } catch (err) {
+                console.warn("[copilot-stream-consensus] Consensus execution failed:", err.message);
+              }
+            } else if (mode === "debate") {
+              try {
+                const queryWithoutSlash = userQuery.replace(/\/debate\s*/i, "");
+                const result = await require("../llm/consensus/consensus.engine").runDebate(
+                  queryWithoutSlash,
+                  { temperature: temperature || 0.7 }
+                );
+                finalReply = result.content;
+                finalModel = result.model;
+              } catch (err) {
+                console.warn("[copilot-stream-debate] Debate execution failed:", err.message);
+              }
+            }
+
+            if (finalReply) {
+              const chunks = finalReply.match(/.{1,4}/g) || [finalReply];
+              for (const chunk of chunks) {
+                aiEmitter.emitAiStream(userId, {
+                  conversationId: id,
+                  text: chunk,
+                });
+                await new Promise((resolve) => setTimeout(resolve, 15));
+              }
+            }
+          }
+
+          if (!finalReply) {
+            // 1. Try running external MCP tool execution loop first
+            const toolLoopResult = await executeToolCallingLoop(
+              userId,
+              id,
+              selectedModel,
+              uniqueModels,
+              messageHistory,
+              temperature,
+              aiEmitter
+            );
+
+            if (toolLoopResult) {
+              finalReply = toolLoopResult.content;
+              finalModel = toolLoopResult.model;
+
+              // Stream final resolved content text to the client chunk-by-chunk
+              const chunks = finalReply.match(/.{1,4}/g) || [finalReply];
+              for (const chunk of chunks) {
+                aiEmitter.emitAiStream(userId, {
+                  conversationId: id,
+                  text: chunk,
+                });
+                await new Promise((resolve) => setTimeout(resolve, 15));
+              }
+            } else {
+              // 2. Standard Native Stream Fallback (no tools configured/available)
+              for (const currentTryModel of uniqueModels) {
+                try {
+                  console.log(`[copilot-stream] Querying model adapter for ${currentTryModel}`);
+                  const adapter = llmRegistry.getAdapter(currentTryModel);
+                  const result = await adapter.stream(
+                    messageHistory,
+                    (token) => {
+                      finalReply += token;
+                      aiEmitter.emitAiStream(userId, {
+                        conversationId: id,
+                        text: token,
+                      });
+                    },
+                    {
+                      model: currentTryModel,
+                      temperature: temperature || 0.7,
+                    }
+                  );
+                  finalModel = result.model || currentTryModel;
+                  break;
+                } catch (apiErr) {
+                  console.warn(
+                    `[copilot-stream] Model adapter ${currentTryModel} stream failed:`,
+                    apiErr.message,
+                  );
+                }
               }
             }
           }
