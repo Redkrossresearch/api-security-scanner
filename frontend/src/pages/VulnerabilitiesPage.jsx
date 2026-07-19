@@ -5,6 +5,7 @@ import {
   updateVulnerabilityStatus 
 } from "../services/vulnerabilityService";
 import VulnerabilityPanel from "../components/dashboard/VulnerabilityPanel";
+import FeatureGuide from "../components/common/FeatureGuide";
 import { 
   Radar, 
   RadarChart, 
@@ -58,6 +59,7 @@ const COLORS = {
 
 const styles = {
   container: {
+    position: "relative",
     padding: "24px",
     background: COLORS.background,
     minHeight: "100%",
@@ -906,6 +908,20 @@ export default function VulnerabilitiesPage() {
               <span style={styles.liveDot}></span>
               + Live
             </div>
+            <FeatureGuide
+              title="Vulnerability Intel"
+              description={`This center lists all vulnerability alerts found across your APIs. We currently have ${vulnerabilities.length} active vulnerabilities logged.`}
+              steps={[
+                "Look at the 'Threat Exposure' grid chart in the sidebar to find high-risk areas.",
+                "Type inside the search bar to filter vulnerabilities by endpoint path or name.",
+                "Click on any row to expand details, see CVSS scores, and ask the AI Copilot to generate secure patch code."
+              ]}
+              techDetails={[
+                "API Path: GET /api/vulnerabilities",
+                "Database: Fetched from the Vulnerability collections matched to your account."
+              ]}
+              positionStyles={{ position: "static" }}
+            />
           </div>
           <p style={styles.headerSubtitle}>Deep discovery. Smart prioritization. Proactive defense.</p>
         </div>

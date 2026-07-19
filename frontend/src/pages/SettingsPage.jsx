@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../services/api";
+import FeatureGuide from "../components/common/FeatureGuide";
 import { 
   getSettings, 
   updateSettings, 
@@ -1978,11 +1979,25 @@ GITHUB_CLIENT_SECRET=your_secret_here`}
           background: "linear-gradient(180deg, rgba(139, 92, 246, 0.02) 0%, rgba(9, 13, 22, 0.6) 100%)",
           boxShadow: "0 15px 35px rgba(0,0,0,0.4)"
         }}>
-          <div style={styles.cardHeader}>
+          <div style={{ ...styles.cardHeader, display: "flex", alignItems: "center", gap: "8px", position: "relative" }}>
             <Cpu style={{ width: "18px", height: "18px", color: "#A78BFA" }} />
-            <h3 style={{ ...styles.cardTitle, background: "linear-gradient(90deg, #E2E8F0, #A78BFA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+            <h3 style={{ ...styles.cardTitle, margin: 0, background: "linear-gradient(90deg, #E2E8F0, #A78BFA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
               Model Context Protocol (MCP) Integration
             </h3>
+            <FeatureGuide
+              title="MCP Integrations"
+              description={`Model Context Protocol (MCP) connects your AI Copilot to other tools. You currently have ${mcpConfigs.length} server configurations saved.`}
+              steps={[
+                "Under 'Local Scanner Server': Copy the JSON config snippet and save it in your claude_desktop_config.json file to let Claude trigger scans.",
+                "Under 'Outbound Client Connections': Enter a command (for local files) or a URL (for remote servers) to give your AI Copilot new features.",
+                "Click the 'Test Connection' button to verify tools are discovered, then save the configuration to enable it."
+              ]}
+              techDetails={[
+                "SSE Inbound URL: /api/mcp/sse?token=YOUR_JWT_TOKEN",
+                "Data storage: Configurations are stored in the McpConfig collection in your MongoDB database."
+              ]}
+              positionStyles={{ position: "static" }}
+            />
           </div>
 
           <p style={{ fontSize: "13px", color: COLORS.muted, lineHeight: "1.6", margin: 0 }}>

@@ -3,6 +3,7 @@ import { Play, Activity, CheckCircle, AlertTriangle, RefreshCw, Terminal, Eye } 
 import { scanService } from "../../../services/scanService";
 import useSocketEvent from "../../../sockets/useSocketEvent";
 import toast from "react-hot-toast";
+import FeatureGuide from "../../common/FeatureGuide";
 
 export default function ScannerPanel() {
   const [targetUrl, setTargetUrl] = useState("https://api.example.com");
@@ -212,6 +213,21 @@ export default function ScannerPanel() {
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <Activity size={14} color="#3B82F6" />
               <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.45)", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>Model Accuracy Matrix</span>
+              <FeatureGuide
+                title="Active Scanner"
+                description={`This tool runs security audits on your APIs. Target URL: "${targetUrl || "None"}". Scan Status: ${scanStatus.toUpperCase()}.`}
+                steps={[
+                  "Enter your API host address in the search box below (for example: http://localhost:5000/api).",
+                  "Click 'Initiate Audit' to start crawling pages and check for vulnerabilities.",
+                  "Read the live green logs below to follow the scan, and check the discovered issues list at the bottom."
+                ]}
+                techDetails={[
+                  "API Route: POST /api/scans",
+                  "WebSockets: Receives 'scan:log' and 'scan:progress' events dynamically.",
+                  "Accuracy Rate: Calculated by comparing finding verifications (True Positive vs. False Positive entries)."
+                ]}
+                positionStyles={{ position: "static" }}
+              />
             </div>
             <span style={{ 
               fontSize: "11px", 

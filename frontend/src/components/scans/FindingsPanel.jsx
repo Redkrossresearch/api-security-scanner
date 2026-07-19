@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Link2,
 } from "lucide-react";
+import FeatureGuide from "../common/FeatureGuide";
 
 export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelectVuln }) {
   const isCompleted = scan?.status === "completed";
@@ -91,15 +92,35 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
           marginBottom: "14px",
         }}
       >
-        <h3
-          style={{
-            margin: 0,
-            color: "#fff",
-            fontSize: "22px",
-          }}
-        >
-          Vulnerabilities Found
-        </h3>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <h3
+            style={{
+              margin: 0,
+              color: "#fff",
+              fontSize: "22px",
+            }}
+          >
+            Vulnerabilities Found
+          </h3>
+          <FeatureGuide
+            title="Vulnerabilities"
+            description={scan 
+              ? `This panel lists the security vulnerabilities found in your last scan of "${scan.targetUrl}". We found ${criticalCount} critical, ${highCount} high, and ${mediumCount + lowCount} other issues.`
+              : "No active scan selected. Select a scan from the history or run a new scan to see the results."
+            }
+            steps={[
+              "Browse the severity counters (Critical, High, Medium, Low) to get an immediate snapshot of scan results.",
+              "Click on any vulnerability row to see the target API path, details of the threat, and how to fix it.",
+              "Click the 'View all' link in the top-right corner to open the master vulnerability ledger."
+            ]}
+            techDetails={[
+              "API Path: GET /api/scans/:id",
+              "Database collection: Vulnerability records linked to the scan ID.",
+              "Updates: Discovered alerts are pushed directly to this UI in real-time using Socket.io WebSockets."
+            ]}
+            positionStyles={{ position: "static" }}
+          />
+        </div>
 
         <span
           onClick={() => toast.success("Redirecting to the comprehensive Vulnerability Database index...")}

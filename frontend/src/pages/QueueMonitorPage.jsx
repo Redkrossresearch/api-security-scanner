@@ -2,19 +2,19 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import api from "../services/api";
 import useSocketEvent from "../sockets/useSocketEvent";
 
-/* ─── Tokens ─────────────────────────────────── */
+/* ─── Tokens (dashboard theme) ───────────────── */
 const C = {
-  bg: "#060910",
-  card: "rgba(255,255,255,0.025)",
-  border: "rgba(255,255,255,0.07)",
-  text: "#E2E8F0",
-  muted: "#64748B",
-  cyan: "#38BDF8",
-  green: "#34D399",
-  red: "#F87171",
-  orange: "#FB923C",
-  purple: "#A78BFA",
-  yellow: "#FBBF24",
+  bg: "#020617",
+  card: "linear-gradient(180deg,#0F172A 0%,#020617 100%)",
+  border: "rgba(255,255,255,0.08)",
+  text: "#F8FAFC",
+  muted: "#94A3B8",
+  cyan: "#60A5FA",
+  green: "#22C55E",
+  red: "#EF4444",
+  orange: "#F97316",
+  purple: "#8B5CF6",
+  yellow: "#FACC15",
 };
 
 /* ─── Severity helpers ─────────────────────────── */
@@ -55,24 +55,25 @@ const grade2color = (g) =>
 const StatCard = ({ icon, label, value, sub, color, pulse }) => (
   <div style={{
     flex: 1, minWidth: 120,
-    background: C.card,
+    background: "linear-gradient(180deg,#0F172A 0%,#020617 100%)",
     border: `1px solid ${C.border}`,
-    borderRadius: 14,
-    padding: "18px 20px",
+    borderRadius: 18,
+    padding: "20px",
     display: "flex", flexDirection: "column", gap: 6,
     position: "relative", overflow: "hidden",
+    boxShadow: "0 8px 24px rgba(0,0,0,.35)",
   }}>
     <div style={{
       position: "absolute", top: 0, left: 0, right: 0, height: 2,
       background: `linear-gradient(90deg,transparent,${color},transparent)`,
-      opacity: 0.6,
+      opacity: 0.7,
     }} />
     <span style={{ fontSize: 20 }}>{icon}</span>
-    <span style={{ fontSize: 28, fontWeight: 800, color, lineHeight: 1 }}>
+    <span style={{ fontSize: 32, fontWeight: 900, color, lineHeight: 1, fontFamily: "Outfit,Inter,sans-serif" }}>
       {value ?? "—"}
       {pulse && <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: color, marginLeft: 6, animation: "blink 1.2s ease infinite" }} />}
     </span>
-    <span style={{ fontSize: 11, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</span>
+    <span style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px" }}>{label}</span>
     {sub && <span style={{ fontSize: 11, color: color, fontWeight: 600 }}>{sub}</span>}
   </div>
 );
@@ -101,15 +102,15 @@ const ActiveJobCard = ({ scan, progress }) => {
 
   return (
     <div style={{
-      background: "rgba(56,189,248,0.04)",
-      border: "1px solid rgba(56,189,248,0.18)",
-      borderRadius: 14,
+      background: "linear-gradient(180deg,rgba(96,165,250,.06) 0%,rgba(15,23,42,.98) 100%)",
+      border: "1px solid rgba(96,165,250,.2)",
+      borderRadius: 18,
       padding: "18px 20px",
       display: "flex", flexDirection: "column", gap: 12,
       position: "relative", overflow: "hidden",
     }}>
       {/* Glowing top bar */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,transparent,#38BDF8,transparent)" }} />
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,transparent,#60A5FA,transparent)" }} />
 
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
@@ -307,7 +308,7 @@ export default function QueueMonitorPage() {
     : 0;
 
   return (
-    <div style={{ fontFamily: "'Inter',sans-serif", color: C.text, padding: "24px 28px", maxWidth: 1280 }}>
+    <div style={{ fontFamily: "'Outfit','Inter',sans-serif", color: C.text, padding: "24px", maxWidth: 1280 }}>
       <style>{`
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
         @keyframes spin  { to{transform:rotate(360deg)} }
@@ -318,13 +319,10 @@ export default function QueueMonitorPage() {
       {/* ─── Header ─────────────────────────── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, gap: 16 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800, display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 24 }}>⏳</span>
-            <span style={{ background: "linear-gradient(90deg,#38BDF8,#A78BFA)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Task Queue Monitor
-            </span>
+          <h1 style={{ margin: 0, fontSize: 42, fontWeight: 700, color: C.text }}>
+            Queue Monitor
           </h1>
-          <p style={{ margin: "5px 0 0", fontSize: 13, color: C.muted }}>
+          <p style={{ margin: "10px 0 0", fontSize: 14, color: C.muted }}>
             Live scan pipeline — {history.length} jobs processed · {activeScans.length} currently running
           </p>
         </div>
@@ -338,10 +336,10 @@ export default function QueueMonitorPage() {
           <button
             onClick={() => setAutoRefresh((v) => !v)}
             style={{
-              background: autoRefresh ? "rgba(52,211,153,0.1)" : C.card,
-              border: `1px solid ${autoRefresh ? "rgba(52,211,153,0.3)" : C.border}`,
+              background: autoRefresh ? "rgba(34,197,94,.1)" : "#111827",
+              border: `1px solid ${autoRefresh ? "rgba(34,197,94,.3)" : "#334155"}`,
               color: autoRefresh ? C.green : C.muted,
-              fontSize: 12, fontWeight: 700, padding: "7px 14px", borderRadius: 8, cursor: "pointer",
+              fontSize: 12, fontWeight: 700, padding: "8px 14px", borderRadius: 10, cursor: "pointer",
               display: "flex", alignItems: "center", gap: 6,
             }}
           >
@@ -350,7 +348,7 @@ export default function QueueMonitorPage() {
           </button>
           <button
             onClick={fetchAll}
-            style={{ background: C.card, border: `1px solid ${C.border}`, color: C.text, fontSize: 12, fontWeight: 600, padding: "7px 14px", borderRadius: 8, cursor: "pointer" }}
+            style={{ background: "#111827", border: "1px solid #334155", color: C.text, fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 10, cursor: "pointer" }}
           >
             ↺ Refresh
           </button>
@@ -381,7 +379,7 @@ export default function QueueMonitorPage() {
             { label: "Worker", val: queueMode ? "Running" : "N/A",        ok: queueMode },
             { label: "Mode",   val: queueMode ? "Queue" : "In-Process",   ok: true      },
           ].map(({ label, val, ok }) => (
-            <div key={label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 12px", textAlign: "center" }}>
+            <div key={label} style={{ background: "linear-gradient(180deg,#0F172A,#020617)", border: `1px solid ${C.border}`, borderRadius: 10, padding: "6px 12px", textAlign: "center" }}>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", fontWeight: 600 }}>{label}</div>
               <div style={{ fontSize: 12, fontWeight: 700, color: ok ? C.green : C.red, marginTop: 2 }}>{val}</div>
             </div>
@@ -419,7 +417,7 @@ export default function QueueMonitorPage() {
       )}
 
       {/* ─── Pipeline Table ─────────────────────────── */}
-      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden" }}>
+      <div style={{ background: "linear-gradient(180deg,#0F172A,#020617)", border: `1px solid ${C.border}`, borderRadius: 20, overflow: "hidden" }}>
 
         {/* Table Toolbar */}
         <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>

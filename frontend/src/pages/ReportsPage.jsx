@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../services/api";
 import { downloadReport } from "../services/reportService";
+import FeatureGuide from "../components/common/FeatureGuide";
 import { 
   FileText, 
   Download, 
@@ -25,15 +26,17 @@ import toast from "react-hot-toast";
 
 const COLORS = {
   white: "#FFFFFF",
-  muted: "#CBD5E1",
-  purple: "#C084FC",
-  critical: "#F87171",
-  warning: "#FB923C",
-  success: "#34D399",
-  border: "rgba(139, 92, 246, 0.3)",
-  background: "linear-gradient(135deg, #070d19 0%, #02050b 100%)",
-  cardBg: "rgba(22, 30, 49, 0.95)",
-  glassBorder: "rgba(139, 92, 246, 0.25)"
+  muted: "#94A3B8",
+  dimmed: "#64748B",
+  purple: "#8B5CF6",
+  critical: "#EF4444",
+  warning: "#F97316",
+  success: "#22C55E",
+  yellow: "#FACC15",
+  border: "rgba(255,255,255,0.08)",
+  background: "transparent",
+  cardBg: "linear-gradient(180deg,#0F172A 0%,#020617 100%)",
+  glassBorder: "rgba(139,92,246,0.25)"
 };
 
 export default function ReportsPage() {
@@ -394,6 +397,7 @@ export default function ReportsPage() {
         
         {/* Glowing cyberpunk HUD Header */}
         <div className="hud-card" style={{ marginBottom: "32px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "24px" }}>
+          
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div style={{
               background: "linear-gradient(135deg, #8B5CF6 0%, #3B82F6 100%)",
@@ -407,9 +411,28 @@ export default function ReportsPage() {
               <ShieldCheck size={28} />
             </div>
             <div>
-              <h1 style={{ fontSize: "27px", fontWeight: "900", margin: 0, letterSpacing: "-0.5px", background: "linear-gradient(90deg, #FFFFFF, #E2E8F0)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-                Compliance Auditing & Reports Hub
-              </h1>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                <h1 style={{ fontSize: "42px", fontWeight: "700", margin: 0, color: "#FFFFFF" }}>
+                  Security Reports
+                </h1>
+                <FeatureGuide
+                  title="Compliance Center"
+                  description={activeScan
+                    ? `This tool measures security compliance for the target "${activeScan.targetUrl}". We found ${critCount} critical and ${highCount} high threats.`
+                    : "No active scan targets. Run an audit scan first to collect compliance grades."
+                  }
+                  steps={[
+                    "Select a target scan using the dropdown selector below this card.",
+                    "Select the standard tabs (OWASP, PCI-DSS, SOC2) to view checklist results.",
+                    "Click the export buttons on the right side to download PDF certificates or JSON specs."
+                  ]}
+                  techDetails={[
+                    "API Endpoint: GET /api/scans/:id",
+                    "Dynamic PDFs: Generated on-the-fly via backend report compiler endpoints."
+                  ]}
+                  positionStyles={{ position: "static" }}
+                />
+              </div>
               <p style={{ fontSize: "13px", color: COLORS.muted, marginTop: "4px", fontWeight: "500" }}>
                 Audit API configurations against industry standards and generate formal PDF, CSV, and JSON audit packages.
               </p>

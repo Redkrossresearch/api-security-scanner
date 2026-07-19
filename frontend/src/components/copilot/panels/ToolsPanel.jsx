@@ -3,6 +3,7 @@ import { Search, Terminal, Sliders, RefreshCw, Cpu, Activity } from "lucide-reac
 import api from "../../../services/api";
 import useSocketEvent from "../../../sockets/useSocketEvent";
 import toast from "react-hot-toast";
+import FeatureGuide from "../../common/FeatureGuide";
 
 export default function ToolsPanel() {
   const [tools, setTools] = useState([]);
@@ -88,10 +89,25 @@ export default function ToolsPanel() {
           textTransform: "uppercase",
           display: "flex",
           alignItems: "center",
-          gap: "6px"
+          gap: "6px",
+          flexWrap: "wrap"
         }}>
           <Activity size={12} style={{ color: "#10B981" }} />
           Live Tool Execution Logs
+          <FeatureGuide
+            title="Copilot Tools"
+            description={`Here you can see the active AI tools. You currently have ${tools.length} tools connected from ${Object.keys(groupedTools).length} external servers.`}
+            steps={[
+              "Look at the tools list below to see what actions the AI Copilot can perform for you.",
+              "Ask the AI Copilot to run tasks (like 'find vulnerabilities' or 'check scanner status') to activate tools.",
+              "Watch the console box below to see tool inputs and execution results in real-time."
+            ]}
+            techDetails={[
+              "API Route: GET /api/mcp/tools",
+              "WebSockets: Receives 'ai:thinking' events dynamically when tools start, succeed, or fail."
+            ]}
+            positionStyles={{ position: "static" }}
+          />
         </h4>
         <div style={{
           background: "#020617",

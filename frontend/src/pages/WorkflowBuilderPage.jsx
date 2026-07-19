@@ -3,6 +3,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import { Plus, Play, Trash2, ArrowRight, CheckCircle, Clock, Zap } from "lucide-react";
 import useSocketEvent from "../sockets/useSocketEvent";
+import FeatureGuide from "../components/common/FeatureGuide";
 
 export default function WorkflowBuilderPage() {
   const [workflows, setWorkflows] = useState([]);
@@ -172,22 +173,33 @@ export default function WorkflowBuilderPage() {
   };
 
   return (
-    <div style={{ color: "#FFF", padding: "10px" }}>
-      {/* Header Banner */}
-      <div style={{
-        background: "linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%)",
-        border: "1px solid rgba(255, 255, 255, 0.05)",
-        borderRadius: "16px",
-        padding: "24px",
-        marginBottom: "24px"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-          <Zap size={22} style={{ color: "#F97316" }} />
-          <h2 style={{ margin: 0, fontSize: "20px", fontWeight: "900" }}>Custom Automated Workflows</h2>
+    <div style={{ color: "#F8FAFC", fontFamily: "'Outfit','Inter',sans-serif" }}>
+
+      {/* ─── Header (matches dashboard style) ─── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: "42px", fontWeight: "700", color: "#FFFFFF" }}>Workflow Builder</h1>
+          <p style={{ color: "#94A3B8", marginTop: "10px", margin: "10px 0 0", fontSize: "14px" }}>
+            Design dependency-aware automation pipelines (DAGs) tying scans, CVE analysis, and alert integrations.
+          </p>
         </div>
-        <p style={{ margin: 0, color: "#94A3B8", fontSize: "13px" }}>
-          Design dependency-aware execution graphs (DAGs) tying security scans, CVE threat mappings, and Slack alert integrations.
-        </p>
+        <div style={{ display: "flex", gap: "10px", flexShrink: 0 }}>
+          <FeatureGuide
+            title="Workflows"
+            description={`This tool lets you build security automation pipelines. You currently have ${workflows.length} workflow templates saved.`}
+            steps={[
+              "Add security check steps (like scans, database alerts, or Slack messages) in the list on the right side.",
+              "Use 'Depends On' step names to decide the order in which steps should run.",
+              "Click the 'Play' button on any saved template to run the checks and watch the live agent progress logs."
+            ]}
+            techDetails={[
+              "API Route: POST /api/workflows/run",
+              "WebSockets: Emits 'agent:started' and 'agent:result' logs dynamically during runs.",
+              "DAG Sort: Pipeline sequences are sorted and executed in order automatically."
+            ]}
+            positionStyles={{ position: "static" }}
+          />
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: "24px", flexDirection: "row", flexWrap: "wrap" }}>
@@ -212,9 +224,9 @@ export default function WorkflowBuilderPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {workflows.map((wf) => (
                 <div key={wf._id} style={{
-                  background: "#090F1B",
-                  border: "1px solid rgba(255, 255, 255, 0.06)",
-                  borderRadius: "12px",
+                  background: "linear-gradient(180deg,#0F172A 0%,#020617 100%)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: "18px",
                   padding: "16px",
                   display: "flex",
                   alignItems: "center",
@@ -270,9 +282,9 @@ export default function WorkflowBuilderPage() {
           {activeRun && (
             <div style={{
               marginTop: "24px",
-              background: "rgba(139, 92, 246, 0.05)",
-              border: "1px solid rgba(139, 92, 246, 0.15)",
-              borderRadius: "14px",
+              background: "linear-gradient(180deg,rgba(139,92,246,.06) 0%,rgba(15,23,42,.98) 100%)",
+              border: "1px solid rgba(139, 92, 246, 0.2)",
+              borderRadius: "18px",
               padding: "18px"
             }}>
               <h4 style={{ margin: "0 0 12px 0", fontSize: "13px", color: "#A78BFA", letterSpacing: "0.5px", textTransform: "uppercase" }}>
@@ -340,7 +352,7 @@ export default function WorkflowBuilderPage() {
         </div>
 
         {/* Right Column: Workflow Creator Editor */}
-        <div style={{ flex: 1.5, minWidth: "320px", background: "#070D19", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "14px", padding: "20px" }}>
+        <div style={{ flex: 1.5, minWidth: "320px", background: "linear-gradient(180deg,#0F172A 0%,#020617 100%)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", padding: "20px" }}>
           <div style={{ marginBottom: "18px" }}>
             <label style={{ fontSize: "10px", fontWeight: "800", color: "#64748B", textTransform: "uppercase", letterSpacing: "0.5px" }}>Workflow Name</label>
             <input
@@ -349,9 +361,9 @@ export default function WorkflowBuilderPage() {
               onChange={(e) => setWorkflowName(e.target.value)}
               style={{
                 width: "100%",
-                background: "#020617",
+                background: "#111827",
                 border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "8px",
+                borderRadius: "10px",
                 padding: "10px 14px",
                 color: "#FFF",
                 fontSize: "13.5px",
@@ -366,9 +378,9 @@ export default function WorkflowBuilderPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
             {steps.map((step, idx) => (
               <div key={step.id} style={{
-                background: "#020617",
-                border: "1px solid rgba(255, 255, 255, 0.05)",
-                borderRadius: "10px",
+                background: "linear-gradient(180deg,#0F172A 0%,#020617 100%)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                borderRadius: "14px",
                 padding: "16px",
                 position: "relative"
               }}>
@@ -496,15 +508,15 @@ export default function WorkflowBuilderPage() {
               onClick={saveWorkflow}
               style={{
                 flex: 1.2,
-                background: "linear-gradient(135deg, #FF7A1A 0%, #F97316 100%)",
+                background: "#F97316",
                 border: "none",
-                borderRadius: "10px",
-                padding: "10px",
+                borderRadius: "12px",
+                padding: "10px 20px",
                 color: "#FFF",
-                fontSize: "12.5px",
-                fontWeight: "850",
+                fontSize: "13px",
+                fontWeight: "700",
                 cursor: "pointer",
-                boxShadow: "0 4px 15px rgba(249, 115, 22, 0.25)"
+                boxShadow: "0 4px 15px rgba(249,115,22,0.25)"
               }}
             >
               Save Pipeline Configuration

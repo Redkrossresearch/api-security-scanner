@@ -1,5 +1,6 @@
 import { TrendingUp, Play, FileText, Activity } from "lucide-react";
 import toast from "react-hot-toast";
+import FeatureGuide from "../common/FeatureGuide";
 
 export default function SecurityScoreCard({
     userName = "Security Operator",
@@ -53,21 +54,38 @@ export default function SecurityScoreCard({
                     {getGreeting().toUpperCase()}, {userName.toUpperCase()} 👋
                 </p>
 
-                <h1
-                    style={{
-                        color: "#FFFFFF",
-                        fontSize: "30px",
-                        margin: 0,
-                        fontWeight: 800,
-                        lineHeight: "1.25",
-                        letterSpacing: "-0.5px",
-                        background: "linear-gradient(90deg, #FFFFFF, #94A3B8)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent"
-                    }}
-                >
-                    Security posture remains healthy
-                </h1>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap", marginBottom: "4px" }}>
+                    <h1
+                        style={{
+                            color: "#FFFFFF",
+                            fontSize: "30px",
+                            margin: 0,
+                            fontWeight: 800,
+                            lineHeight: "1.25",
+                            letterSpacing: "-0.5px",
+                            background: "linear-gradient(90deg, #FFFFFF, #94A3B8)",
+                            WebkitBackgroundClip: "text",
+                            WebkitTextFillColor: "transparent"
+                        }}
+                    >
+                        Security posture remains healthy
+                    </h1>
+                    <FeatureGuide
+                        title="Security Score"
+                        description={`This panel shows how secure your system is. Your active security score is ${scoreVal} out of 100 (${riskLevel} Risk level).`}
+                        steps={[
+                            "Look at the speedometer circle chart on the right side of this card to check your letter grade (A to F).",
+                            "Click the 'Start Live Scan' button to inspect your API endpoints for potential safety threats.",
+                            "Click the 'Export Audit Report' button to save these security checks as a document."
+                        ]}
+                        techDetails={[
+                            "API Path: GET /api/dashboard/stats",
+                            "How it is calculated: Each active vulnerability reduces your score. Critical issues deduct the most points.",
+                            "Color ranges: The gauge turns green for safe scores, yellow for warning levels, and red for critical risks."
+                        ]}
+                        positionStyles={{ position: "static" }}
+                    />
+                </div>
 
                 <p
                     style={{
