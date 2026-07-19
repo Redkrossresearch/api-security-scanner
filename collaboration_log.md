@@ -21,3 +21,15 @@ This document tracks the day-by-day development updates performed on the `atharv
   * Refactored both streaming and non-streaming handler chains to route through `executeChatMode`.
 * **Syntax & Integration Fixes**:
   * Fixed function boundary bracket issues for `executeToolCallingLoop` that were causing Node parse crashes.
+
+#### 🌿 Global & Shared Branch Updates
+* **Workspace Cleanups & Hardening**:
+  * Cleaned the repository root of `.gitignore` and Microsoft Word roadmap documents.
+  * Safely preserved roadmap documents locally in the user's home folder (`C:\Users\athar\`) to protect them from git tracking while keeping them accessible.
+  * Audited and verified `vercel.json` as a vital root configuration file required for Vercel monorepo frontend deployments.
+* **Cost-Free Multi-Model Routing Fallbacks**:
+  * Updated `llm.registry.js` to dynamically allow adapter resolution for all providers.
+  * Integrated fallback handlers within `openai.adapter.js`, `claude.adapter.js`, `gemini.adapter.js`, and `deepseek.adapter.js`. If native API keys are missing, the adapters automatically delegate execution to OpenRouter (using active 2026 free models: Tencent Hy3, Poolside Laguna, Cohere North Mini Code, and OpenAI GPT-OSS) or Pollinations keyless endpoints.
+  * Verified that Consensus, Debate, and Parallel modes run completely free without requiring paid API keys.
+* **Frontend Mode Integration**:
+  * Confirmed that the Copilot chat prompt strategy selector (`PromptInput.jsx` and `ChatWindow.jsx`) is fully operational and sends `funnelMode` payloads to trigger the backend streaming engine successfully.
