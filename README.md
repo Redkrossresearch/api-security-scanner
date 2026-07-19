@@ -110,6 +110,15 @@ sequenceDiagram
     J->>O: Final markdown consensus verdict (High)
 ```
 
+### 3. Mode-Aware Copilot Routing (Sprints 1 & 2)
+The platform features an advanced copilot routing layer that supports multiple AI thinking profiles:
+* **Single Mode**: Standard direct streaming chat with the selected provider (OpenAI, Claude, Gemini, etc.).
+* **Parallel Mode**: Queries two top adapters concurrently and routes responses parallelly.
+* **Consensus Mode**: Prompts Claude, OpenAI, and Gemini in parallel, then routes to an OpenRouter LLM Judge to consolidate.
+* **Debate Mode**: Runs a 2-round debate between Claude (pentester) and Deepseek (auditor), resolved by an OpenRouter Judge (triggerable via `/debate` slash command in chat).
+
+Both streaming and non-streaming pathways resolve queries through a unified `executeChatMode()` helper to maintain zero code drift (DRY architecture).
+
 ---
 
 ## 🔌 Model Context Protocol (MCP) Integration
