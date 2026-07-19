@@ -1422,7 +1422,73 @@ const executeToolCallingLoop = async (userId, conversationId, selectedModel, uni
     }
   }
 
-  throw new Error("Max tool execution iterations (6) exceeded");
+// Helper function to execute LLM mode (parallel, consensus, debate, single)
+const executeChatMode = async (mode, messageHistory, userQuery, temperature, uniqueModels, selectedModel) => {
+  let aiReplyText = "";
+  let usedModel = selectedModel;
+
+  if (mode === "parallel") {
+    try {
+      const result = await require("../llm/router/llm.funnel").executeFunnel(
+        uniqueModels.slice(0, 2),
+        messageHistory,
+        { temperature: temperature || 0.7 }
+      );
+      aiReplyText = result.content;
+      usedModel = result.model;
+    } catch (err) {
+      console.warn("[copilot-funnel] Parallel execution failed, falling back to sequential:", err.message);
+    }
+  } else if (mode === "consensus") {
+    try {
+      const result = await require("../llm/consensus/consensus.engine").runConsensus(
+        messageHistory,
+        { temperature: temperature || 0.7 }
+      );
+      aiReplyText = result.content;
+      usedModel = result.model;
+    } catch (err) {
+      console.warn("[copilot-consensus] Consensus evaluation failed, falling back to sequential:", err.message);
+    }
+  } else if (mode === "debate" || (userQuery && userQuery.toLowerCase().includes("/debate"))) {
+    try {
+      const queryWithoutSlash = userQuery.replace(/\/debate\s*/i, "");
+      const result = await require("../llm/consensus/consensus.engine").runDebate(
+        queryWithoutSlash,
+        { temperature: temperature || 0.7 }
+      );
+      aiReplyText = result.content;
+      usedModel = result.model;
+    } catch (err) {
+      console.warn("[copilot-debate] AI Debate failed, falling back to sequential:", err.message);
+    }
+  }
+
+  // Fallback to sequential generation if not resolved
+  if (!aiReplyText) {
+    let attempts = 0;
+    for (const currentTryModel of uniqueModels) {
+      attempts++;
+      try {
+        console.log(`[copilot] Attempt ${attempts}: trying model adapter ${currentTryModel}`);
+        const adapter = llmRegistry.getAdapter(currentTryModel);
+        const result = await adapter.generate(
+          messageHistory,
+          {
+            model: currentTryModel,
+            temperature: temperature || 0.7,
+          }
+        );
+        aiReplyText = result.content;
+        usedModel = result.model || currentTryModel;
+        break;
+      } catch (apiErr) {
+        console.warn(`[copilot] Model adapter ${currentTryModel} failed:`, apiErr.message?.slice(0, 100));
+      }
+    }
+  }
+
+  return { content: aiReplyText, model: usedModel };
 };
 
 // POST /api/copilot/conversations/:id/messages — Main AI Brain
@@ -1648,42 +1714,9 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
           }
 
           if (mode !== "single") {
-            if (mode === "parallel") {
-              try {
-                const result = await require("../llm/router/llm.funnel").executeFunnel(
-                  uniqueModels.slice(0, 2),
-                  messageHistory,
-                  { temperature: temperature || 0.7 }
-                );
-                finalReply = result.content;
-                finalModel = result.model;
-              } catch (err) {
-                console.warn("[copilot-stream-funnel] Parallel execution failed:", err.message);
-              }
-            } else if (mode === "consensus") {
-              try {
-                const result = await require("../llm/consensus/consensus.engine").runConsensus(
-                  messageHistory,
-                  { temperature: temperature || 0.7 }
-                );
-                finalReply = result.content;
-                finalModel = result.model;
-              } catch (err) {
-                console.warn("[copilot-stream-consensus] Consensus execution failed:", err.message);
-              }
-            } else if (mode === "debate") {
-              try {
-                const queryWithoutSlash = userQuery.replace(/\/debate\s*/i, "");
-                const result = await require("../llm/consensus/consensus.engine").runDebate(
-                  queryWithoutSlash,
-                  { temperature: temperature || 0.7 }
-                );
-                finalReply = result.content;
-                finalModel = result.model;
-              } catch (err) {
-                console.warn("[copilot-stream-debate] Debate execution failed:", err.message);
-              }
-            }
+            const result = await executeChatMode(mode, messageHistory, userQuery, temperature, uniqueModels, selectedModel);
+            finalReply = result.content;
+            finalModel = result.model;
 
             if (finalReply) {
               const chunks = finalReply.match(/.{1,4}/g) || [finalReply];
@@ -1827,77 +1860,15 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
       console.warn("[copilot] Non-streaming tool loop execution failed:", err.message);
     }
 
-    let attempts = 0;
-    const funnelMode = req.body.funnelMode || process.env.FUNNEL_MODE || "single"; // parallel | consensus | debate | single
-
-    if (!aiReplyText && funnelMode === "parallel") {
-      try {
-        const result = await require("../llm/router/llm.funnel").executeFunnel(
-          uniqueModels.slice(0, 2),
-          messageHistory,
-          { temperature: temperature || 0.7 }
-        );
-        aiReplyText = result.content;
-        usedModel = result.model;
-      } catch (err) {
-        console.warn("[copilot-funnel] Parallel execution failed, falling back to sequential:", err.message);
-      }
-    } else if (!aiReplyText && funnelMode === "consensus") {
-      try {
-        const result = await require("../llm/consensus/consensus.engine").runConsensus(
-          messageHistory,
-          { temperature: temperature || 0.7 }
-        );
-        aiReplyText = result.content;
-        usedModel = result.model;
-      } catch (err) {
-        console.warn("[copilot-consensus] Consensus evaluation failed, falling back to sequential:", err.message);
-      }
-    } else if (!aiReplyText && (funnelMode === "debate" || (userQuery && userQuery.toLowerCase().includes("/debate")))) {
-      try {
-        const result = await require("../llm/consensus/consensus.engine").runDebate(
-          userQuery,
-          { temperature: temperature || 0.7 }
-        );
-        aiReplyText = result.content;
-        usedModel = result.model;
-      } catch (err) {
-        console.warn("[copilot-debate] AI Debate failed, falling back to sequential:", err.message);
-      }
+    let mode = req.body.mode || req.body.funnelMode || process.env.FUNNEL_MODE || "single";
+    if (userQuery && userQuery.toLowerCase().includes("/debate")) {
+      mode = "debate";
     }
 
     if (!aiReplyText) {
-      for (const currentTryModel of uniqueModels) {
-        attempts++;
-        try {
-          console.log(
-            `[copilot] Attempt ${attempts}: trying model adapter ${currentTryModel}`,
-          );
-          const adapter = llmRegistry.getAdapter(currentTryModel);
-          const result = await adapter.generate(
-            messageHistory,
-            {
-              model: currentTryModel,
-              temperature: temperature || 0.7,
-            }
-          );
-          aiReplyText = result.content;
-          usedModel = result.model || currentTryModel;
-          error = null;
-          if (currentTryModel !== selectedModel) {
-            console.log(
-              `[copilot] Note: Responded via fallback adapter ${currentTryModel} (selected: ${selectedModel})`,
-            );
-          }
-          break;
-        } catch (apiErr) {
-          error = apiErr.message;
-          console.warn(
-            `[copilot] Model adapter ${currentTryModel} failed:`,
-            error?.slice(0, 100),
-          );
-        }
-      }
+      const result = await executeChatMode(mode, messageHistory, userQuery, temperature, uniqueModels, selectedModel);
+      aiReplyText = result.content;
+      usedModel = result.model;
     }
 
     // 9. Use local intelligent fallback if AI failed
