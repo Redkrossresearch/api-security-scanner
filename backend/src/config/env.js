@@ -33,6 +33,27 @@ if (!parsed.success) {
 
 const validated = parsed.data;
 
+/**
+ * Anti-leak security helper: Sanitizes objects by masking sensitive keys
+ */
+const sanitizeSecrets = (data) => {
+  if (!data || typeof data !== "object") return data;
+  const sensitiveKeys = ["key", "secret", "token", "auth", "password", "apiKey", "jwt"];
+  const sanitized = Array.isArray(data) ? [] : {};
+  
+  for (const [k, v] of Object.entries(data)) {
+    const isSensitive = sensitiveKeys.some((sk) => k.toLowerCase().includes(sk.toLowerCase()));
+    if (isSensitive && typeof v === "string" && v.length > 4) {
+      sanitized[k] = `${v.slice(0, 3)}...***...${v.slice(-3)}`;
+    } else if (typeof v === "object" && v !== null) {
+      sanitized[k] = sanitizeSecrets(v);
+    } else {
+      sanitized[k] = v;
+    }
+  }
+  return sanitized;
+};
+
 module.exports = {
   nodeEnv: validated.NODE_ENV,
   port: validated.PORT,
@@ -51,4 +72,5 @@ module.exports = {
   mistralApiKey: validated.MISTRAL_API_KEY,
   cohereApiKey: validated.COHERE_API_KEY,
   ollamaHostUrl: validated.OLLAMA_HOST_URL,
+  sanitizeSecrets,
 };

@@ -4,13 +4,16 @@ class Logger {
   }
 
   log(level, message, meta = {}) {
+    const config = require("../config/env");
+    const sanitizedMeta = config.sanitizeSecrets ? config.sanitizeSecrets(meta) : meta;
+
     const logObj = {
       timestamp: new Date().toISOString(),
       level: level.toUpperCase(),
       module: this.moduleName,
       message,
-      correlationId: meta.correlationId || undefined,
-      ...meta,
+      correlationId: sanitizedMeta.correlationId || sanitizedMeta.requestId || undefined,
+      ...sanitizedMeta,
     };
 
     if (process.env.NODE_ENV === "production") {
@@ -19,7 +22,7 @@ class Logger {
       const corrStr = logObj.correlationId ? ` [${logObj.correlationId}]` : "";
       console.log(
         `[${logObj.timestamp}] [${logObj.level}] [${logObj.module}]${corrStr} ${message}`,
-        Object.keys(meta).length > 0 ? (meta.correlationId ? { ...meta, correlationId: undefined } : meta) : ""
+        Object.keys(sanitizedMeta).length > 0 ? (sanitizedMeta.correlationId ? { ...sanitizedMeta, correlationId: undefined } : sanitizedMeta) : ""
       );
     }
   }

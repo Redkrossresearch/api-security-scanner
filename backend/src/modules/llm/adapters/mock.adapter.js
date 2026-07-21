@@ -1,4 +1,4 @@
-const BaseAdapter = require("../base.adapter");
+const BaseAdapter = require("./base.adapter");
 const PollinationsAdapter = require("./pollinations.adapter");
 
 class MockAdapter extends BaseAdapter {
