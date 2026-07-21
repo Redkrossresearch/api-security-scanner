@@ -2,9 +2,11 @@ const crypto = require("crypto");
 const logger = require("../utils/logger")("http");
 
 const requestLogger = (req, res, next) => {
-  const correlationId = req.headers["x-correlation-id"] || crypto.randomUUID();
+  const correlationId = req.headers["x-request-id"] || req.headers["x-correlation-id"] || crypto.randomUUID();
   req.correlationId = correlationId;
+  req.requestId = correlationId;
   res.setHeader("X-Correlation-ID", correlationId);
+  res.setHeader("X-Request-ID", correlationId);
 
   const start = Date.now();
   const { method, url, ip } = req;
