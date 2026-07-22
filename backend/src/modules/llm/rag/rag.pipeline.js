@@ -86,6 +86,82 @@ Responses: ${JSON.stringify(detail.responses || {})}`;
   }
 
   /**
+   * Ingest PDF document (Sprint 25)
+   */
+  async ingestPdf(pdfBuffer, docName = "document.pdf", metadata = {}) {
+    try {
+      const pdfParse = require("pdf-parse");
+      const pdfData = await pdfParse(pdfBuffer);
+      const text = pdfData.text || "";
+      console.log(`[rag-pipeline] Extracted ${text.length} chars from PDF: ${docName}`);
+
+      await this.ingestDocument(`pdf-${Date.now()}-${docName}`, text, {
+        sourceType: "pdf_document",
+        docName,
+        pages: pdfData.numpages || 1,
+        ...metadata,
+      });
+      return { success: true, pages: pdfData.numpages, charCount: text.length };
+    } catch (err) {
+      console.error(`[rag-pipeline] PDF ingestion error for ${docName}:`, err.message);
+      // Fallback: treat buffer as text if plain text disguised as pdf
+      const textFallback = pdfBuffer.toString("utf-8");
+      await this.ingestDocument(`pdf-fallback-${Date.now()}`, textFallback, { sourceType: "pdf_fallback", docName });
+      return { success: true, charCount: textFallback.length };
+    }
+  }
+
+  /**
+   * Ingest ZIP project repository (Sprint 25)
+   */
+  async ingestZip(zipBuffer, zipName = "project.zip", metadata = {}) {
+    try {
+      const AdmZip = require("adm-zip");
+      const zip = new AdmZip(zipBuffer);
+      const zipEntries = zip.getEntries();
+      let fileCount = 0;
+
+      const allowedExtensions = [".js", ".jsx", ".ts", ".tsx", ".py", ".json", ".yaml", ".yml", ".sql", ".md", ".env.example", ".html", ".css"];
+
+      for (const entry of zipEntries) {
+        if (entry.isDirectory) continue;
+        const ext = path.extname(entry.entryName).toLowerCase();
+        if (allowedExtensions.includes(ext) || entry.entryName.includes("Dockerfile")) {
+          const content = entry.getData().toString("utf-8");
+          if (content.trim().length > 0) {
+            await this.ingestDocument(`zip-${zipName}-${entry.entryName}`, `File: ${entry.entryName}\n\n${content}`, {
+              sourceType: "zip_project_file",
+              filePath: entry.entryName,
+              zipName,
+              ...metadata,
+            });
+            fileCount++;
+          }
+        }
+      }
+      console.log(`[rag-pipeline] Ingested ${fileCount} files from ZIP project: ${zipName}`);
+      return { success: true, fileCount };
+    } catch (err) {
+      console.error(`[rag-pipeline] ZIP ingestion error for ${zipName}:`, err.message);
+      throw err;
+    }
+  }
+
+  /**
+   * Ingest custom Knowledge Base text (Sprint 30)
+   */
+  async ingestKnowledgeBase(title, content, metadata = {}) {
+    const kbId = `kb-${Date.now()}-${title.replace(/[^a-zA-Z0-9]/g, "_")}`;
+    await this.ingestDocument(kbId, `Title: ${title}\n\n${content}`, {
+      sourceType: "knowledge_base",
+      title,
+      ...metadata,
+    });
+    console.log(`[rag-pipeline] Ingested Knowledge Base entry: "${title}"`);
+    return { success: true, kbId };
+  }
+
+  /**
    * Ingest chat conversation history (Sprint 36)
    */
   async ingestChatHistory(conversationId) {

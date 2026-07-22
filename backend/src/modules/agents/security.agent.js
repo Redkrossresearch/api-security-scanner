@@ -1,11 +1,17 @@
+/**
+ * security.agent.js (Sprint 32 — Security Expert Agent)
+ * Specialized agent wrapping scanner modules for endpoint analysis & vulnerability findings.
+ */
 const BaseAgent = require("./base.agent");
 
 class SecurityAgent extends BaseAgent {
   constructor() {
     super(
-      "SecurityPentester",
-      "You are a Security Pentester Agent. Your role is to analyze a target security scan finding, explain how the vulnerability could be exploited, and provide a realistic demonstration payload (such as SQL Injection, XSS, or IDOR parameters). Focus entirely on technical pentesting details.",
-      "claude" // Sprint 30 target provider
+      "SecurityAgent",
+      "Senior Application Security Specialist",
+      `Analyze API endpoints, scan results, and OpenAPI declarations to identify security flaws (OWASP Top 10, SQLi, XSS, CORS, Broken Auth, Rate Limit vulnerabilities). Provide structured finding summaries with severity ratings.`,
+      ["sql-injection-scanner", "xss-scanner", "cors-scanner", "rate-limit-scanner"],
+      "claude"
     );
   }
 }
