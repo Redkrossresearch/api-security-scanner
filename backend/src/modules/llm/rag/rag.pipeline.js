@@ -243,6 +243,52 @@ ${doc.text}`)
 ${contextBlock}
 ================================================================================\n`;
   }
+
+  /**
+   * Ingest Completed Scan Findings (Sprint 46)
+   */
+  async ingestScanFindings(scanId, findings = []) {
+
+    for (let i = 0; i < findings.length; i++) {
+      const f = findings[i];
+      const text = `Vulnerability Finding: ${f.title || f.name}
+Severity: ${f.severity || "UNKNOWN"}
+Description: ${f.description || ""}
+Endpoint: ${f.endpoint || f.url || "N/A"}
+Remediation: ${f.remediation || "N/A"}`;
+      await vectorDb.addDocument(`scan-${scanId}-finding-${i}`, text, {
+        sourceType: "scan_finding",
+        scanId,
+        severity: f.severity,
+        cve: f.cve
+      });
+    }
+  }
+
+  /**
+   * Ingest OpenAPI / Swagger Specifications (Sprint 48)
+   */
+  async ingestOpenApiSpec(specId, openapiJson = {}) {
+    const paths = openapiJson.paths || {};
+    let count = 0;
+    for (const [pathUrl, methods] of Object.entries(paths)) {
+      for (const [method, details] of Object.entries(methods)) {
+        count++;
+        const text = `OpenAPI Endpoint: ${method.toUpperCase()} ${pathUrl}
+Summary: ${details.summary || details.description || "N/A"}
+Auth Required: ${details.security ? "YES" : "NO"}
+Parameters: ${JSON.stringify(details.parameters || [])}`;
+        await vectorDb.addDocument(`openapi-${specId}-${count}`, text, {
+          sourceType: "openapi_endpoint",
+          specId,
+          pathUrl,
+          method: method.toUpperCase(),
+          authRequired: !!details.security
+        });
+      }
+    }
+  }
 }
 
 module.exports = new RAGPipelineManager();
+

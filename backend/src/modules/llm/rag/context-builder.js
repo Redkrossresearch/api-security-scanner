@@ -18,9 +18,23 @@ class ContextBuilder {
 
     try {
       const docs = await vectorDb.query(query, limit * 2);
-      if (!docs || docs.length === 0) {
+      
+      // Sprint 50 Memory Retrieval Integration
+      let memoryContext = "";
+      if (options.userId) {
+        try {
+          const CopilotMemory = require("../../copilot/memory.model");
+          const memories = await CopilotMemory.find({ userId: options.userId }).limit(5);
+          if (memories && memories.length > 0) {
+            memoryContext = "\n\n[USER STORED MEMORIES]\n" + memories.map((m) => `- ${m.key}: ${m.value}`).join("\n");
+          }
+        } catch { /* Memory fallback */ }
+      }
+
+      if ((!docs || docs.length === 0) && !memoryContext) {
         return { contextText: "", sources: [], citations: [] };
       }
+
 
       let currentLength = 0;
       const selectedDocs = [];

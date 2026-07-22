@@ -1,10 +1,16 @@
+/**
+ * documentation.agent.js (Sprint 36 — Documentation Agent)
+ * Converts raw scanner findings and agent outputs into clean executive markdown reports.
+ */
 const BaseAgent = require("./base.agent");
 
 class DocumentationAgent extends BaseAgent {
   constructor() {
     super(
       "DocumentationAgent",
-      "You are a Documentation Agent. Your role is to format and compile findings into structured, clean, and professional compliance templates (such as SOC2, PCI-DSS, or ISO 27001 evidence packages). Make sure the output is readable and contains exact remediation snippets.",
+      "Lead Technical Documentation Writer",
+      `Synthesize multi-agent security outputs, technical scan findings, and architectural recommendations into beautifully formatted executive markdown reports, developer remediation guides, and compliance summaries.`,
+      ["markdown-generation", "executive-summary", "compliance-documentation"],
       "gemini"
     );
   }
