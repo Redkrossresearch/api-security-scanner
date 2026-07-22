@@ -22,6 +22,57 @@ This is the **official commit-by-commit** development registry. Every entry maps
 
 > Format: `[COMMIT HASH]` → Author → Date → Files Changed → Sprints
 
+### `e1b7b1c` — 22 Jul 2026 — Merge
+**Merge branch 'atharv-dev' into muskan-dev**
+- 🔀 **Integration Merge:** Synchronized Atharv's backend RAG & agent framework with Muskan's frontend command & live preview renderers.
+- 📌 **Sprints:** Sprints 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35 consolidated into unified release candidate.
+
+---
+
+### `2f92464` — 22 Jul 2026 — Muskan ⭐ FRONTEND SPRINTS 29 & 33 COMMIT
+**feat(muskan): Sprint 29, 33 — CommandBlock (CMD/PS/Bash) & HtmlPreviewBlock (sandboxed iframe preview)**
+
+| Component | File | Feature Delivered | Lines Added |
+| :--- | :--- | :--- | :--- |
+| `CommandBlock` | `frontend/src/components/copilot/BlockRenderer.jsx` | CMD / PowerShell / Bash terminal styling, prompt indicators (`$`, `PS>`), language badges & copy | +55 |
+| `HtmlPreviewBlock` | `frontend/src/components/copilot/BlockRenderer.jsx` | Sandboxed `iframe` preview (`sandbox="allow-scripts"`) for interactive live previewing of HTML/CSS/JS with toggle tabs | +53 |
+
+- **1 file changed, 108 insertions(+)**
+- 📌 **Sprints Completed:**
+  - **Sprint 29** → Terminal command block renderer (`cmd`, `powershell`, `bash`, `sh`, `zsh`) with dark prompt themes
+  - **Sprint 33** → Interactive HTML/CSS/JS live preview with sandboxed iframe & tabbed Code / Live Preview toggle
+
+---
+
+### `c073e9e` — 22 Jul 2026 — Atharv ⭐ BACKEND SPRINTS 25, 27, 28, 30, 31, 32, 34, 35 COMMIT
+**feat(backend): implement Sprint 25, 27, 28, 30, 31, 32, 34, 35 — RAG Ingestion Pipeline, 4th LLM Judge, Agent Framework & RAG-LLM Context Builder**
+
+| Component | File | Feature Delivered | Lines Added |
+| :--- | :--- | :--- | :--- |
+| `RAGPipelineManager` | `backend/src/modules/llm/rag/rag.pipeline.js` | `ingestPdf()` (`pdf-parse`), `ingestZip()` (`adm-zip`), `ingestKnowledgeBase()` | +76 |
+| `ContextBuilder` | `backend/src/modules/llm/rag/context-builder.js` | Token-budget aware context truncation & inline citations `[1]`, `[2]` | +89 |
+| `RAGRoutes` | `backend/src/modules/llm/rag/rag.routes.js` | REST Endpoints `/api/rag/upload-doc`, `/api/rag/ingest-kb`, `/api/rag/query` | +87 |
+| `BaseAgent` | `backend/src/modules/agents/base.agent.js` | Class contract with tool execution, error handling & JSON output contract | +76 |
+| `PlannerAgent` | `backend/src/modules/agents/planner.agent.js` | Goal decomposition agent generating ordered DAG sub-task steps | +48 |
+| `SecurityAgent` | `backend/src/modules/agents/security.agent.js` | Wraps scanner modules (`sql-injection`, `xss`, `cors`, `rate-limit`) | +12 |
+| `PentestingAgent` | `backend/src/modules/agents/pentesting.agent.js` | Payload crafting & exploit vector validation | +19 |
+| `ResearchAgent` | `backend/src/modules/agents/research.agent.js` | Threat intelligence research agent combining RAG lookups with web search | +32 |
+| `CVEAnalystAgent` | `backend/src/modules/agents/cve.agent.js` | CVE lookup & CVSS 3.1 vector calculations | +16 |
+| `AgentRegistry` | `backend/src/modules/agents/index.js` | Unified agent roster exporter | +18 |
+| `LLMConsensusEngine` | `backend/src/modules/llm/consensus/consensus.engine.js` | 4th LLM Judge strategy evaluating tie-breakers & debate verdicts | +35 |
+| `AppServer` | `backend/src/app.js` | Express app route mounting for `/api/rag` | +2 |
+
+- **11 files changed, 438 insertions(+), 37 deletions(-)**
+- 📌 **Sprints Completed:**
+  - **Sprint 25** → PDF & ZIP project repository RAG ingestion pipeline
+  - **Sprint 27** → 4th LLM Judge model for resolving consensus tie-breakers and issuing debate verdicts
+  - **Sprint 28** → `BaseAgent` framework core with standardized JSON messaging schema
+  - **Sprint 30** → Auto-embedding chat history & custom Knowledge Base upload REST endpoint
+  - **Sprint 31** → `PlannerAgent` for goal decomposition into ordered sub-task DAGs
+  - **Sprint 32** → `SecurityAgent` & `PentestingAgent` for scanner execution & payload crafting
+  - **Sprint 34** → `ResearchAgent` & `CVEAnalystAgent` for RAG/web search lookups & CVSS calculations
+  - **Sprint 35** → `context-builder.js` for token-budget-aware RAG prompt injection & inline markdown citations
+
 ---
 
 ### `bdda74f` — 21 Jul 2026 — Atharv
