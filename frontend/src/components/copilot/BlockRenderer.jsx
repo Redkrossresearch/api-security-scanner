@@ -29,6 +29,34 @@ function CopyButton({ text, small = false }) {
   );
 }
 
+// ─── Download Button (Sprint 43) ──────────────────────────────────────────────
+function DownloadButton({ content, filename = "snippet.txt", small = false }) {
+  const download = () => {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <button onClick={download} title="Download File" style={{
+      background: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(255,255,255,0.1)",
+      color: "#38BDF8", borderRadius: "6px",
+      padding: small ? "2px 6px" : "4px 10px", cursor: "pointer",
+      fontSize: "11px", fontWeight: "700", display: "flex", alignItems: "center", gap: "4px",
+      transition: "all 0.2s ease",
+    }}>
+      Download
+    </button>
+  );
+}
+
 // ─── Code Block ──────────────────────────────────────────────────────────────
 function CodeBlock({ content, language = "text", meta = {} }) {
   const langColors = {
@@ -376,11 +404,41 @@ function HtmlPreviewBlock({ content, meta = {} }) {
 }
 
 // ─── Main BlockRenderer ───────────────────────────────────────────────────────
+// ─── SQL Preview & Syntax Validation Block (Sprint 38) ────────────────────────
+function SqlBlock({ content, meta = {} }) {
+  const isBasicValid = !/(\bSELECT\b.*\bSELECT\b|;\s*[^;\s]+)/i.test(content) || /SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER/i.test(content);
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #0B132B 0%, #1C2541 100%)",
+      border: `1px solid ${isBasicValid ? "rgba(56,189,248,0.3)" : "rgba(239,68,68,0.4)"}`,
+      borderRadius: "12px", overflow: "hidden", margin: "6px 0"
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", background: "rgba(255,255,255,0.04)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "11px", fontWeight: "800", color: "#38BDF8", textTransform: "uppercase" }}>SQL QUERY</span>
+          <span style={{ fontSize: "10px", padding: "2px 6px", borderRadius: "4px", background: isBasicValid ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)", color: isBasicValid ? "#4ADE80" : "#F87171" }}>
+            {isBasicValid ? "Syntax OK" : "Syntax Flagged"}
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <CopyButton text={content} small />
+          <DownloadButton content={content} filename="query.sql" small />
+        </div>
+      </div>
+      <pre style={{ margin: 0, padding: "12px 16px", color: "#F1F5F9", fontSize: "13px", fontFamily: "'Fira Code', monospace", overflowX: "auto" }}>
+        <code>{content}</code>
+      </pre>
+    </div>
+  );
+}
+
 export default function BlockRenderer({ block }) {
   if (!block) return null;
   const { type = "markdown", content = "", meta = {} } = block;
 
   switch (type) {
+    case "sql":
+      return <SqlBlock content={content} meta={meta} />;
     case "command":
     case "cmd":
     case "bash":
@@ -417,4 +475,5 @@ export default function BlockRenderer({ block }) {
       );
   }
 }
+
 
