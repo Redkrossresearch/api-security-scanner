@@ -277,12 +277,119 @@ function CardBlock({ content, meta = {} }) {
   );
 }
 
+// ─── Command Block (Sprint 29) ─────────────────────────────────────────────
+function CommandBlock({ content, language = "bash", meta = {} }) {
+  const shellType = language.toLowerCase();
+  const isPowerShell = shellType.includes("ps") || shellType.includes("powershell");
+  const isCmd = shellType.includes("cmd") || shellType.includes("bat");
+  
+  const badgeColor = isPowerShell ? "#3B82F6" : isCmd ? "#EC4899" : "#10B981";
+  const promptChar = isPowerShell ? "PS >" : isCmd ? "C:\\>" : "$";
+
+  return (
+    <div style={{
+      background: "linear-gradient(135deg, #0B0F19 0%, #111827 100%)",
+      border: `1px solid ${badgeColor}40`, borderRadius: "12px",
+      overflow: "hidden", margin: "6px 0", boxShadow: "0 4px 20px rgba(0,0,0,0.4)"
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 14px", background: "rgba(0,0,0,0.4)",
+        borderBottom: "1px solid rgba(255,255,255,0.06)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Code2 size={13} color={badgeColor} />
+          <span style={{
+            fontSize: "11px", fontWeight: "800", color: badgeColor,
+            background: `${badgeColor}20`, padding: "2px 8px", borderRadius: "4px",
+            textTransform: "uppercase", letterSpacing: "0.5px"
+          }}>
+            {language || "terminal"}
+          </span>
+          <span style={{ fontSize: "11px", color: "#64748B" }}>— Command Shell</span>
+        </div>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <CopyButton text={content} small />
+        </div>
+      </div>
+      <pre style={{
+        margin: 0, padding: "14px 16px", overflowX: "auto", fontSize: "13px",
+        lineHeight: "1.65", color: "#F3F4F6",
+        fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+        display: "flex", gap: "10px"
+      }}>
+        <span style={{ color: badgeColor, fontWeight: "700", userSelect: "none" }}>{promptChar}</span>
+        <code style={{ flex: 1 }}>{content}</code>
+      </pre>
+    </div>
+  );
+}
+
+// ─── HTML/CSS/JS Live Preview (Sprint 33) ────────────────────────────────────
+function HtmlPreviewBlock({ content, meta = {} }) {
+  const [activeTab, setActiveTab] = useState("preview"); // 'preview' | 'code'
+
+  return (
+    <div style={{
+      border: "1px solid rgba(139,92,246,0.3)", borderRadius: "12px",
+      overflow: "hidden", margin: "6px 0", background: "#0F172A"
+    }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        padding: "8px 14px", background: "rgba(0,0,0,0.4)", borderBottom: "1px solid rgba(255,255,255,0.08)"
+      }}>
+        <div style={{ display: "flex", gap: "6px" }}>
+          <button onClick={() => setActiveTab("preview")} style={{
+            padding: "4px 12px", borderRadius: "6px", border: "none", cursor: "pointer",
+            background: activeTab === "preview" ? "#8B5CF6" : "rgba(255,255,255,0.06)",
+            color: activeTab === "preview" ? "#FFF" : "#94A3B8",
+            fontSize: "11px", fontWeight: "700", transition: "all 0.2s ease"
+          }}>
+            ▶ Live Preview
+          </button>
+          <button onClick={() => setActiveTab("code")} style={{
+            padding: "4px 12px", borderRadius: "6px", border: "none", cursor: "pointer",
+            background: activeTab === "code" ? "#8B5CF6" : "rgba(255,255,255,0.06)",
+            color: activeTab === "code" ? "#FFF" : "#94A3B8",
+            fontSize: "11px", fontWeight: "700", transition: "all 0.2s ease"
+          }}>
+            &lt;/&gt; Code
+          </button>
+        </div>
+        <CopyButton text={content} small />
+      </div>
+
+      {activeTab === "preview" ? (
+        <div style={{ padding: "12px", background: "#FFF", minHeight: "180px", borderRadius: "0 0 12px 12px" }}>
+          <iframe
+            srcDoc={content}
+            title="HTML Live Preview"
+            sandbox="allow-scripts"
+            style={{ width: "100%", height: "200px", border: "none" }}
+          />
+        </div>
+      ) : (
+        <CodeBlock content={content} language="html" meta={meta} />
+      )}
+    </div>
+  );
+}
+
 // ─── Main BlockRenderer ───────────────────────────────────────────────────────
 export default function BlockRenderer({ block }) {
   if (!block) return null;
   const { type = "markdown", content = "", meta = {} } = block;
 
   switch (type) {
+    case "command":
+    case "cmd":
+    case "bash":
+    case "powershell":
+    case "terminal":
+      return <CommandBlock content={content} language={meta.language || type} meta={meta} />;
+    case "html_preview":
+    case "preview":
+      return <HtmlPreviewBlock content={content} meta={meta} />;
     case "code":
       return <CodeBlock content={content} language={meta.language || "text"} meta={meta} />;
     case "table":
@@ -310,3 +417,4 @@ export default function BlockRenderer({ block }) {
       );
   }
 }
+
