@@ -8,13 +8,12 @@ This is the **official commit-by-commit** development registry. Every entry maps
 
 | Branch | Owner | Focus | Status |
 | :--- | :--- | :--- | :--- |
-| `atharv-dev` | **Atharv** | Backend Engine, Routing, Adapters, Confidence & Decision Systems | 🟢 Active |
-| `muskan-dev` | **Muskan** | Frontend UI, Renderers, Charts, Debate & Agent Panels | 🟢 Active |
-| `dev` | **Shared** | Integration & QA | 🟢 Synced |
+| `atharv-dev` | **Atharv** | Backend Engine, Routing, Adapters, RAG & Agents | 🟢 Active |
+| `muskan-dev` | **Muskan** | Frontend UI, Renderers, Charts, Debate & Live Preview | 🟢 Active |
 | `main` | **Release** | Production | 🔵 Stable |
 
 > [!IMPORTANT]
-> **All 4 branches are at identical commit `bdda74f`** — zero diff between any branch as of July 21, 2026.
+> **All 3 branches (`atharv-dev`, `muskan-dev`, `main`) are at identical tip commit `2e561b3`** — zero diff between any branch as of July 22, 2026.
 
 ---
 
