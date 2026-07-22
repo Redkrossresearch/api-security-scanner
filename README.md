@@ -1,4 +1,4 @@
-# 🛡️ ATHX Security (Enterprise API Security Platform)
+# 🛡️ ATHX Security — Enterprise AI API Security Platform
 
 <div align="center">
 
@@ -9,243 +9,167 @@
 [![Node.js 24](https://img.shields.io/badge/Node.js-24.x-green?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-brightgreen?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
 [![BullMQ](https://img.shields.io/badge/Task--Queue-BullMQ--Redis-orange?style=for-the-badge&logo=redis)](https://bullmq.io/)
-[![AI-Copilot](https://img.shields.io/badge/AI--Copilot-OpenRouter-darkviolet?style=for-the-badge&logo=openai)](https://openrouter.ai/)
+[![Multi-Agent Orchestrator](https://img.shields.io/badge/Multi--Agent-DAG--Engine-darkviolet?style=for-the-badge&logo=openai)](https://openrouter.ai/)
 
-**An elite, high-performance API vulnerability assessment platform, multi-agent debate orchestrator, and DevSecOps automated scanner.**
+**An elite, high-performance API vulnerability assessment platform, multi-agent AI debate orchestrator, enterprise RAG engine, and DevSecOps automated scanner.**
+
 </div>
 
 ---
 
-## ⚡ Core Platform Status
+## ⚡ Platform Overview & Roadmap Progress
 
-ATHX Security integrates active crawling, automated pentesting, multi-agent AI debate loops, and long-term memory structures to deliver production-grade API assessment pipelines.
+ATHX Security combines active DAST crawling, automated pentesting, DAG multi-agent debate loops, enterprise RAG document ingestion, and long-term memory structures into a unified production-grade security suite.
 
-### Hybrid Execution Matrix
+### 🎯 Roadmap Status (Sprints 1 – 50: `100% DONE`)
 
-| Capability Module | Local / Production Mode (Redis & Credentials) | Stateless Fallback Mode (Serverless Vercel Deploy) | Status |
-| :--- | :--- | :--- | :---: |
-| **🤖 Core Scanners & Crawler** | Crawls forms, anchors, parameters via Axios and runs 23 active security audits (SQLi, XSS, Path Traversal, SSL, CORS, Cookies, exposed files). | Runs in-process fallback scans with dynamic time-based database progress updates. | **Production-Ready** ✅ |
-| **⏳ Distributed Task Queue** | Offloads heavy scans to a BullMQ task queue with multi-worker concurrency. | Falls back to in-process execution with asynchronous promise loops. | **Production-Ready** ✅ |
-| **🔄 Live Scanner Logs** | Broadcasts live scanner logs and discoveries via Socket.IO channels. | Gracefully falls back to polling `/api/scans/:id/status` with simulated log triggers. | **Production-Ready** ✅ |
-| **🧠 RAG Vector DB** | Indexes advisories, OpenAPI structures, and CWE vectors using cosine-similarity RAG. | Utilizes fast local database indexing with semantic embedding weights fallbacks. | **Production-Ready** ✅ |
-| **👥 Pentester debate loops** | Chains 6 specialized agents (Pentester, CVE, Code review, Reviewer, Compliance, Judge) for cross-check consensus. | Resolves prompt judgments with resilient fallback adapter chains. | **Production-Ready** ✅ |
-| **🔒 PDF Report Exporter** | Compiles executive security status, grades, WAF rules, and remediation actions into a polished PDF. | Generates PDF streams dynamically via report generator services. | **Production-Ready** ✅ |
-| **🔌 GitHub OAuth Integration** | Triggers centered popup OAuth, lists repos/branches, and commits workflow files. | Loads local OAuth authorization mock panel and simulated workflow sync. | **Production-Ready** ✅ |
+| Milestone Phase | Sprints | Focus Area | Status |
+| :--- | :---: | :--- | :---: |
+| **Phase 1: Core Scanner & Adapters** | Sprints 1 – 15 | Multi-LLM Adapters, Fallback Chain, Confidence Engine, Decision Engine | **✅ COMPLETED** |
+| **Phase 2: Debate & Copilot UI** | Sprints 16 – 24 | Copilot Chat UI, Rich Block Renderers, Debate Transcripts | **✅ COMPLETED** |
+| **Phase 3: RAG & Document Pipeline** | Sprints 25 – 30 | PDF & ZIP Ingestion, 4th LLM Judge, Chat & KB Memory Ingestion | **✅ COMPLETED** |
+| **Phase 4: Multi-Agent Roster I** | Sprints 31 – 35 | Planner, Security, Pentesting, Research, CVE Agents & Inline RAG Citations | **✅ COMPLETED** |
+| **Phase 5: Multi-Agent Roster II & DAG** | Sprints 36 – 43 | CodeReview, Documentation, Risk, Reviewer, Decision, Fix Agents, DAG Engine, SQL & Download Renderers | **✅ COMPLETED** |
+| **Phase 6: Advanced RAG & Human-in-the-Loop** | Sprints 44 – 50 | Vector DB Schema, Approval Checkpoints, Scan & OpenAPI Ingestion, OWASP/CVE Feeds & Memory | **✅ COMPLETED** |
 
 ---
 
-## 📐 System Architecture
+## 🧠 Multi-Agent Roster & DAG Orchestrator
 
-### Platform Topology
+The system features **11 specialized AI security agents** orchestrated via a DAG (Directed Acyclic Graph) workflow engine (`agent.orchestrator.js`).
+
 ```mermaid
 graph TD
-    User([Security User / CI/CD Gate]) -->|HTTPS API Requests| Gateway[Express App / API Gateway]
+    UserQuery[User Goal / Security Audit Request] --> Planner[PlannerAgent: DAG Decomposition]
     
-    subgraph Backend Services
-        Gateway --> Auth[Auth Service / JWT]
-        Gateway --> Scans[Scan Service / Orchestrator]
-        Gateway --> AI[OpenRouter / Multi-LLM Registry]
-        Gateway --> Reports[PDF Exporter & OpenAPI Exporter]
-        Gateway --> RAG[RAG Ingestion / Vector Store]
-        
-        Scans -->|Check Redis availability| QueueClient{Queue Selector}
-        QueueClient -->|Redis Live| BullMQ[BullMQ Job Queue]
-        QueueClient -->|Redis Offline| InProc[In-Process Fallback Engine]
-        
-        BullMQ -->|De-queues scan jobs| Worker[Background Worker Threads]
-        InProc --> Scanners[23 Active Scanner Engines]
-        Worker --> Scanners
+    subgraph Execution DAG Stage 1: Assessment & Research
+        Planner --> Security[SecurityAgent: Scanner Modules]
+        Planner --> Pentest[PentestingAgent: Exploit Validation]
+        Planner --> Research[ResearchAgent: Web & RAG Search]
+        Planner --> CVE[CVEAnalystAgent: CVSS & NVD Lookup]
+        Planner --> CodeReview[CodeReviewAgent: Static Code Analysis]
     end
     
-    subgraph Database Layer
-        Scanners -->|Save Scan Details| Mongo[(MongoDB / Mongoose)]
-        RAG -->|Store Semantic Chunks| Mongo
+    subgraph Execution DAG Stage 2: Audit & Risk Scoring
+        Security & Pentest & CodeReview --> Risk[RiskAgent: Business Impact Scoring]
+        Security & Pentest & CodeReview --> Reviewer[ReviewerAgent: Anti-False-Positive Audit]
     end
     
-    subgraph Frontend Control Room
-        UI([React 19 Dashboard]) -->|HTTP Polling / Socket.IO| Gateway
-        UI -->|Displays metrics| Monitor[Queue Monitor Dashboard]
-        UI -->|Interactive workflow canvas| Workflow[Workflow Builder]
+    subgraph Execution DAG Stage 3: Synthesis & Remediation
+        Risk & Reviewer --> Decision[DecisionAgent: Final Verdict & Consensus]
+        Decision --> Fix[FixAgent: Code Patch Generation]
+        Decision --> Doc[DocumentationAgent: Executive Markdown Report]
     end
+    
+    Doc & Fix --> FinalOutput[Unified Copilot Response & Downloads]
 ```
+
+### Specialized Security Agents Roster
+
+| Agent Name | Primary Role | Default Provider | Model Isolation Matrix (Sprint 42) |
+| :--- | :--- | :---: | :--- |
+| `PlannerAgent` | Goal Decomposition & DAG Sub-task Generation | OpenAI | Generates ordered sub-tasks with `dependsOn` linkages |
+| `SecurityAgent` | DAST Scanner Engine Wrapper | Claude | Executes active vulnerability probes |
+| `PentestingAgent` | Exploit Vector & Payload Validator | Gemini | Validates exploitability bounds |
+| `ResearchAgent` | Web Search & RAG Context Retriever | Pollinations | Queries vector store & live web security feeds |
+| `CVEAnalystAgent` | NVD Database & CVSS 3.1 Specialist | Pollinations | Calculates vector metrics & CVE lookup |
+| `CodeReviewAgent` | Static AI Code & OpenAPI Reviewer | Claude | Reviews source code & OpenAPI specifications |
+| `DocumentationAgent` | Executive Report Writer | Gemini | Formats findings into executive markdown |
+| `RiskAgent` | Business & Financial Risk Scorer | Gemini | Wraps CVSS 3.1 calculation & asset criticality |
+| `ReviewerAgent` | Cross-Verification & Anti-False-Positive Auditor | OpenAI | **Isolated Model**: Never shares provider with claim agent |
+| `DecisionAgent` | Consolidated Verdict Synthesizer | Claude | Resolves conflicts & outputs confidence rating |
+| `FixAgent` | Autonomous Remediation Patch Engineer | Gemini | Generates concrete code-level patch snippets |
 
 ---
 
-## 🧠 Advanced Subsystems
+## 🎨 Rich Content Renderers & Interactive UI
 
-### 1. Intelligent LLM Router & Guardrails
-Incoming prompts are dynamically classified and routed through a resilient fallback chain. Outgoing data passes through sanitizers to protect sensitive credentials.
+The frontend `BlockRenderer` supports 10+ dynamic content block types:
+
+1. **`CommandBlock` (Sprint 29)**: Terminal block for CMD, PowerShell, and Bash with prompt badges (`$`, `PS>`) and 1-click copy.
+2. **`HtmlPreviewBlock` (Sprint 33)**: Live sandboxed iframe preview (`sandbox="allow-scripts"`) with Code / Live UI toggle.
+3. **`SqlBlock` (Sprint 38)**: SQL syntax highlighting with client-side syntax validation indicator (`Syntax OK` / `Syntax Flagged`).
+4. **`DownloadButton` (Sprint 43)**: 1-click downloadable files (`.js`, `.py`, `.sql`, `.json`, `.yaml`, `.md`).
+5. **JSON / YAML Viewers**: Collapsible key-value inspector with syntax formatting.
+6. **Alerts & Accordions**: Info, Warning, Critical, and Success badges with expandable sections.
+
+---
+
+## 📚 Enterprise RAG Engine Architecture
+
+The RAG pipeline (`rag.pipeline.js` & `context-builder.js`) retrieves and injects security knowledge into agent prompts with token-budget truncation and inline citations (`[1]`, `[2]`).
 
 ```mermaid
 graph LR
-    Prompt[User Input] --> Guard[Guardrails Validation]
-    Guard --> Classifier{Intelligent Router}
-    Classifier -->|Coding Category| OpenAI[OpenAI Adapter]
-    Classifier -->|Reasoning Category| Claude[Claude Adapter]
-    Classifier -->|General Category| OpenRouter[OpenRouter Shorthand]
+    Query[User Prompt] --> RAG[RAG Pipeline Manager]
     
-    OpenAI -->|Fail / Timeout| Fallback[Ollama / Local Mock Fallback]
-    Fallback --> Redact[Database Secret Redaction]
-    Redact --> Output[Sanitized AI Response]
-```
-
-### 2. Multi-Agent Pentester Debate Pipeline
-Specialized agents challenge and critique each other to reach a final, high-confidence consensus regarding vulnerability severity and remediation plans.
-
-```mermaid
-sequenceDiagram
-    participant O as Agent Orchestrator
-    participant P as Pentester Agent
-    participant C as CVE Analyst Agent
-    participant R as Reviewer Agent
-    participant J as Judge Agent
-
-    O->>P: Analyze vulnerability payload response
-    P->>O: Propose exploit path (Critical)
-    O->>C: Correlate CVSS severity score
-    C->>O: Map CVSS 9.8 vector details
-    O->>R: Audit findings & challenge claims
-    R->>O: Propose alternative risk levels (Medium)
-    O->>J: Compile debate traces & finalize report
-    J->>O: Final markdown consensus verdict (High)
-```
-
-### 3. Mode-Aware Copilot Routing (Sprints 1 & 2)
-The platform features an advanced copilot routing layer that supports multiple AI thinking profiles:
-* **Single Mode**: Standard direct streaming chat with the selected provider (OpenAI, Claude, Gemini, etc.).
-* **Parallel Mode**: Queries two top adapters concurrently and routes responses parallelly.
-* **Consensus Mode**: Prompts Claude, OpenAI, and Gemini in parallel, then routes to an OpenRouter LLM Judge to consolidate.
-* **Debate Mode**: Runs a 2-round debate between Claude (pentester) and Deepseek (auditor), resolved by an OpenRouter Judge (triggerable via `/debate` slash command in chat).
-
-Both streaming and non-streaming pathways resolve queries through a unified `executeChatMode()` helper to maintain zero code drift (DRY architecture).
-
----
-
-## 🔌 Model Context Protocol (MCP) Integration
-
-The platform integrates full support for the **Model Context Protocol (MCP)**, bridging the gap between autonomous AI agents, security scanner operations, and developer IDEs.
-
-```mermaid
-graph TD
-    subgraph Inbound Connection (IDE integration)
-        IDE[Claude Desktop / VS Code] -->|SSE HTTP Link| SSE_End[Express Gateway: /api/mcp/sse]
-        SSE_End -->|Token Verification| Auth[JWT Auth Middleware]
-        Auth -->|Read/Write Operations| CoreTools[list_scans, start_scan, get_scan_progress, list_vulnerabilities]
+    subgraph Multi-Source Ingestion Pipeline
+        PDF[PDF Specs] --> VectorDB[(Vector Store)]
+        ZIP[ZIP Archives] --> VectorDB
+        ScanFindings[Completed Scans] --> VectorDB
+        OpenAPI[OpenAPI Specs] --> VectorDB
+        OWASP[OWASP & CVE Feeds] --> VectorDB
+        UserMemory[User Memory Store] --> VectorDB
     end
-
-    subgraph Outbound Connection (Copilot Extensions)
-        Chat[Copilot Drawer] -->|User Input| Adapter[LLM Adapter Loop]
-        Adapter -->|Tool Call Request| Mgr[Outbound Client Manager]
-        Mgr -->|Stdio Spawner| LocalSrv[Local CLI Servers e.g. filesystem]
-        Mgr -->|SSE Web Request| RemoteSrv[Remote SSE Servers]
-    end
-```
-
-### 1. Inbound Scanner Server (Exposing Scanner to IDEs)
-Developers can plug this application's scanner capabilities directly into their local LLM clients (like Claude Desktop). This enables starting scans, listing vulnerabilities, and looking up remediation steps directly inside their workspace coding window.
-
-* **Tool Declarations:**
-  - `list_scans`: Returns target endpoints, status, and findings summary.
-  - `start_scan`: Triggers a new live scan for a specified target URL.
-  - `get_scan_progress`: Returns real-time percentage progress of running tasks.
-  - `list_vulnerabilities`: Returns threat logs filterable by scanId or severity levels.
-  - `get_vulnerability_details`: Retrieves recommendations, CVSS vectors, and code remediation advisories.
-
-### 2. Outbound Client Manager (Giving Copilot Agent Capabilities)
-The Copilot Chat drawer is capable of loading external MCP servers. Once connected, the AI agent can invoke tools like reading local project structures, executing shell scripts, or auditing system files to diagnose security alerts.
-
-### 3. Production Readiness & Deployment Matrix
-To guarantee that the codebase runs seamlessly in production environments without local limitations:
-
-| Transport Type | Deployment Suitability | Production Recommendations |
-| :--- | :--- | :--- |
-| **Inbound SSE Link** | **Cloud Deployed & Local** | Exposes the scanner tools via standard Express router paths (`/api/mcp/sse` & `/api/mcp/messages`). Authenticated via JWT parameter passes (`?token=JWT`), allowing developers to query production scan states from their local Claude client. |
-| **Outbound Stdio** | **Containers & Dedicated VMs** | Spawns standard OS CLI subprocesses. Supported in container environments (e.g. AWS ECS, Kubernetes, Docker) provided the target CLI binaries (e.g. `npx`, `python`) are pre-installed in the Docker image. |
-| **Outbound SSE** | **Serverless Platforms** | Connects to remote endpoints via standard HTTP requests. Recommended for serverless deployments (e.g. Vercel, AWS Lambda) as it eliminates server-side process spawning, ensuring stateless execution and horizontal scaling. |
-
-> [!IMPORTANT]
-> **Outbound Stdio CLI Restrictions:** If deploying to serverless platforms with ephemeral, read-only filesystems (like Vercel), disable Stdio connections in settings and register external tools using **SSE connection transports** instead.
-
-### 4. Running Validation Tests
-To run the automated, end-to-end integration test verifying the local stdio runner connection, database handshakes, and tool reflection:
-```bash
-cd backend
-node src/modules/mcp/test-mcp.js
+    
+    VectorDB --> Rerank[Reranker & Similarity Filter]
+    Rerank --> ContextBuilder[Token Budget Context Builder]
+    ContextBuilder --> Prompt[Prompt with Inline Citations]
 ```
 
 ---
 
-## 🛠️ Installation & Setup
+## 🔀 Branch Sync & Collaboration Matrix
+
+Project development follows a strict owner-branch isolation policy with 100% synchronization across all active local and remote branches.
+
+| Branch Name | Owner | Role | Status |
+| :--- | :--- | :--- | :---: |
+| `atharv-dev` | **Atharv** | Backend Core, RAG Engine, Multi-Agent Roster, DAG Orchestrator | 🟢 Synced (`228fe1a`) |
+| `muskan-dev` | **Muskan** | Frontend Copilot UI, Rich Renderers, Live Preview, Downloads | 🟢 Synced (`228fe1a`) |
+| `main` | **Release** | Verified Production Deployment Candidate | 🔵 Production (`228fe1a`) |
+
+---
+
+## 🛠️ Quick Start & Installation
 
 ### Prerequisites
-* **Node.js** v24+
-* **MongoDB** (Local or Atlas Connection URI)
-* **Redis** (Optional: required for BullMQ queues)
+- Node.js 20+ (v24 recommended)
+- npm 10+
+- MongoDB (optional for local in-memory fallback mode)
 
-### Local Development Setup
-
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/Atharv-design/api-security-scanner.git
-   cd api-security-scanner
-   ```
-
-2. **Configure Backend Environment:**
-   Create a `.env` file in the `backend/` directory:
-   ```env
-   NODE_ENV=development
-   PORT=5000
-   MONGODB_URI=your_mongodb_connection_string
-   JWT_ACCESS_SECRET=your_jwt_access_secret
-   JWT_REFRESH_SECRET=your_jwt_refresh_secret
-   CLIENT_URL=http://localhost:5173
-   OPENROUTER_API_KEY=your_openrouter_api_key
-   
-   # --- BACKGROUND TASK QUEUE (REDIS) ---
-   # Enable BullMQ background worker queue. If commented out, falls back to in-process.
-   # REDIS_URL=redis://127.0.0.1:6379
-   # QUEUE_CONCURRENCY=3
-   ```
-
-3. **Start the Backend Server:**
-   ```bash
-   cd backend
-   npm install
-   npm run dev
-   ```
-
-4. **Start the Frontend Client:**
-   ```bash
-   cd ../frontend
-   npm install
-   npm run dev
-   ```
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
-
----
-
-## 📈 Quality Benchmarking & Chaos Testing
-
-### 1. Golden Dataset Quality Benchmarks
-To run the automated precision benchmark test suite against 50 pre-defined security scenarios:
+### 1. Clone & Install Dependencies
 ```bash
-cd backend
-node src/modules/llm/consensus/runBenchmark.js
+git clone https://github.com/Atharv-design/api-security-scanner.git
+cd api-security-scanner
+
+# Install backend dependencies
+cd backend && npm install
+
+# Install frontend dependencies
+cd ../frontend && npm install
 ```
-*Outputs accuracy coefficients, MTTR profiles, and consensus correlation percentages.*
 
-### 2. Chaos Resilience Testing
-Simulate random adapter crashes and connection drops to test the circuit-breaker fallback mechanisms:
+### 2. Environment Configuration
+Create `.env` in `backend/`:
+```env
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/api-security-scanner
+JWT_ACCESS_SECRET=your_jwt_access_secret_min_32_chars
+JWT_REFRESH_SECRET=your_jwt_refresh_secret_min_32_chars
+CLIENT_URL=http://localhost:5173
+```
+
+### 3. Run Locally
 ```bash
-cd backend
-node src/modules/llm/consensus/runChaosTest.js
+# Terminal 1: Backend Server
+cd backend && npm run dev
+
+# Terminal 2: Frontend Client
+cd frontend && npm run dev
 ```
 
 ---
 
-## 🔮 Future Development Roadmap
-
-- [ ] **Sandboxed Scanner Containers:** Execute command injections and exploits within transient, isolated Docker sandboxes.
-- [ ] **Auto-Patch Git Integration:** Enable autonomous agents to create feature branches and submit PRs with validated code fixes automatically.
-- [ ] **Live NVD CVE Sync Cron:** Repeatable BullMQ cron job updating local RAG threat indexes from the National Vulnerability Database API every 24 hours.
-- [ ] **WAF Deploy Webhooks:** Automated cloud webhooks updating Cloudflare/AWS WAF rule profiles directly upon vuln validation.
+## 📄 License
+Distributed under the MIT License. See `LICENSE` for details.
