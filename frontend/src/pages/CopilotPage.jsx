@@ -10,7 +10,7 @@ import { ChatWindow, PromptInput } from "../components/copilot/chat";
 import { ContextPanel } from "../components/copilot/panels";
 import { GlobalSettingsModal, CommandPalette } from "../components/copilot/modals";
 
-const DEFAULT_MODEL = "openai";
+const DEFAULT_MODEL = "gemini";
 const DEFAULT_TEMPERATURE = 0.7;
 
 const THEMES = {
