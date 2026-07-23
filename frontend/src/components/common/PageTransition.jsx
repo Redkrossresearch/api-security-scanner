@@ -1,6 +1,6 @@
 /**
  * PageTransition.jsx
- * Silky smooth, GPU-accelerated page reveal transition with top loading glow indicator.
+ * Ultra-smooth, slow, luxurious page reveal transition with top loading glow indicator & backdrop blur.
  */
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -18,8 +18,8 @@ export default function PageTransition({ children }) {
       const timer = setTimeout(() => {
         setDisplayLocation(location);
         setStage("fadeIn");
-        setTimeout(() => setLoadingBar(false), 350);
-      }, 150);
+        setTimeout(() => setLoadingBar(false), 750);
+      }, 220);
       return () => clearTimeout(timer);
     }
   }, [location, displayLocation]);
@@ -36,9 +36,9 @@ export default function PageTransition({ children }) {
             right: 0,
             height: "3px",
             background: "linear-gradient(90deg, #7C3AED 0%, #38BDF8 50%, #10B981 100%)",
-            boxShadow: "0 0 12px #38BDF8",
+            boxShadow: "0 0 16px rgba(56, 189, 248, 0.8), 0 0 30px rgba(124, 58, 237, 0.5)",
             zIndex: 99999,
-            animation: "topLoadingBar 0.4s ease-out forwards"
+            animation: "topLoadingBar 0.75s cubic-bezier(0.22, 1, 0.36, 1) forwards"
           }}
         />
       )}
