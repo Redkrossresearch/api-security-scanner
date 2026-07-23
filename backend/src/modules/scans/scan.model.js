@@ -165,11 +165,28 @@ const scanSchema = new mongoose.Schema(
     },
 
     completedAt: Date,
+
+    // ✅ Pipeline Audit Stages with Real Inspection Metadata
+    pipelineStages: [
+      {
+        name: { type: String, required: true },
+        label: { type: String, default: "" },
+        status: { type: String, enum: ["pending", "running", "completed", "failed"], default: "pending" },
+        startedAt: Date,
+        completedAt: Date,
+        durationMs: Number,
+        itemsProcessed: { type: Number, default: 0 },
+        findingsDiscovered: { type: Number, default: 0 },
+        summary: { type: String, default: "" },
+        metadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+      },
+    ],
   },
   {
     timestamps: true,
   },
 );
+
 
 // ✅ Existing indexes
 scanSchema.index({
