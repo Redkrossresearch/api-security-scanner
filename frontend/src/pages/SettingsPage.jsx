@@ -481,6 +481,20 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAcceptInvite = async (targetUserId) => {
+    if (!activeTeamId) return;
+    try {
+      const res = await api.post(`/teams/${activeTeamId}/members/${targetUserId}/accept`);
+      if (res.data?.success) {
+        toast.success("Workspace invitation request accepted!");
+        await fetchTeamsAndLogs();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to accept invite");
+    }
+  };
+
+
 
   // Load user settings
   useEffect(() => {
@@ -2572,19 +2586,54 @@ GITHUB_CLIENT_SECRET=your_secret_here`}
                           <span style={{ fontSize: "11.5px", color: COLORS.muted }}>{m.userId?.email || "No email"}</span>
                         </div>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <span style={{
-                            background: m.role === "owner" ? "rgba(56,189,248,0.08)" : m.role === "admin" ? "rgba(167,139,250,0.08)" : "rgba(255,255,255,0.03)",
-                            color: m.role === "owner" ? "#38BDF8" : m.role === "admin" ? "#A78BFA" : "#94A3B8",
-                            fontSize: "10px",
-                            fontWeight: "800",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.5px",
-                            padding: "3px 10px",
-                            borderRadius: "20px",
-                            border: `1px solid ${m.role === "owner" ? "rgba(56,189,248,0.2)" : m.role === "admin" ? "rgba(167,139,250,0.2)" : "rgba(255,255,255,0.06)"}`
-                          }}>
-                            {m.role}
-                          </span>
+                          {m.status === "pending" ? (
+                            <span style={{
+                              background: "rgba(245, 158, 11, 0.1)",
+                              color: "#F59E0B",
+                              fontSize: "10px",
+                              fontWeight: "800",
+                              textTransform: "uppercase",
+                              padding: "3px 10px",
+                              borderRadius: "20px",
+                              border: "1px solid rgba(245, 158, 11, 0.3)"
+                            }}>
+                              PENDING REQUEST
+                            </span>
+                          ) : (
+                            <span style={{
+                              background: m.role === "owner" ? "rgba(56,189,248,0.08)" : m.role === "admin" ? "rgba(167,139,250,0.08)" : "rgba(255,255,255,0.03)",
+                              color: m.role === "owner" ? "#38BDF8" : m.role === "admin" ? "#A78BFA" : "#94A3B8",
+                              fontSize: "10px",
+                              fontWeight: "800",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.5px",
+                              padding: "3px 10px",
+                              borderRadius: "20px",
+                              border: `1px solid ${m.role === "owner" ? "rgba(56,189,248,0.2)" : m.role === "admin" ? "rgba(167,139,250,0.2)" : "rgba(255,255,255,0.06)"}`
+                            }}>
+                              {m.role}
+                            </span>
+                          )}
+
+                          {m.status === "pending" && (
+                            <button
+                              type="button"
+                              onClick={() => handleAcceptInvite(m.userId?._id || m.userId)}
+                              title="Accept invitation request"
+                              style={{
+                                background: "rgba(16,185,129,0.15)",
+                                border: "1px solid rgba(16,185,129,0.3)",
+                                color: "#10B981",
+                                padding: "3px 8px",
+                                borderRadius: "6px",
+                                fontSize: "10.5px",
+                                fontWeight: "700",
+                                cursor: "pointer"
+                              }}
+                            >
+                              Accept Request
+                            </button>
+                          )}
                           
                           {m.role !== "owner" && (
                             <button
@@ -2607,6 +2656,7 @@ GITHUB_CLIENT_SECRET=your_secret_here`}
                             </button>
                           )}
                         </div>
+
                       </div>
                     ))}
                   </div>
