@@ -9,6 +9,7 @@ const {
   removeMember,
   getAuditLogs,
   deleteTeam,
+  acceptMemberInvite,
 } = require("./team.controller");
 
 // General Routes
@@ -23,6 +24,13 @@ router.post(
   authorizeTeam(["owner", "admin"]),
   addMember,
 );
+router.post(
+  "/:id/members/:userId/accept",
+  authenticate,
+  authorizeTeam(["owner", "admin", "member"]),
+  acceptMemberInvite,
+);
+
 
 router.delete(
   "/:id/members/:userId",
