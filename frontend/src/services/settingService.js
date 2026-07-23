@@ -44,3 +44,9 @@ export const syncGitlabWorkflow = async () => {
   const res = await api.post("/settings/gitlab/sync");
   return res.data;
 };
+
+export const deleteTeamWorkspace = async (teamId) => {
+  const res = await api.delete(`/teams/${teamId}`);
+  return res.data;
+};
+
