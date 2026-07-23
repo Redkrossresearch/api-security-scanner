@@ -6,6 +6,7 @@
 import { useState, useRef } from "react";
 import { Copy, Check, ChevronDown, ChevronRight, AlertTriangle, Info, CheckCircle, XCircle, Code2, Table2, FileJson } from "lucide-react";
 import DiagramRenderer from "./renderers/DiagramRenderer";
+import CitationCard from "./renderers/CitationCard";
 
 
 // ─── Copy Button ─────────────────────────────────────────────────────────────
@@ -479,10 +480,22 @@ export default function BlockRenderer({ block }) {
           color: "#CBD5E1", fontSize: "14px", lineHeight: "1.7",
           fontFamily: "'Inter', sans-serif",
         }}>
-          {content}
+          <div>{content}</div>
+
+          {meta?.citations && Array.isArray(meta.citations) && meta.citations.length > 0 && (
+            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+              <div style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Sources ({meta.citations.length})
+              </div>
+              {meta.citations.map((cit, idx) => (
+                <CitationCard key={idx} citation={cit} />
+              ))}
+            </div>
+          )}
         </div>
       );
   }
 }
+
 
 
