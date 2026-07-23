@@ -12,8 +12,6 @@ const MistralAdapter = require("./adapters/mistral.adapter");
 const CohereAdapter = require("./adapters/cohere.adapter");
 const PollinationsAdapter = require("./adapters/pollinations.adapter");
 
-const config = require("../../config/env");
-
 class LLMRegistry {
   constructor() {
     this.adapters = {
@@ -33,43 +31,35 @@ class LLMRegistry {
     };
   }
 
-  /**
-   * Check if a given provider is configured in environment config
-   */
   isProviderConfigured(provider) {
-    // We always return true because all provider adapters are equipped with dynamic
-    // keyless/OpenRouter free fallbacks when their native API keys are missing.
     return true;
   }
 
-  /**
-   * Fetch active adapter by name, falling back to mock if not found/unconfigured
-   */
   getAdapter(providerName) {
     const provider = providerName?.toLowerCase();
     const adapter = this.adapters[provider];
     
-    if (adapter && this.isProviderConfigured(provider)) {
+    if (adapter) {
       return adapter;
     }
     
-    // Fall back to first configured provider
     const chain = this.getFallbackChain();
     if (chain.length > 0) {
       return this.adapters[chain[0]];
     }
 
-    return this.adapters.mock;
+    return this.adapters.gemini;
   }
 
-  /**
-   * Return ordered array of active/configured provider names
-   */
   getFallbackChain() {
     const list = [
+      process.env.GEMINI_API_KEY ? "gemini" : null,
+      process.env.GROQ_API_KEY ? "groq" : null,
+      process.env.OPENAI_API_KEY ? "openai" : null,
+      process.env.OPENROUTER_API_KEY ? "openrouter" : null,
+      "gemini",
       "openrouter",
       "openai",
-      "gemini",
       "claude",
       "groq",
       "deepseek",
@@ -79,10 +69,11 @@ class LLMRegistry {
       "ollama",
       "lmstudio",
       "pollinations",
-      "mock"
-    ];
+      "mock",
+    ].filter(Boolean);
+
     const cb = require("./router/llm.circuitbreaker");
-    return list.filter((p) => this.isProviderConfigured(p) && cb.isAvailable(p));
+    return Array.from(new Set(list)).filter((p) => cb.isAvailable(p));
   }
 }
 
