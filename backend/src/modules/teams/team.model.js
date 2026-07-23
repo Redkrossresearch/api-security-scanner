@@ -24,8 +24,14 @@ const teamSchema = new mongoose.Schema(
           enum: ["owner", "admin", "member"],
           default: "member",
         },
+        status: {
+          type: String,
+          enum: ["pending", "accepted"],
+          default: "pending",
+        },
       },
     ],
+
   },
   {
     timestamps: true,
