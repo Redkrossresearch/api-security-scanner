@@ -187,23 +187,25 @@ Responses: ${JSON.stringify(detail.responses || {})}`;
   }
 
   /**
-   * Retrieve relevant chunks and rerank (Sprint 37)
-   * Integrates dynamic Web Search if local matches are sparse/irrelevant
+   * Retrieve relevant chunks and rerank (Sprint 51 — Hybrid BM25 + Vector + Reranking)
+   * Retrieves top-20 candidates and reranks down to top-5 candidates
    */
-  async retrieveContext(query, limit = 3) {
+  async retrieveContext(query, limit = 5) {
     console.log(`[rag-pipeline] Querying RAG index for query: "${query}"`);
-    let results = await vectorDb.query(query, limit * 2);
+    const rerankerService = require("./reranker.service");
+
+    // Top-20 initial candidates
+    let results = await vectorDb.query(query, 20);
 
     // Auto-growing RAG: If local matches are sparse or have low similarity, trigger web search query
     const topScore = results.length > 0 ? results[0].similarity : 0;
-    if (results.length === 0 || topScore < 0.65) {
+    if (results.length === 0 || topScore < 0.55) {
       console.log(`[rag-pipeline] Low local similarity (${topScore.toFixed(2)}). Triggering dynamic web search integration...`);
       try {
         const { searchWeb } = require("../../copilot/search.service");
         const webMatches = await searchWeb(query);
         
         if (webMatches && webMatches.length > 0) {
-          // Temporarily cache top 3 web results to vector store so they enrich subsequent questions
           for (let i = 0; i < Math.min(3, webMatches.length); i++) {
             const match = webMatches[i];
             const textChunk = `Web Search Title: ${match.title}
@@ -219,7 +221,7 @@ Extract: ${match.snippet}`;
           }
 
           // Re-query vector DB to include newly ingested web cache vectors
-          results = await vectorDb.query(query, limit * 2);
+          results = await vectorDb.query(query, 20);
         }
       } catch (err) {
         console.warn("[rag-pipeline] Dynamic web search integration failed:", err.message);
@@ -230,19 +232,20 @@ Extract: ${match.snippet}`;
       return "";
     }
 
-    // Rerank step: Simple sorting by score (can be extended with custom rank weighting)
-    const topMatches = results.slice(0, limit);
+    // Sprint 51: Reranking Step — Score top-20 candidates with BM25 + Vector composite weighting
+    const rerankedMatches = await rerankerService.rerank(results, query, limit);
 
-    const contextBlock = topMatches
-      .map((doc, idx) => `[Source ${idx + 1}] (${doc.metadata.sourceType || "Document"}):
+    const contextBlock = rerankedMatches
+      .map((doc, idx) => `[Source ${idx + 1}] (${doc.metadata.sourceType || "Document"} | Score: ${doc.rerankScore}):
 ${doc.text}`)
       .join("\n\n");
 
     return `\n\n================================================================================
-## ENTERPRISE RAG CONTEXT (Retrieved Security Knowledge)
+## ENTERPRISE RAG CONTEXT (Hybrid Retrieved & Reranked Knowledge)
 ${contextBlock}
 ================================================================================\n`;
   }
+
 
   /**
    * Ingest Completed Scan Findings (Sprint 46)
