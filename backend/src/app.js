@@ -61,15 +61,16 @@ app.use(compression());
 
 app.use(morgan("dev"));
 
-// 🔴 Critical 2 — JSON Payload Limit (Prevents large payload attacks)
-app.use(express.json({ limit: "2mb" }));
+// 🔴 Critical 2 — JSON Payload Limit (Supports large file analysis up to 50MB)
+app.use(express.json({ limit: "50mb" }));
 
 app.use(
   express.urlencoded({
     extended: true,
-    limit: "2mb",
+    limit: "50mb",
   }),
 );
+
 
 app.use(cookieParser());
 

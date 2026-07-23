@@ -1668,7 +1668,7 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
     const combinedPrompt =
       promptTemplate + kbPromptContext + webContext + fileContext + ragContext + memoryContext;
 
-    // 5. Build message history
+    // 5. Build message history and inject enriched system prompt with file context
     let selectedModel = model;
     let fallbackModels = [];
     if (!model || model === DEFAULT_MODEL) {
@@ -1679,15 +1679,21 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
       fallbackModels = llmRegistry.getFallbackChain();
     }
     const uniqueModels = Array.from(new Set([selectedModel, ...fallbackModels]));
-    const messageHistory = await buildMessageHistory(id, userQuery, 12);
+    const rawHistory = await buildMessageHistory(id, userQuery, 12);
 
-    // 6. Build enriched system prompt
+    // 6. Build enriched system prompt (includes fileContext, webContext, RAG, memories)
     const enrichedSystemPrompt = buildEnrichedSystemPrompt(
       systemStats,
       selectedModel,
       userMemories,
       combinedPrompt,
     );
+
+    const messageHistory = [
+      { role: "system", content: enrichedSystemPrompt },
+      ...rawHistory,
+    ];
+
 
     const isStream = req.body.stream === true;
     const requestTeamId = req.headers["x-team-id"];
