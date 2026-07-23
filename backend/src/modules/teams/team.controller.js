@@ -213,8 +213,13 @@ const getAuditLogs = async (req, res) => {
 
     return res.json({ success: true, logs });
   } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // DELETE /api/teams/:id
 const deleteTeam = async (req, res) => {
+
   try {
     const team = req.team;
     const isOwner = team.owner.toString() === req.user._id.toString();
