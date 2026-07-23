@@ -252,7 +252,7 @@ const MODEL_REGISTRY = {
   },
 };
 
-const DEFAULT_MODEL = "openai";
+const DEFAULT_MODEL = process.env.GEMINI_API_KEY ? "gemini" : "gemini";
 
 // ─── Helper: Build enriched system prompt ──────────────────────────────────────
 const buildEnrichedSystemPrompt = (
