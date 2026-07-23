@@ -12,7 +12,8 @@ import {
   FileBadge2,
 } from "lucide-react";
 
-export default function ScanStatusCard({ scan, scanStatus }) {
+export default function ScanStatusCard({ scan, scanStatus, onSelectStage }) {
+
   const progress = scanStatus
     ? scanStatus.progress
     : scan
@@ -450,6 +451,8 @@ export default function ScanStatusCard({ scan, scanStatus }) {
               <React.Fragment key={stage.name}>
                 <div
                   className={`pipeline-stage-card ${styles.class || ""}`}
+                  onClick={() => onSelectStage && onSelectStage(stage)}
+                  title={`Click to view audit telemetry for ${stage.label}`}
                   style={{
                     flex: "1 1 0",
                     minWidth: "120px",
@@ -461,8 +464,10 @@ export default function ScanStatusCard({ scan, scanStatus }) {
                     textAlign: "center",
                     position: "relative",
                     overflow: "hidden",
+                    cursor: "pointer",
                   }}
                 >
+
                   {/* Status Badge */}
                   <div style={{
                     position: "absolute", top: "6px", right: "6px",
