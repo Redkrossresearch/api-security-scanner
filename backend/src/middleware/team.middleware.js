@@ -4,15 +4,14 @@ const Team = require("../modules/teams/team.model");
 const authorizeTeam = (allowedRoles = []) => {
   return async (req, res, next) => {
     try {
-      const teamId = req.headers["x-team-id"] || req.params.id;
+      const teamId = req.headers["x-team-id"];
 
       if (!teamId) {
         return res.status(400).json({
           success: false,
-          message: "Team ID is required for this operation",
+          message: "X-Team-ID header is required for this operation",
         });
       }
-
 
       if (!mongoose.Types.ObjectId.isValid(teamId)) {
         return res.status(400).json({
