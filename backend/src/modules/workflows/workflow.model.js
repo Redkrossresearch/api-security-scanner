@@ -1,41 +1,36 @@
+/**
+ * workflow.model.js (Sprint 68 — Workflow Builder Schema)
+ * Stores user-defined custom automation workflows with step sequences.
+ */
 const mongoose = require("mongoose");
 
-const WorkflowStepSchema = new mongoose.Schema({
-  id: {
-    type: String,
-    required: true,
-  },
-  stepType: {
-    type: String,
-    enum: ["scan", "cve_search", "owasp_mapping", "risk_score", "report", "notify"],
-    required: true,
-  },
-  config: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {},
-  },
-  dependsOn: {
-    type: [String],
-    default: [],
-  },
-});
-
-const WorkflowSchema = new mongoose.Schema(
+const workflowSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: true,
-      trim: true,
     },
+    description: String,
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
-      index: true,
     },
-    steps: [WorkflowStepSchema],
+    steps: [
+      {
+        stepIndex: Number,
+        actionType: { type: String, required: true }, // e.g. "crawl", "scan", "rag", "report"
+        targetUrl: String,
+        params: { type: mongoose.Schema.Types.Mixed, default: {} },
+      },
+    ],
+    active: {
+      type: Boolean,
+      default: true,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-module.exports = mongoose.model("Workflow", WorkflowSchema);
+module.exports = mongoose.model("Workflow", workflowSchema);
