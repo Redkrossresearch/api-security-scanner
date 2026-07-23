@@ -80,8 +80,9 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem("token", res.data.accessToken);
           }
         } catch (err) {
-          console.error("Auth session sync failed:", err);
+          console.warn("Auth session sync warning (backend cold start / offline):", err.message);
         }
+
         setCurrentUser(user);
         setLoading(false);
       } else {

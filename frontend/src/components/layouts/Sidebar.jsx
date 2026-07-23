@@ -106,8 +106,12 @@ function Sidebar() {
           }
         }
       } catch (err) {
-        console.error("Failed to load teams:", err);
+        console.warn("Teams load warning (using default workspace):", err.message);
+        setTeams([{ _id: "default", name: "Enterprise Workspace" }]);
+        setActiveTeam("default");
       }
+
+
     };
     if (currentUser) {
       fetchTeams();

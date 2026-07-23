@@ -9,6 +9,13 @@ export const SocketProvider = ({ children }) => {
   const [latency, setLatency] = useState(0);
 
   useEffect(() => {
+    const isVercel = typeof window !== "undefined" && window.location.hostname.includes("vercel.app");
+    if (isVercel) {
+      console.warn("[SocketProvider] Disabling WebSockets on serverless Vercel host.");
+      setIsConnected(false);
+      return;
+    }
+
     const token = localStorage.getItem("token");
     if (currentUser && token) {
       socket.auth = { token };
@@ -31,16 +38,13 @@ export const SocketProvider = ({ children }) => {
     const onConnectError = (err) => {
       setIsConnected(false);
       setLatency(0);
-      console.error("[SocketProvider] Connection error:", err.message);
-      if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
-        console.warn("[SocketProvider] Disabling sockets on serverless Vercel host.");
-        socket.disconnect();
-      }
+      console.warn("[SocketProvider] Connection warning:", err.message);
     };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     socket.on("connect_error", onConnectError);
+
     
     // Listen to system:heartbeat to compute latency
     socket.on("system:heartbeat", (data) => {
