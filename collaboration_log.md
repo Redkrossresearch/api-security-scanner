@@ -21,7 +21,23 @@ This is the **official commit-by-commit** development registry. Every entry maps
 
 > Format: `[COMMIT HASH]` → Author → Date → Files Changed → Sprints
 
-### `f2e9a16` — 23 Jul 2026 — Muskan (Frontend)
+### `b4b178d` — 23 Jul 2026 — Muskan (Frontend)
+**feat(frontend): implement CitationCard, Sources panel & adaptive output layout (Sprints 126-130, 142)**
+- 🎨 **Files Changed (2 files, +90 lines):**
+  - [`CitationCard.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/renderers/CitationCard.jsx) (Visual Citation Card with official authority badges, favicon, hover preview & external link)
+  - [`BlockRenderer.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/BlockRenderer.jsx) (Collapsible Sources list panel & adaptive output layout)
+- 📌 **Sprints:** 126, 127, 128, 129, 130, 142.
+
+### `066ced1` — 23 Jul 2026 — Atharv (Backend)
+**feat(backend): implement Real Web Search RAG, Knowledge Tagging, Smart Output Classifier & Launch v3.0 (Sprints 121-125, 131-137, 138-141, 143-150)**
+- 🛠️ **Files Changed (6 files, +317 lines):**
+  - [`web.search.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/search/web.search.service.js) (Full page fetcher, 24h query caching & search reliability fallback)
+  - [`tag.schema.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/knowledge/tag.schema.js) (Knowledge tagging vocabulary schema)
+  - [`tag.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/knowledge/tag.service.js) (Auto-tagging classification, CRUD, tag-based retrieval & 30-day analytics)
+  - [`output-classifier.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/llm/output-classifier.js) (Smart output-type decision engine & block schema validator)
+  - [`agent.routes.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/agents/agent.routes.js) (REST endpoint `GET /api/knowledge`)
+- 📌 **Sprints:** 121, 122, 123, 124, 125, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 143, 144, 145, 146, 147, 148, 149, 150.
+
 **feat(frontend): implement Endpoint Discovery fix, Claude typography, Image Lightbox & Universal Copy controls (Sprints 94, 99, 101-106, 107-111)**
 - 🎨 **Files Changed (5 files, +449 lines):**
   - [`EndpointDiscoveryTable.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/scans/EndpointDiscoveryTable.jsx) (Fixed endpoint discovery & modal viewer listing all discovered endpoints)
