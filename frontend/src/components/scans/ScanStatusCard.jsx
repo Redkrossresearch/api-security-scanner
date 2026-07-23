@@ -58,90 +58,141 @@ export default function ScanStatusCard({ scan, scanStatus }) {
     },
   ];
 
-  const getStageStatus = (scannersList) => {
-    if (!scanStatus || !scanStatus.scanners) {
-      if (scan && scan.status === "completed") return "completed";
-      if (scan && scan.status === "failed") return "failed";
-      return "pending";
+  const stageDefinitions = [
+    { name: "Recon", label: "Reconnaissance", scanners: ["security-header", "ssl", "server", "technology"] },
+    { name: "Discovery", label: "Endpoint Discovery", scanners: ["api-inventory", "openapi"] },
+    { name: "Authentication", label: "Auth Audit", scanners: ["jwt", "cookie"] },
+    { name: "Authorization", label: "BOLA & CORS", scanners: ["cors"] },
+    { name: "Testing", label: "Vulnerability Testing", scanners: ["rate-limit", "attack-surface"] },
+    { name: "Reporting", label: "AI Threat Report", scanners: ["endpoint-risk"] },
+  ];
+
+  const totalStages = stageDefinitions.length;
+  const isCompleted = scan?.status === "completed" || progress >= 100;
+  const isFailed = scan?.status === "failed";
+  const isRunning = (scanStatus?.status === "running" || scan?.status === "running") && progress < 100;
+
+  const stages = stageDefinitions.map((stageDef, index) => {
+    let stageStatus = "pending";
+
+    // Priority 1: Check live scanner map if provided by socket
+    if (scanStatus && scanStatus.scanners) {
+      const states = stageDef.scanners.map(s => scanStatus.scanners[s] || "pending");
+      if (states.every(s => s === "completed")) stageStatus = "completed";
+      else if (states.some(s => s === "running")) stageStatus = "running";
+      else if (states.some(s => s === "failed")) stageStatus = "failed";
     }
-    const states = scannersList.map(s => scanStatus.scanners[s] || "pending");
-    if (states.every(s => s === "completed")) return "completed";
-    if (states.some(s => s === "running")) return "running";
-    if (states.some(s => s === "failed")) return "failed";
-    return "pending";
-  };
+
+    // Priority 2: If scanner map wasn't specific, derive from sequential progress %
+    if (stageStatus === "pending") {
+      if (isCompleted) {
+        stageStatus = "completed";
+      } else if (isFailed) {
+        const threshold = ((index + 1) / totalStages) * 100;
+        stageStatus = progress >= threshold ? "completed" : (progress >= (index / totalStages) * 100 ? "failed" : "pending");
+      } else if (isRunning || progress > 0) {
+        const stageStart = (index / totalStages) * 100;
+        const stageEnd = ((index + 1) / totalStages) * 100;
+
+        if (progress >= stageEnd) {
+          stageStatus = "completed";
+        } else if (progress >= stageStart) {
+          stageStatus = "running";
+        } else {
+          stageStatus = "pending";
+        }
+      } else {
+        // Idle unstarted state
+        if (scan && scan.status === "completed") stageStatus = "completed";
+        else stageStatus = "pending";
+      }
+    }
+
+    return {
+      ...stageDef,
+      status: stageStatus,
+    };
+  });
 
   const getStageIcon = (name, color) => {
     switch (name) {
       case "Recon":
-        return <FolderSearch size={20} color={color} />;
+        return <FolderSearch size={18} color={color} />;
       case "Discovery":
-        return <Zap size={20} color={color} />;
+        return <Zap size={18} color={color} />;
       case "Authentication":
-        return <KeyRound size={20} color={color} />;
+        return <KeyRound size={18} color={color} />;
       case "Authorization":
-        return <Fingerprint size={20} color={color} />;
+        return <Fingerprint size={18} color={color} />;
       case "Testing":
-        return <ShieldCheck size={20} color={color} />;
+        return <ShieldCheck size={18} color={color} />;
       default:
-        return <FileBadge2 size={20} color={color} />;
+        return <FileBadge2 size={18} color={color} />;
     }
   };
-
-  const stages = [
-    {
-      name: "Recon",
-      status: scanStatus ? getStageStatus(["security-header", "ssl", "server", "technology"]) : "completed"
-    },
-    {
-      name: "Discovery",
-      status: scanStatus ? getStageStatus(["api-inventory", "openapi"]) : "completed"
-    },
-    {
-      name: "Authentication",
-      status: scanStatus ? getStageStatus(["jwt", "cookie"]) : "running"
-    },
-    {
-      name: "Authorization",
-      status: scanStatus ? getStageStatus(["cors"]) : "pending"
-    },
-    {
-      name: "Testing",
-      status: scanStatus ? getStageStatus(["rate-limit", "attack-surface"]) : "pending"
-    },
-    {
-      name: "Reporting",
-      status: scanStatus ? getStageStatus(["endpoint-risk"]) : "pending"
-    },
-  ];
 
   const getStageColors = (status) => {
     if (status === "completed") {
       return {
         color: "#10B981",
-        bg: "rgba(16, 185, 129, 0.08)",
-        border: "1px solid rgba(16, 185, 129, 0.25)",
-        glow: "rgba(16, 185, 129, 0.08)",
+        labelColor: "#059669",
+        bg: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 182, 212, 0.05))",
+        border: "1px solid rgba(16, 185, 129, 0.35)",
+        iconBg: "rgba(16, 185, 129, 0.15)",
+        glow: "rgba(16, 185, 129, 0.12)",
+        badgeText: "✓ DONE",
+        badgeBg: "rgba(16, 185, 129, 0.18)",
+        badgeColor: "#34D399",
+        class: "completed-stage-glow",
       };
     }
     if (status === "running") {
       return {
         color: "#F97316",
-        bg: "rgba(249, 115, 22, 0.1)",
-        border: "1px solid rgba(249, 115, 22, 0.35)",
-        glow: "rgba(249, 115, 22, 0.15)",
+        labelColor: "#FB923C",
+        bg: "linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(124, 58, 237, 0.12))",
+        border: "1px solid rgba(249, 115, 22, 0.6)",
+        iconBg: "rgba(249, 115, 22, 0.25)",
+        glow: "rgba(249, 115, 22, 0.35)",
+        badgeText: "● RUNNING",
+        badgeBg: "rgba(249, 115, 22, 0.25)",
+        badgeColor: "#FDBA74",
         class: "running-glow-pulse",
+      };
+    }
+    if (status === "failed") {
+      return {
+        color: "#EF4444",
+        labelColor: "#F87171",
+        bg: "rgba(239, 68, 68, 0.1)",
+        border: "1px solid rgba(239, 68, 68, 0.35)",
+        iconBg: "rgba(239, 68, 68, 0.15)",
+        glow: "rgba(239, 68, 68, 0.15)",
+        badgeText: "✕ FAILED",
+        badgeBg: "rgba(239, 68, 68, 0.2)",
+        badgeColor: "#FCA5A5",
+        class: "",
       };
     }
     return {
       color: "#475569",
-      bg: "rgba(1, 2, 5, 0.6)",
-      border: "1px solid rgba(255, 255, 255, 0.03)",
+      labelColor: "#334155",
+      bg: "rgba(10, 16, 28, 0.4)",
+      border: "1px solid rgba(255, 255, 255, 0.04)",
+      iconBg: "rgba(255, 255, 255, 0.02)",
       glow: "none",
+      badgeText: "⏳ QUEUED",
+      badgeBg: "rgba(255, 255, 255, 0.04)",
+      badgeColor: "#64748B",
+      class: "pending-stage",
     };
   };
 
   const status = scanStatus?.status || scan?.status || "idle";
+
+  const activeStageItem = stages.find((s) => s.status === "running") ||
+                         (stages.every((s) => s.status === "completed") ? null : stages.find((s) => s.status === "pending"));
+
 
   return (
     <div
@@ -359,88 +410,117 @@ export default function ScanStatusCard({ scan, scanStatus }) {
             Security Assessment Pipeline
           </h3>
 
-          <div
-            style={{
-              color: "#F97316",
-              fontWeight: "800",
-              fontSize: "12px",
-              background: "rgba(249, 115, 22, 0.1)",
-              padding: "4px 10px",
-              borderRadius: "6px",
-              border: "1px solid rgba(249, 115, 22, 0.2)",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}
-          >
-            <span className="pipeline-running-dot" />
-            Authentication Running
-          </div>
+          {/* Dynamic Header Badge */}
+          {isCompleted ? (
+            <div style={{ color: "#10B981", fontWeight: "800", fontSize: "12px", background: "rgba(16, 185, 129, 0.12)", padding: "5px 12px", borderRadius: "8px", border: "1px solid rgba(16, 185, 129, 0.3)", display: "flex", alignItems: "center", gap: "6px" }}>
+              <ShieldCheck size={14} color="#10B981" />
+              <span>Assessment Completed</span>
+            </div>
+          ) : activeStageItem ? (
+            <div style={{ color: "#F97316", fontWeight: "800", fontSize: "12px", background: "linear-gradient(90deg, rgba(249, 115, 22, 0.15), rgba(6, 182, 212, 0.15))", padding: "5px 12px", borderRadius: "8px", border: "1px solid rgba(249, 115, 22, 0.4)", display: "flex", alignItems: "center", gap: "8px", boxShadow: "0 0 12px rgba(249, 115, 22, 0.15)" }}>
+              <span className="pipeline-running-dot" />
+              <span>{activeStageItem.label} {activeStageItem.status === "running" ? "Active" : "Queued"}</span>
+            </div>
+          ) : (
+            <div style={{ color: "#94A3B8", fontWeight: "700", fontSize: "12px", background: "rgba(255, 255, 255, 0.05)", padding: "5px 12px", borderRadius: "8px", border: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span>Idle</span>
+            </div>
+          )}
         </div>
 
+        {/* Sequential Step Cards + Laser Connectors */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
-            gap: "12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "8px",
+            width: "100%",
+            overflowX: "auto",
+            paddingBottom: "4px"
           }}
         >
-          {stages.map((stage) => {
+          {stages.map((stage, idx) => {
             const styles = getStageColors(stage.status);
+            const isLast = idx === stages.length - 1;
+            const nextStage = !isLast ? stages[idx + 1] : null;
+            const isLaserActive = stage.status === "completed" || stage.status === "running";
+
             return (
-              <div
-                key={stage.name}
-                className={`pipeline-stage-card ${styles.class || ""}`}
-                style={{
-                  background: styles.bg,
-                  border: styles.border,
-                  boxShadow: styles.glow !== "none" ? `0 0 15px ${styles.glow}` : "none",
-                  borderRadius: "14px",
-                  padding: "16px 12px",
-                  textAlign: "center",
-                  position: "relative",
-                  overflow: "hidden",
-                }}
-              >
+              <React.Fragment key={stage.name}>
                 <div
+                  className={`pipeline-stage-card ${styles.class || ""}`}
                   style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "10px",
-                    margin: "0 auto 12px",
-                    background: stage.status === "pending" ? "rgba(255,255,255,0.015)" : styles.bg,
-                    border: stage.status === "pending" ? "1px solid rgba(255,255,255,0.03)" : styles.border,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+                    flex: "1 1 0",
+                    minWidth: "120px",
+                    background: styles.bg,
+                    border: styles.border,
+                    boxShadow: styles.glow !== "none" ? `0 0 15px ${styles.glow}` : "none",
+                    borderRadius: "14px",
+                    padding: "16px 10px",
+                    textAlign: "center",
+                    position: "relative",
+                    overflow: "hidden",
                   }}
                 >
-                  {getStageIcon(stage.name, stage.status === "pending" ? "#475569" : styles.color)}
+                  {/* Status Badge */}
+                  <div style={{
+                    position: "absolute", top: "6px", right: "6px",
+                    fontSize: "8.5px", fontWeight: "800",
+                    padding: "2px 6px", borderRadius: "4px",
+                    background: styles.badgeBg, color: styles.badgeColor,
+                    letterSpacing: "0.4px"
+                  }}>
+                    {styles.badgeText}
+                  </div>
+
+                  <div
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      borderRadius: "10px",
+                      margin: "6px auto 10px",
+                      background: styles.iconBg,
+                      border: stage.status === "pending" ? "1px solid rgba(255,255,255,0.03)" : styles.border,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.25s ease",
+                    }}
+                  >
+                    {getStageIcon(stage.name, stage.status === "pending" ? "#475569" : styles.color)}
+                  </div>
+
+                  <div
+                    style={{
+                      color: stage.status === "pending" ? "#64748B" : "#FFFFFF",
+                      fontWeight: "800",
+                      fontSize: "12.5px",
+                    }}
+                  >
+                    {stage.name}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: "4px",
+                      color: styles.labelColor,
+                      fontSize: "10px",
+                      fontWeight: "700",
+                      letterSpacing: "0.3px",
+                    }}
+                  >
+                    {stage.label}
+                  </div>
                 </div>
 
-                <div
-                  style={{
-                    color: stage.status === "pending" ? "#475569" : "#FFFFFF",
-                    fontWeight: "800",
-                    fontSize: "12.5px",
-                  }}
-                >
-                  {stage.name}
-                </div>
-
-                <div
-                  style={{
-                    marginTop: "6px",
-                    color: styles.color,
-                    fontSize: "10px",
-                    fontWeight: "800",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  {stage.status}
-                </div>
-              </div>
+                {/* Laser flow connector between cards */}
+                {!isLast && (
+                  <div
+                    className={`pipeline-laser-connector ${isLaserActive ? "active-laser" : ""}`}
+                  />
+                )}
+              </React.Fragment>
             );
           })}
         </div>
@@ -526,18 +606,50 @@ export default function ScanStatusCard({ scan, scanStatus }) {
         }
 
         .pipeline-stage-card {
-          transition: all 0.25s ease;
+          transition: all 0.3s ease;
+        }
+
+        .pipeline-stage-card.completed-stage-glow {
+          box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
         }
 
         .pipeline-stage-card.running-glow-pulse {
-          animation: runningBorderPulse 2s infinite ease-in-out;
+          animation: runningBorderPulse 1.8s ease-in-out infinite alternate;
         }
 
         @keyframes runningBorderPulse {
-          0%, 100% { border-color: rgba(249, 115, 22, 0.25); box-shadow: 0 0 12px rgba(249, 115, 22, 0.08); }
-          50% { border-color: rgba(249, 115, 22, 0.5); box-shadow: 0 0 20px rgba(249, 115, 22, 0.22); }
+          0% {
+            border-color: rgba(249, 115, 22, 0.5);
+            box-shadow: 0 0 18px rgba(249, 115, 22, 0.3), inset 0 0 10px rgba(249, 115, 22, 0.15);
+          }
+          100% {
+            border-color: rgba(6, 182, 212, 0.8);
+            box-shadow: 0 0 28px rgba(6, 182, 212, 0.45), inset 0 0 15px rgba(6, 182, 212, 0.25);
+          }
+        }
+
+        .pipeline-laser-connector {
+          width: 16px;
+          height: 3px;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 999px;
+          flex-shrink: 0;
+          transition: all 0.3s ease;
+        }
+
+        .pipeline-laser-connector.active-laser {
+          background: linear-gradient(90deg, #10B981, #06B6D4, #3B82F6, #10B981);
+          background-size: 200% 100%;
+          animation: laserEnergyFlow 1.8s linear infinite;
+          box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+        }
+
+        @keyframes laserEnergyFlow {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
         }
       `}</style>
     </div>
   );
 }
+
