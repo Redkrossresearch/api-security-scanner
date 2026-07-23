@@ -8,6 +8,7 @@ const {
   addMember,
   removeMember,
   getAuditLogs,
+  deleteTeam,
 } = require("./team.controller");
 
 // General Routes
@@ -15,12 +16,14 @@ router.post("/", authenticate, createTeam);
 router.get("/", authenticate, getTeams);
 
 // Team-Specific Access Controlled Routes (X-Team-ID header required)
+router.delete("/:id", authenticate, authorizeTeam(["owner"]), deleteTeam);
 router.post(
   "/:id/members",
   authenticate,
   authorizeTeam(["owner", "admin"]),
   addMember,
 );
+
 router.delete(
   "/:id/members/:userId",
   authenticate,
