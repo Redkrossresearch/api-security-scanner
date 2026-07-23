@@ -1,8 +1,6 @@
 const Team = require("./team.model");
 const AuditLog = require("./audit.model");
 const User = require("../auth/auth.model");
-const bcrypt = require("bcryptjs");
-
 
 // Create dynamic helper to log actions
 const writeLog = async (teamId, userId, action, details = {}, ip = "") => {
@@ -92,26 +90,15 @@ const addMember = async (req, res) => {
         });
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const emailRegex = /^\S+@\S+\.\S+$/;
-    if (!emailRegex.test(normalizedEmail)) {
-      return res.status(400).json({ success: false, message: "Invalid email format" });
-    }
-
-    // Resolve user by email, or auto-provision pending invited user
-    let userToAdd = await User.findOne({
-      email: normalizedEmail,
+    // Resolve user by email
+    const userToAdd = await User.findOne({
+      email: email.toLowerCase(),
       isDeleted: { $ne: true },
     });
-
     if (!userToAdd) {
-      const passwordHash = await bcrypt.hash(`InvitePass_${Date.now()}`, 10);
-      userToAdd = await User.create({
-        name: normalizedEmail.split("@")[0],
-        email: normalizedEmail,
-        passwordHash,
-        role: "user",
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found with this email" });
     }
 
     // Check if user is already a member
@@ -123,15 +110,14 @@ const addMember = async (req, res) => {
         .status(400)
         .json({
           success: false,
-          message: "User is already a member or has a pending invitation to this workspace",
+          message: "User is already a member of this team",
         });
     }
 
-    // Push member with pending invitation status
+    // Push member
     team.members.push({
       userId: userToAdd._id,
       role: targetRole,
-      status: "pending",
     });
     await team.save();
 
@@ -139,16 +125,15 @@ const addMember = async (req, res) => {
       team._id,
       req.user._id,
       "member_added",
-      { invitedUser: normalizedEmail, role: targetRole },
+      { invitedUser: userToAdd.email, role: targetRole },
       req.ip || "",
     );
 
-    return res.status(201).json({
+    return res.json({
       success: true,
-      message: `Invitation request sent to ${normalizedEmail}! Status: Pending Acceptance`,
+      message: "Member added successfully",
       team,
     });
-
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
@@ -221,71 +206,10 @@ const getAuditLogs = async (req, res) => {
   }
 };
 
-// DELETE /api/teams/:id
-const deleteTeam = async (req, res) => {
-
-  try {
-    const team = req.team;
-    const isOwner = (team.ownerId && team.ownerId.toString() === req.user._id.toString()) ||
-                    team.members.some((m) => m.userId.toString() === req.user._id.toString() && m.role === "owner");
-
-    if (!isOwner) {
-      return res.status(403).json({ success: false, message: "Only workspace owner can delete workspace" });
-    }
-
-
-    await Team.findByIdAndDelete(team._id);
-    await AuditLog.deleteMany({ teamId: team._id });
-
-    return res.json({ success: true, message: "Workspace deleted successfully" });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// POST /api/teams/:id/members/:userId/accept
-const acceptMemberInvite = async (req, res) => {
-  try {
-    const team = req.team;
-    const { userId } = req.params;
-
-    const member = team.members.find(
-      (m) => m.userId.toString() === userId.toString()
-    );
-
-    if (!member) {
-      return res.status(404).json({ success: false, message: "Member invitation not found" });
-    }
-
-    member.status = "accepted";
-    await team.save();
-
-    await writeLog(
-      team._id,
-      req.user._id,
-      "invite_accepted",
-      { userId },
-      req.ip || ""
-    );
-
-    return res.json({
-      success: true,
-      message: "Workspace invitation accepted successfully!",
-      team,
-    });
-  } catch (err) {
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
 module.exports = {
   createTeam,
   getTeams,
   addMember,
   removeMember,
   getAuditLogs,
-  deleteTeam,
-  acceptMemberInvite,
 };
-
-
