@@ -13,13 +13,26 @@ This is the **official commit-by-commit** development registry. Every entry maps
 | `main` | **Release** | Production | 🔵 Stable |
 
 > [!IMPORTANT]
-> **All 3 branches (`atharv-dev`, `muskan-dev`, `main`) are synced at Sprints 36-50 tip commit** — zero diff between any branch as of July 22, 2026.
+> **All 3 branches (`atharv-dev`, `muskan-dev`, `main`) are synced at tip commit `d803377`** — zero diff between any branch as of July 23, 2026.
 
 ---
 
 ## 🔀 Full Commit History — Sprint Mapping (Newest → Oldest)
 
 > Format: `[COMMIT HASH]` → Author → Date → Files Changed → Sprints
+
+### `d803377` — 23 Jul 2026 — Muskan (Frontend)
+**fix(frontend): resolve Vercel deployment timeouts, add offline/degraded dashboard mode, and disable WebSockets on serverless host**
+- 🎨 **Files Changed (6 files, +68 lines):**
+  - [`api.js`](file:///c:/Users/athar/api-security-scanner/frontend/src/services/api.js) (Increased Axios timeout to 30s to handle serverless cold starts)
+  - [`SocketProvider.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/sockets/SocketProvider.jsx) (Disabled WebSockets on Vercel host to prevent connection error spam)
+  - [`useDashboard.js`](file:///c:/Users/athar/api-security-scanner/frontend/src/hooks/useDashboard.js) (Added automatic fallback `dashboardData` with `isOffline: true` on network failure)
+  - [`DashboardPage.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/pages/DashboardPage.jsx) (Added degraded/offline status banner with instant `Retry Connection` button)
+  - [`AuthContext.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/contexts/AuthContext.jsx) (Gentle warning handling for session sync during cold starts)
+  - [`Sidebar.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/layouts/Sidebar.jsx) (Default workspace fallback for `/teams` endpoint)
+- 📌 **Fix Target:** Production Vercel deployment error recovery & graceful degraded mode.
+
+
 
 ### `9dbecc9` — 22 Jul 2026 — Muskan (Frontend)
 **feat(muskan): Sprint 38, 43, 47 — SqlBlock syntax validation, DownloadButton per block, and virtualized renderer performance**
