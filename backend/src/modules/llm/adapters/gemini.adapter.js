@@ -64,6 +64,21 @@ class GeminiAdapter extends BaseAdapter {
 
     throw lastError || new Error("Failed to generate content with Gemini API");
   }
+
+  async stream(messages, onToken, options = {}) {
+    const res = await this.generate(messages, options);
+    const content = res.content || "";
+
+    if (typeof onToken === "function" && content) {
+      // Simulate smooth streaming tokens if chunking text
+      const chunks = content.match(/.{1,12}/g) || [content];
+      for (const chunk of chunks) {
+        onToken(chunk);
+      }
+    }
+
+    return res;
+  }
 }
 
 module.exports = GeminiAdapter;
