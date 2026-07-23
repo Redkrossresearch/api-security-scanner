@@ -21,7 +21,32 @@ This is the **official commit-by-commit** development registry. Every entry maps
 
 > Format: `[COMMIT HASH]` → Author → Date → Files Changed → Sprints
 
-### `a516bb6` — 23 Jul 2026 — Muskan (Frontend)
+### `34e7f99` — 23 Jul 2026 — Muskan (Frontend)
+**feat(frontend): implement Diagram Interactivity, Chart Engine, Download Center & 3-Panel Workspace Shell (Sprints 61, 66, 69, 71, 75, 79, 80, 84, 85, 89, 90)**
+- 🎨 **Files Changed (5 files, +525 lines):**
+  - [`DiagramRenderer.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/renderers/DiagramRenderer.jsx) (Zoom, Pan, PNG Export controls & Node Detail Popover modal)
+  - [`ChartBlock.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/renderers/ChartBlock.jsx) (Bar/Line/Pie Recharts engine with pre-built security templates & responsive data states)
+  - [`DownloadsPage.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/pages/DownloadsPage.jsx) (Centralized Download Center UI for reports, OpenAPI specs, and exports)
+  - [`WorkspacePage.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/pages/WorkspacePage.jsx) (3-Panel AI Workspace shell with Left Agent Roster, Middle Chat, Right Live Artifact Inspector, and Custom Agent Builder UI)
+  - [`App.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/App.jsx) (Wired `/workspace` and `/downloads` routes)
+- 📌 **Sprints:** 61, 66, 69, 71, 75, 79, 80, 84, 85, 89, 90.
+
+### `a65c58d` — 23 Jul 2026 — Atharv (Backend)
+**feat(backend): implement autonomous hardening, memory, image agent, multi-task queue, workflows, confidence v2, benchmark suite, attack graph, adapters, dev/judge agents & custom models (Sprints 62, 63, 64, 65, 67, 68, 70, 72, 73, 74, 76, 77, 78, 81, 82, 83, 84, 86, 87, 88, 90)**
+- 🛠️ **Files Changed (21 files, +906 lines):**
+  - [`autonomous.loop.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/agents/autonomous.loop.js) & [`agent.routes.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/agents/agent.routes.js) (Hard stop limits & REST kill-switch API)
+  - [`memory.model.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/memory/memory.model.js) & [`memory.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/memory/memory.service.js) (Long-term memory persistence & auto-extraction)
+  - [`image.agent.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/agents/image.agent.js) (Diagram JSON contract generator)
+  - [`task-queue.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/queue/task-queue.service.js) (Multi-task parallel queue graph & dependency triggers)
+  - [`workflow.model.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/workflows/workflow.model.js) & [`workflow.engine.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/workflows/workflow.engine.js) (Workflow execution engine)
+  - [`confidence.engine.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/engines/confidence.engine.js) & [`feedback.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/feedback/feedback.service.js) (Confidence Engine v2 & user feedback loop)
+  - [`benchmark.suite.js`](file:///c:/Users/athar/api-security-scanner/backend/src/utils/benchmark.suite.js) (50+ golden dataset benchmark suite)
+  - [`attack-graph.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/scans/attack-graph.service.js) & [`security-audit.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/utils/security-audit.service.js) (Attack path graph generator & security cost audit)
+  - [`huggingface.adapter.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/llm/adapters/huggingface.adapter.js) & [`github-models.adapter.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/llm/adapters/github-models.adapter.js) (Provider adapters with health checks)
+  - [`developer.agent.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/agents/developer.agent.js), [`judge.agent.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/agents/judge.agent.js), [`handoff.protocol.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/agents/handoff.protocol.js) (Developer, Judge, and Handoff agents)
+  - [`prompt-template.model.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/templates/prompt-template.model.js) & [`custom-agent.model.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/agents/custom-agent.model.js) (Prompt template library & custom agents)
+- 📌 **Sprints:** 62, 63, 64, 65, 67, 68, 70, 72, 73, 74, 76, 77, 78, 81, 82, 83, 84, 86, 87, 88, 90.
+
 **feat(frontend): implement React Flow diagram renderer & custom node/edge layout engine (Sprints 52 & 57)**
 - 🎨 **Files Changed (2 files, +250 lines):**
   - [`DiagramRenderer.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/renderers/DiagramRenderer.jsx) (Custom node types: service, database, api, user, ER tables; auto-layout non-overlapping positioning algorithm)
