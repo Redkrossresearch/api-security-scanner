@@ -9,7 +9,8 @@ import {
   handleGithubCallback,
   getGithubRepos,
   disconnectGithub,
-  getGithubBranches
+  getGithubBranches,
+  deleteTeamWorkspace
 } from "../services/settingService";
 import { 
   Shield, 
@@ -29,9 +30,14 @@ import {
   Cpu,
   Database,
   Network,
-  Sliders
+  Sliders,
+  AlertTriangle,
+  Sparkles,
+  ShieldAlert,
+  X
 } from "lucide-react";
 import toast from "react-hot-toast";
+
 
 const COLORS = {
   white: "#FFFFFF",
@@ -226,6 +232,10 @@ export default function SettingsPage() {
   const [auditLogs, setAuditLogs] = useState([]);
   const [creatingTeam, setCreatingTeam] = useState(false);
   const [invitingMember, setInvitingMember] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingWorkspace, setDeletingWorkspace] = useState(false);
+
 
   // MCP Configuration states
   const [mcpConfigs, setMcpConfigs] = useState([]);
@@ -446,6 +456,31 @@ export default function SettingsPage() {
       toast.error(err.response?.data?.message || err.message || "Failed to remove member");
     }
   };
+
+  const handleDeleteTeam = async () => {
+    if (!activeTeamId) {
+      toast.error("No active team workspace selected");
+      return;
+    }
+    setDeletingWorkspace(true);
+    try {
+      const res = await deleteTeamWorkspace(activeTeamId);
+      if (res?.success) {
+        toast.success("Workspace deleted successfully!");
+        localStorage.removeItem("activeTeamId");
+        setActiveTeamId("");
+        setActiveTeamData(null);
+        setShowDeleteModal(false);
+        setDeleteConfirmText("");
+        await fetchTeamsAndLogs();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to delete workspace");
+    } finally {
+      setDeletingWorkspace(false);
+    }
+  };
+
 
   // Load user settings
   useEffect(() => {
@@ -2642,9 +2677,132 @@ GITHUB_CLIENT_SECRET=your_secret_here`}
               )}
             </div>
           )}
+          {/* Danger Zone: Delete Workspace */}
+          {activeTeamData && (
+            <div style={{
+              marginTop: "28px", padding: "20px 24px",
+              background: "rgba(239, 68, 68, 0.04)",
+              border: "1px solid rgba(239, 68, 68, 0.2)",
+              borderRadius: "16px", display: "flex",
+              alignItems: "center", justifyContent: "space-between",
+              boxShadow: "0 8px 32px rgba(239, 68, 68, 0.05)"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                <div style={{
+                  background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.3)",
+                  borderRadius: "12px", padding: "10px", color: "#EF4444", display: "flex", alignItems: "center"
+                }}>
+                  <ShieldAlert style={{ width: "22px", height: "22px" }} />
+                </div>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: "15px", fontWeight: "800", color: "#F87171" }}>
+                    Danger Zone — Delete Workspace
+                  </h4>
+                  <p style={{ margin: "4px 0 0 0", fontSize: "12px", color: "#94A3B8" }}>
+                    Permanently remove <strong>"{activeTeamData.name}"</strong>, member assignments, and audit records. This action cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                style={{
+                  background: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)",
+                  border: "none", color: "#FFFFFF", padding: "10px 20px", borderRadius: "10px",
+                  fontSize: "12.5px", fontWeight: "750", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+                  boxShadow: "0 4px 15px rgba(239, 68, 68, 0.3)", transition: "transform 0.2s ease"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.03)"}
+                onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1.0)"}
+              >
+                <Trash2 style={{ width: "15px", height: "15px" }} />
+                Delete Workspace
+              </button>
+            </div>
+          )}
+
         </div>
 
       </div>
+
+      {/* Delete Workspace Confirmation Lightbox Modal */}
+      {showDeleteModal && activeTeamData && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(3, 7, 18, 0.85)", backdropFilter: "blur(10px)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99999, padding: "20px"
+        }}>
+          <div style={{
+            background: "#070D19", border: "1px solid rgba(239, 68, 68, 0.3)",
+            borderRadius: "20px", padding: "28px", maxWidth: "480px", width: "100%",
+            boxShadow: "0 20px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(239, 68, 68, 0.15)",
+            position: "relative"
+          }}>
+            <button
+              onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(""); }}
+              style={{ position: "absolute", top: "18px", right: "18px", background: "transparent", border: "none", color: "#94A3B8", cursor: "pointer" }}
+            >
+              <X style={{ width: "20px", height: "20px" }} />
+            </button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+              <div style={{ background: "rgba(239, 68, 68, 0.15)", padding: "10px", borderRadius: "12px", color: "#EF4444" }}>
+                <AlertTriangle style={{ width: "24px", height: "24px" }} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#FFFFFF" }}>
+                  Delete Workspace?
+                </h3>
+                <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#94A3B8" }}>
+                  This will permanently erase <strong>"{activeTeamData.name}"</strong>.
+                </p>
+              </div>
+            </div>
+
+            <p style={{ fontSize: "13px", color: "#CBD5E1", lineHeight: "1.5", marginBottom: "18px" }}>
+              To prevent accidental deletion, please type the workspace name <strong style={{ color: "#EF4444" }}>{activeTeamData.name}</strong> below:
+            </p>
+
+            <input
+              type="text"
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder={`Type "${activeTeamData.name}"`}
+              style={{
+                width: "100%", background: "#030712", border: "1px solid rgba(239, 68, 68, 0.3)",
+                borderRadius: "10px", padding: "12px 14px", color: "#FFFFFF", fontSize: "13px",
+                marginBottom: "20px", outline: "none"
+              }}
+            />
+
+            <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => { setShowDeleteModal(false); setDeleteConfirmText(""); }}
+                style={{
+                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
+                  color: "#94A3B8", padding: "10px 18px", borderRadius: "10px", fontSize: "13px", fontWeight: "700", cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleDeleteTeam}
+                disabled={deletingWorkspace || deleteConfirmText.trim() !== activeTeamData.name.trim()}
+                style={{
+                  background: deleteConfirmText.trim() === activeTeamData.name.trim() ? "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)" : "rgba(239, 68, 68, 0.2)",
+                  border: "none", color: deleteConfirmText.trim() === activeTeamData.name.trim() ? "#FFFFFF" : "#94A3B8",
+                  padding: "10px 22px", borderRadius: "10px", fontSize: "13px", fontWeight: "750",
+                  cursor: deleteConfirmText.trim() === activeTeamData.name.trim() ? "pointer" : "not-allowed",
+                  boxShadow: deleteConfirmText.trim() === activeTeamData.name.trim() ? "0 4px 15px rgba(239, 68, 68, 0.3)" : "none"
+                }}
+              >
+                {deletingWorkspace ? "Deleting..." : "Permanently Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Save Button Row */}
       <div style={styles.saveBtnRow}>

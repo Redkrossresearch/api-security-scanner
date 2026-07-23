@@ -90,16 +90,27 @@ const addMember = async (req, res) => {
         });
     }
 
-    // Resolve user by email
-    const userToAdd = await User.findOne({
-      email: email.toLowerCase(),
+    const normalizedEmail = email.toLowerCase().trim();
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      return res.status(400).json({ success: false, message: "Invalid email format" });
+    }
+
+    // Resolve user by email, or auto-provision pending invited user
+    let userToAdd = await User.findOne({
+      email: normalizedEmail,
       isDeleted: { $ne: true },
     });
+
     if (!userToAdd) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found with this email" });
+      userToAdd = await User.create({
+        name: normalizedEmail.split("@")[0],
+        email: normalizedEmail,
+        password: `InvitePass_${Date.now()}`,
+        role: "user",
+      });
     }
+
 
     // Check if user is already a member
     const isMember = team.members.some(
@@ -202,6 +213,21 @@ const getAuditLogs = async (req, res) => {
 
     return res.json({ success: true, logs });
   } catch (err) {
+// DELETE /api/teams/:id
+const deleteTeam = async (req, res) => {
+  try {
+    const team = req.team;
+    const isOwner = team.owner.toString() === req.user._id.toString();
+
+    if (!isOwner) {
+      return res.status(403).json({ success: false, message: "Only workspace owner can delete workspace" });
+    }
+
+    await Team.findByIdAndDelete(team._id);
+    await AuditLog.deleteMany({ teamId: team._id });
+
+    return res.json({ success: true, message: "Workspace deleted successfully" });
+  } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
@@ -212,4 +238,6 @@ module.exports = {
   addMember,
   removeMember,
   getAuditLogs,
+  deleteTeam,
 };
+
