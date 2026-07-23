@@ -1,10 +1,12 @@
 import { useEffect, useRef } from "react";
 import Sidebar from "../components/layouts/Sidebar";
 import ParticleBackground from "../components/layouts/ParticleBackground";
+import PageTransition from "../components/common/PageTransition";
 import { Outlet, useLocation } from "react-router-dom";
 import SocketProvider from "../sockets/SocketProvider";
 import useSocketEvent from "../sockets/useSocketEvent";
 import toast from "react-hot-toast";
+
 
 function GlobalSocketListener() {
   useSocketEvent("scan:completed", (data) => {
@@ -226,8 +228,11 @@ export default function MainLayout() {
             flexDirection: "column",
           }}
         >
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
+
       </div>
       </div>
     </SocketProvider>
