@@ -114,20 +114,21 @@ const ModelLogo = ({ provider, color, size = 20 }) => {
 };
 
 const MODELS = [
-  // ⚡ Active Native API Keys (Google Gemini & Groq LPU Active)
-  { id: "gemini", label: "Gemini Flash Latest (Active API Key)", provider: "Google Gemini", color: "#4285F4", speed: "Ultra Fast", quality: "Highest", desc: "Google's active Gemini model via GEMINI_API_KEY" },
-  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Active API Key)", provider: "Google Gemini", color: "#4285F4", speed: "Ultra Fast", quality: "High", desc: "Next-gen Gemini 2.0 Flash engine" },
-  { id: "groq", label: "Llama 3.3 70B (Groq Active Key)", provider: "Groq LPU", color: "#F55036", speed: "⚡ 500 tok/s", quality: "Ultra", desc: "Ultra-fast Groq LPU inference (180ms response)" },
-  { id: "groq-instant", label: "Llama 3.1 8B (Groq Active Key)", provider: "Groq LPU", color: "#F55036", speed: "⚡ 800 tok/s", quality: "High", desc: "Instant Groq LPU inference (89ms response)" },
-  { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro (Active API Key)", provider: "Google Gemini", color: "#8E24AA", speed: "Medium", quality: "Ultra", desc: "Complex security reasoning with 1M context" },
+  // ⚡ Active Native API Keys (Google Gemini & Groq LPU)
+  { id: "gemini", label: "Gemini Flash Latest (Google)", provider: "Google Gemini", color: "#4285F4", speed: "Ultra Fast", quality: "Highest", desc: "Google's active Gemini model via GEMINI_API_KEY" },
+  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Google)", provider: "Google Gemini", color: "#4285F4", speed: "Ultra Fast", quality: "High", desc: "Next-gen Gemini 2.0 Flash engine" },
+  { id: "gemini-1.5-pro", label: "Gemini 1.5 Pro (Google)", provider: "Google Gemini", color: "#8E24AA", speed: "Medium", quality: "Ultra", desc: "Complex security reasoning with 1M context" },
+  { id: "groq", label: "Llama 3.3 70B (Groq)", provider: "Groq LPU", color: "#F55036", speed: "⚡ 500 tok/s", quality: "Ultra", desc: "Ultra-fast Groq LPU inference (180ms response)" },
+  { id: "groq-instant", label: "Llama 3.1 8B (Groq)", provider: "Groq LPU", color: "#F55036", speed: "⚡ 800 tok/s", quality: "High", desc: "Instant Groq LPU inference (89ms response)" },
 
-  // 🔄 Multi-Provider Fallback Models
-  { id: "openai", label: "GPT-4o-Mini (OpenRouter / Fallback)", provider: "OpenAI", color: "#10A37F", speed: "Fast", quality: "High", desc: "OpenAI instruction model via OpenRouter/Fallback" },
-  { id: "claude", label: "Claude 3.5 Sonnet (Fallback)", provider: "Anthropic", color: "#F0A973", speed: "Fast", quality: "Highest", desc: "Anthropic's flagship model via fallback" },
-  { id: "deepseek", label: "DeepSeek V3 (Fallback)", provider: "DeepSeek", color: "#4A90D9", speed: "Fast", quality: "Highest", desc: "DeepSeek reasoning model via fallback" },
-  { id: "qwen-coder", label: "Qwen Coder 32B (Fallback)", provider: "Alibaba", color: "#FF6A00", speed: "Fast", quality: "High", desc: "Code security analysis model" },
-  { id: "mistral", label: "Mistral Small (Fallback)", provider: "Mistral AI", color: "#FF7000", speed: "Very Fast", quality: "Medium", desc: "Fast & light security auditing model" },
+  // 🔄 Multi-Provider OpenRouter Fast Free Models
+  { id: "openai", label: "GPT-4o Mini (OpenRouter)", provider: "OpenAI", color: "#10A37F", speed: "Fast", quality: "High", desc: "OpenAI instruction model via OpenRouter" },
+  { id: "claude", label: "Claude 3.5 Sonnet (OpenRouter)", provider: "Anthropic", color: "#F0A973", speed: "Fast", quality: "Highest", desc: "Anthropic's flagship model via OpenRouter" },
+  { id: "deepseek", label: "DeepSeek V3 (OpenRouter)", provider: "DeepSeek", color: "#4A90D9", speed: "Fast", quality: "Highest", desc: "DeepSeek reasoning model via OpenRouter" },
+  { id: "qwen-coder", label: "Qwen Coder 32B (OpenRouter)", provider: "Alibaba", color: "#FF6A00", speed: "Fast", quality: "High", desc: "Code security analysis model via OpenRouter" },
+  { id: "mistral", label: "Mistral Small (OpenRouter)", provider: "Mistral AI", color: "#FF7000", speed: "Very Fast", quality: "Medium", desc: "Fast & light security auditing model via OpenRouter" },
 ];
+
 
 
 
@@ -587,7 +588,7 @@ export default function PromptInput({
           animation: "slide-up 0.2s ease",
         }}>
           <div style={{ padding: "4px 12px 8px", fontSize: "9px", fontWeight: "800", color: THEME.colors.textSubtle, letterSpacing: "1.2px", textTransform: "uppercase" }}>
-            AI Models · OpenRouter
+            AI Models · Multi-Provider Engines
           </div>
           {/* Search Models */}
           <div style={{ padding: "0 4px 6px" }}>
