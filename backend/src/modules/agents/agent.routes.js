@@ -42,5 +42,18 @@ router.get("/provider-health", (req, res) => {
   });
 });
 
+// GET /api/knowledge (Sprint 134)
+router.get("/knowledge", (req, res) => {
+  const tagService = require("../knowledge/tag.service");
+  const { tag, sourceType } = req.query;
+  const filtered = tagService.filterByTags(tag, sourceType);
+  return res.status(200).json({
+    success: true,
+    total: filtered.length,
+    tags: filtered,
+  });
+});
+
 module.exports = router;
+
 
