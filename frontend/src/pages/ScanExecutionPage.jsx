@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { scanService } from "../services/scanService";
 import api from "../services/api";
@@ -44,7 +45,7 @@ const getFixSnippet = (vuln) => {
   }
   if (title.includes("rate")) {
     return {
-      code: `// Node.js Express rate limiting setup\nconst rateLimit = require('express-rate-limit');\n\nconst limiter = rateLimit({\n  windowMs: 15 * 60 * 1000, // 15 minutes\n  max: 100,                  // limit each IP to 100 requests per windowMs\n  message: 'Too many requests from this IP, please try again later.'\n});\n\napp.use('/api/', limiter);`,
+      code: `// Node.js Express rate limiting setup\nconst rateLimit = require('express-rate-limit');\n\nconst limiter = rateLimit({\n  windowMs: 15 * 60 * 1000, // 15 minutes\n  max: 100,                  // limit each IP to 100 requests per windowMs\n  message: 'Too many requests from this IP, please try again later.'\n});\n\napp.use('/api/', limiter);\n`,
       desc: "Apply rate limiting controls to block automated brute-force attacks."
     };
   }
@@ -55,6 +56,7 @@ const getFixSnippet = (vuln) => {
 };
 
 export default function ScanExecutionPage() {
+  const location = useLocation();
   const [url, setUrl] = useState("https://api.example.com");
   const [isScanning, setIsScanning] = useState(false);
   const [scan, setScan] = useState(null);
@@ -63,6 +65,93 @@ export default function ScanExecutionPage() {
   const [isFixModalOpen, setIsFixModalOpen] = useState(false);
   const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
   const [liveLogs, setLiveLogs] = useState([]);
+
+  // Auto-restore active/last scan state on mount or page navigation
+  useEffect(() => {
+    let isMounted = true;
+    const restoreScanState = async () => {
+      try {
+        // Priority 1: Check location state (e.g. navigated from Scan History or Dashboard)
+        if (location.state?.scan) {
+          const navScan = location.state.scan;
+          if (isMounted) {
+            setScan(navScan);
+            setUrl(navScan.targetUrl || navScan.assetName || "https://api.example.com");
+            if (navScan.vulnerabilities?.length > 0) {
+              setSelectedVuln(navScan.vulnerabilities[0]);
+            }
+            if (navScan.status === "running" || navScan.status === "queued") {
+              setIsScanning(true);
+              setScanStatus({ status: navScan.status, progress: navScan.progress || 10, currentScanner: "scanner" });
+            } else {
+              setScanStatus({ status: navScan.status || "completed", progress: 100 });
+            }
+            const sId = navScan._id || navScan.scanId;
+            if (sId) localStorage.setItem("last_scan_id", sId);
+          }
+          return;
+        }
+
+        // Priority 2: Check localStorage for active or last scan ID
+        const activeId = localStorage.getItem("active_scan_id");
+        const lastId = localStorage.getItem("last_scan_id");
+        const targetScanId = activeId || lastId;
+
+        if (targetScanId) {
+          try {
+            const cachedScan = await scanService.getScanById(targetScanId);
+            if (cachedScan && isMounted) {
+              setScan(cachedScan);
+              setUrl(cachedScan.targetUrl || cachedScan.assetName || "https://api.example.com");
+              if (cachedScan.vulnerabilities?.length > 0) {
+                setSelectedVuln(cachedScan.vulnerabilities[0]);
+              }
+              if (cachedScan.status === "running" || cachedScan.status === "queued") {
+                setIsScanning(true);
+                setScanStatus({ status: cachedScan.status, progress: cachedScan.progress || 25, currentScanner: "scanner" });
+              } else {
+                setIsScanning(false);
+                setScanStatus({ status: cachedScan.status || "completed", progress: 100 });
+              }
+              setLiveLogs([
+                { level: "INFO", time: new Date(cachedScan.createdAt || Date.now()).toLocaleTimeString(), message: `Loaded scan session for ${cachedScan.targetUrl || cachedScan.assetName}` },
+                { level: "INFO", time: new Date().toLocaleTimeString(), message: `Endpoints discovered: ${cachedScan.endpoints?.length || 0} | Total vulnerabilities: ${cachedScan.vulnerabilities?.length || 0}` }
+              ]);
+              return;
+            }
+          } catch (e) {
+            console.warn("Could not load cached scan ID, falling back to history", e);
+          }
+        }
+
+        // Priority 3: Fetch latest scan from backend /scans/history?limit=1
+        const historyRes = await api.get("/scans/history?limit=1");
+        if (historyRes.data?.scans?.length > 0 && isMounted) {
+          const latestSummary = historyRes.data.scans[0];
+          const fullScan = await scanService.getScanById(latestSummary._id || latestSummary.scanId);
+          if (fullScan && isMounted) {
+            setScan(fullScan);
+            setUrl(fullScan.targetUrl || fullScan.assetName || "https://api.example.com");
+            if (fullScan.vulnerabilities?.length > 0) {
+              setSelectedVuln(fullScan.vulnerabilities[0]);
+            }
+            setScanStatus({ status: fullScan.status || "completed", progress: 100 });
+            const sId = fullScan._id || fullScan.scanId;
+            if (sId) localStorage.setItem("last_scan_id", sId);
+            setLiveLogs([
+              { level: "INFO", time: new Date(fullScan.createdAt || Date.now()).toLocaleTimeString(), message: `Loaded recent scan audit for ${fullScan.targetUrl || fullScan.assetName}` },
+              { level: "INFO", time: new Date().toLocaleTimeString(), message: `Score: ${fullScan.score || 85}/100 | Target: ${fullScan.targetUrl || fullScan.assetName}` }
+            ]);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to auto-restore scan history:", err);
+      }
+    };
+
+    restoreScanState();
+    return () => { isMounted = false; };
+  }, [location.state]);
 
   // HTTP Polling fallback for serverless/Vercel environments where socket.io connection fails
   useEffect(() => {
@@ -102,8 +191,10 @@ export default function ScanExecutionPage() {
           if (status === "completed") {
             clearInterval(pollInterval);
             setIsScanning(false);
+            localStorage.removeItem("active_scan_id");
             const completedScan = await scanService.getScanById(scan._id);
             setScan(completedScan);
+            if (completedScan?._id) localStorage.setItem("last_scan_id", completedScan._id);
             if (completedScan.vulnerabilities?.length > 0) {
               setSelectedVuln(completedScan.vulnerabilities[0]);
             }
@@ -111,6 +202,7 @@ export default function ScanExecutionPage() {
           } else if (status === "failed") {
             clearInterval(pollInterval);
             setIsScanning(false);
+            localStorage.removeItem("active_scan_id");
             toast.error("Scan failed.");
           }
         }
@@ -175,9 +267,11 @@ export default function ScanExecutionPage() {
   useSocketEvent("scan:completed", async (data) => {
     if (scan && (data.scanId === scan._id || data.scanId === scan.scanId)) {
       setIsScanning(false);
+      localStorage.removeItem("active_scan_id");
       toast.success("Scan completed successfully!");
       const completedScan = await scanService.getScanById(scan._id);
       setScan(completedScan);
+      if (completedScan?._id) localStorage.setItem("last_scan_id", completedScan._id);
       setScanStatus({
         status: "completed",
         progress: 100,
@@ -191,6 +285,7 @@ export default function ScanExecutionPage() {
   useSocketEvent("scan:failed", (data) => {
     if (scan && (data.scanId === scan._id || data.scanId === scan.scanId)) {
       setIsScanning(false);
+      localStorage.removeItem("active_scan_id");
       toast.error(`Scan failed: ${data.reason}`);
       setScanStatus({
         status: "failed",
@@ -205,7 +300,9 @@ export default function ScanExecutionPage() {
     setScan(null);
     setScanStatus(null);
     setSelectedVuln(null);
-    setLiveLogs([]);
+    setLiveLogs([
+      { level: "INFO", time: new Date().toLocaleTimeString(), message: `Initializing dynamic API security scan for ${url}` }
+    ]);
 
     try {
       const initialScan = await scanService.createScan(url);
@@ -215,11 +312,18 @@ export default function ScanExecutionPage() {
         progress: 0,
         currentScanner: "crawler",
       });
+      const sId = initialScan._id || initialScan.scanId;
+      if (sId) {
+        localStorage.setItem("active_scan_id", sId);
+        localStorage.setItem("last_scan_id", sId);
+      }
     } catch (err) {
       toast.error(err.message || "Failed to start scan");
       setIsScanning(false);
+      localStorage.removeItem("active_scan_id");
     }
   };
+
 
   const handleDownloadPdf = async () => {
     if (!scan) {
