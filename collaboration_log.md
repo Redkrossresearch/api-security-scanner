@@ -13,13 +13,29 @@ This is the **official commit-by-commit** development registry. Every entry maps
 | `main` | **Release** | Production | 🔵 Stable |
 
 > [!IMPORTANT]
-> **All 3 branches (`atharv-dev`, `muskan-dev`, `main`) are synced at tip commit `c1692ff`** — zero diff between any branch as of July 23, 2026.
+> **All 3 branches (`atharv-dev`, `muskan-dev`, `main`) are synced at tip commit `17e1bc0`** — zero diff between any branch as of July 23, 2026.
 
 ---
 
 ## 🔀 Full Commit History — Sprint Mapping (Newest → Oldest)
 
 > Format: `[COMMIT HASH]` → Author → Date → Files Changed → Sprints
+
+### `17e1bc0` — 23 Jul 2026 — Muskan (Frontend)
+**feat(frontend): interactive stage click deep-dive modal displaying real inspection metrics**
+- 🎨 **Files Changed (2 files, +589 lines):**
+  - [`ScanStatusCard.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/scans/ScanStatusCard.jsx) (Interactive stage card cursor & click event binding `onSelectStage`)
+  - [`ScanExecutionPage.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/pages/ScanExecutionPage.jsx) (Futuristic Pipeline Stage Deep-Dive Modal displaying real stage audit metrics, scope summary, scanner list, and targeted issues)
+- 📌 **Feature:** Interactive Pipeline Inspection & Deep-Dive Telemetry Modal.
+
+### `9e66ed3` — 23 Jul 2026 — Atharv (Backend)
+**feat(backend): add pipelineStages schema & real telemetry persistence per stage**
+- 🛠️ **Files Changed (2 files, +93 lines):**
+  - [`scan.model.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/scans/scan.model.js) (Added `pipelineStages` schema with audit metrics, items processed, duration, and findings count)
+  - [`scan.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/scans/scan.service.js) (Calculates and saves real stage execution telemetry for Recon, Discovery, Authentication, Authorization, Testing, and Reporting)
+- 📌 **Feature:** Real backend stage execution tracking & DB persistence.
+
+
 
 ### `c1692ff` — 23 Jul 2026 — Muskan (Frontend)
 **feat(frontend): implement sequential step-by-step pipeline glowing animations & laser flow connectors**
