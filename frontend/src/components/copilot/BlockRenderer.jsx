@@ -5,6 +5,8 @@
  */
 import { useState, useRef } from "react";
 import { Copy, Check, ChevronDown, ChevronRight, AlertTriangle, Info, CheckCircle, XCircle, Code2, Table2, FileJson } from "lucide-react";
+import DiagramRenderer from "./renderers/DiagramRenderer";
+
 
 // ─── Copy Button ─────────────────────────────────────────────────────────────
 function CopyButton({ text, small = false }) {
@@ -437,8 +439,15 @@ export default function BlockRenderer({ block }) {
   const { type = "markdown", content = "", meta = {} } = block;
 
   switch (type) {
+    case "diagram":
+    case "flowchart":
+    case "sequence":
+    case "er":
+    case "reactflow":
+      return <DiagramRenderer diagramData={meta.diagramData} diagramType={type} />;
     case "sql":
       return <SqlBlock content={content} meta={meta} />;
+
     case "command":
     case "cmd":
     case "bash":
