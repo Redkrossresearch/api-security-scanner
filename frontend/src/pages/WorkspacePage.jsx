@@ -17,7 +17,18 @@ export default function WorkspacePage() {
   const [inputText, setInputText] = useState("");
   const [isCustomAgentModalOpen, setIsCustomAgentModalOpen] = useState(false);
 
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+  const [projects] = useState(["Production API Audit", "Payment Gateway Scan", "Internal Microservices"]);
+
+  const togglePinMessage = (msgId) => {
+    setPinnedMessages((prev) =>
+      prev.includes(msgId) ? prev.filter((id) => id !== msgId) : [...prev, msgId]
+    );
+    toast.success("Message pinned state updated!");
+  };
+
   const handleSendMessage = () => {
+
     if (!inputText) return;
     setMessages((prev) => [...prev, { id: String(Date.now()), sender: "user", text: inputText }]);
     setInputText("");

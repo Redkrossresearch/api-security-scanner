@@ -21,7 +21,27 @@ This is the **official commit-by-commit** development registry. Every entry maps
 
 > Format: `[COMMIT HASH]` → Author → Date → Files Changed → Sprints
 
-### `34e7f99` — 23 Jul 2026 — Muskan (Frontend)
+### `f2e9a16` — 23 Jul 2026 — Muskan (Frontend)
+**feat(frontend): implement Endpoint Discovery fix, Claude typography, Image Lightbox & Universal Copy controls (Sprints 94, 99, 101-106, 107-111)**
+- 🎨 **Files Changed (5 files, +449 lines):**
+  - [`EndpointDiscoveryTable.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/scans/EndpointDiscoveryTable.jsx) (Fixed endpoint discovery & modal viewer listing all discovered endpoints)
+  - [`index.css`](file:///c:/Users/athar/api-security-scanner/frontend/src/index.css) (Claude-style typography system: `Inter` UI + `Source Serif 4` body + `JetBrains Mono` code, warm gray background & 72ch reading width)
+  - [`ImageBlock.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/renderers/ImageBlock.jsx) (Click-to-zoom Lightbox modal & PNG download trigger)
+  - [`CopyButton.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/CopyButton.jsx) (Global CopyButton with Markdown vs Plain Text dropdown & cross-browser fallbacks)
+- 📌 **Sprints:** 94, 99, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111.
+
+### `fea9a1e` — 23 Jul 2026 — Atharv (Backend)
+**feat(backend): implement Agent Roster QA, Response Schema v2, Multi-Format Export, Storage Cleanup, Health API & Real Web Search (Sprints 91, 92, 96, 97, 98, 112, 113, 114, 115, 116, 117, 118, 119, 120)**
+- 🛠️ **Files Changed (8 files, +353 lines):**
+  - [`web-crawler.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/scanner/web-crawler.service.js) (Crawls HTML links, form actions, JS API patterns & robots.txt endpoints without capping)
+  - [`agent-roster.test.js`](file:///c:/Users/athar/api-security-scanner/backend/src/utils/agent-roster.test.js) (QA suite verifying all 10 specialized AI agents)
+  - [`response.schema.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/llm/response.schema.js) (Response Schema v2 block parser)
+  - [`export.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/reports/export.service.js) (Multi-format export backend for PDF, DOCX, CSV, JSON, YAML & ZIP)
+  - [`storage-cleanup.js`](file:///c:/Users/athar/api-security-scanner/backend/src/utils/storage-cleanup.js) (7-day automated storage cleanup cron)
+  - [`web.search.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/search/web.search.service.js) (Real web search integration with OWASP/NIST/CVE domain authority ranking & spam filter)
+  - [`agent.routes.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/agents/agent.routes.js) (REST endpoint `GET /api/admin/provider-health`)
+- 📌 **Sprints:** 91, 92, 96, 97, 98, 112, 113, 114, 115, 116, 117, 118, 119, 120.
+
 **feat(frontend): implement Diagram Interactivity, Chart Engine, Download Center & 3-Panel Workspace Shell (Sprints 61, 66, 69, 71, 75, 79, 80, 84, 85, 89, 90)**
 - 🎨 **Files Changed (5 files, +525 lines):**
   - [`DiagramRenderer.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/renderers/DiagramRenderer.jsx) (Zoom, Pan, PNG Export controls & Node Detail Popover modal)
