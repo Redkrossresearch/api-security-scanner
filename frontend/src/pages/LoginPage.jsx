@@ -1215,9 +1215,8 @@ export default function LoginPage() {
 
   return (
     <div style={{
-      height:"100vh", width:"100%", background:"#030812",
-      position:"relative", overflowX:"hidden", overflowY:"auto",
-      WebkitOverflowScrolling:"touch",
+      minHeight:"100vh", width:"100%", background:"#030812",
+      position:"relative", overflowX:"hidden",
       fontFamily:"'Inter',-apple-system,sans-serif",
     }}>
       <div style={{
