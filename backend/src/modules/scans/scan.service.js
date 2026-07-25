@@ -19,7 +19,42 @@ const { scanAttackSurface } = require("../scanner/attack-surface.scanner");
 const { scanRateLimit } = require("../scanner/rate-limit.scanner");
 const { scanApiInventory } = require("../scanner/api-inventory.scanner");
 const { scanEndpointRisk } = require("../scanner/endpoint-risk.scanner");
+const { scanGraphQL } = require("../scanner/graphql.scanner");
+const { scanClickjacking } = require("../scanner/clickjacking.scanner");
+const { scanSubdomainTakeover } = require("../scanner/subdomain-takeover.scanner");
+const { scanCSRF } = require("../scanner/csrf.scanner");
+const { scanCloudMetadata } = require("../scanner/cloud-metadata.scanner");
+const { scanWebSockets } = require("../scanner/websockets.scanner");
+const { scanNoSQLInjection } = require("../scanner/nosql-injection.scanner");
+const { scanOAuthMisconfig } = require("../scanner/oauth-misconfig.scanner");
+const { scanSSRF } = require("../scanner/ssrf.scanner");
+const { scanXXE } = require("../scanner/xxe.scanner");
+const { scanSSTI } = require("../scanner/ssti.scanner");
+const { scanOpenRedirect } = require("../scanner/open-redirect.scanner");
+const { scanBOLA } = require("../scanner/bola-idor.scanner");
+const { scanBFLA } = require("../scanner/bfla.scanner");
+const { scanMassAssignment } = require("../scanner/mass-assignment.scanner");
+const { scanJWTWeakSecret } = require("../scanner/jwt-weak-secret.scanner");
+const { scanHTTPSmuggling } = require("../scanner/http-smuggling.scanner");
+const { scanDirectoryBruteforce } = require("../scanner/directory-bruteforce.scanner");
+const { scanCORSNullOrigin } = require("../scanner/cors-null-origin.scanner");
+const { scanHSTSConfig } = require("../scanner/hsts-config.scanner");
+const { scanContentTypeSniffing } = require("../scanner/content-type-sniffing.scanner");
+const { scanReferrerPolicy } = require("../scanner/referrer-policy.scanner");
+const { scanCSPEval } = require("../scanner/csp-eval.scanner");
+const { scanApiVersioning } = require("../scanner/api-versioning.scanner");
+const { scanProtoPollution } = require("../scanner/proto-pollution.scanner");
+const { scanCachePoisoning } = require("../scanner/cache-poisoning.scanner");
+const { scanSwaggerExposure } = require("../scanner/swagger-exposure.scanner");
+const { scanGitExposure } = require("../scanner/git-exposure.scanner");
+const { scanEnvExposure } = require("../scanner/env-exposure.scanner");
+const { scanLDAPInjection } = require("../scanner/ldap-injection.scanner");
+const { scanXPathInjection } = require("../scanner/xpath-injection.scanner");
+const { scanGRPCSecurity } = require("../scanner/grpc-security.scanner");
+const { scanRedisExposure } = require("../scanner/redis-exposure.scanner");
+
 const { calculateSecurityScore } = require("../engines/security-score.engine");
+
 const {
   dispatchScanNotification,
 } = require("../settings/notification.service");
@@ -243,6 +278,39 @@ const runInProcess = (scan, targetUrl, scanIdString) => {
         traversalFindings,
         commandFindings,
         exposedFileFindings,
+        graphqlFindings,
+        clickjackingFindings,
+        subdomainTakeoverFindings,
+        csrfFindings,
+        cloudMetadataFindings,
+        websocketsFindings,
+        nosqlFindings,
+        oauthFindings,
+        ssrfFindings,
+        xxeFindings,
+        sstiFindings,
+        openRedirectFindings,
+        bolaFindings,
+        bflaFindings,
+        massAssignmentFindings,
+        jwtWeakSecretFindings,
+        httpSmugglingFindings,
+        directoryBruteforceFindings,
+        corsNullOriginFindings,
+        hstsFindings,
+        contentTypeSniffingFindings,
+        referrerPolicyFindings,
+        cspEvalFindings,
+        apiVersioningFindings,
+        protoPollutionFindings,
+        cachePoisoningFindings,
+        swaggerExposureFindings,
+        gitExposureFindings,
+        envExposureFindings,
+        ldapInjectionFindings,
+        xpathInjectionFindings,
+        grpcSecurityFindings,
+        redisExposureFindings,
       ] = await Promise.all([
         runScanner("security-header", scanSecurityHeaders),
         runScanner("ssl", scanSSL),
@@ -264,6 +332,39 @@ const runInProcess = (scan, targetUrl, scanIdString) => {
         runScanner("path-traversal", scanPathTraversal, targetUrl),
         runScanner("command-injection", scanCommandInjection, targetUrl),
         runScanner("exposed-files", scanExposedFiles, targetUrl),
+        runScanner("graphql", scanGraphQL, targetUrl),
+        runScanner("clickjacking", scanClickjacking, targetUrl),
+        runScanner("subdomain-takeover", scanSubdomainTakeover, targetUrl),
+        runScanner("csrf", scanCSRF, targetUrl),
+        runScanner("cloud-metadata", scanCloudMetadata, targetUrl),
+        runScanner("websockets", scanWebSockets, targetUrl),
+        runScanner("nosql-injection", scanNoSQLInjection, targetUrl),
+        runScanner("oauth-misconfig", scanOAuthMisconfig, targetUrl),
+        runScanner("ssrf", scanSSRF, targetUrl),
+        runScanner("xxe", scanXXE, targetUrl),
+        runScanner("ssti", scanSSTI, targetUrl),
+        runScanner("open-redirect", scanOpenRedirect, targetUrl),
+        runScanner("bola-idor", scanBOLA, targetUrl),
+        runScanner("bfla", scanBFLA, targetUrl),
+        runScanner("mass-assignment", scanMassAssignment, targetUrl),
+        runScanner("jwt-weak-secret", scanJWTWeakSecret, targetUrl),
+        runScanner("http-smuggling", scanHTTPSmuggling, targetUrl),
+        runScanner("directory-bruteforce", scanDirectoryBruteforce, targetUrl),
+        runScanner("cors-null-origin", scanCORSNullOrigin, targetUrl),
+        runScanner("hsts-config", scanHSTSConfig, targetUrl),
+        runScanner("content-type-sniffing", scanContentTypeSniffing, targetUrl),
+        runScanner("referrer-policy", scanReferrerPolicy, targetUrl),
+        runScanner("csp-eval", scanCSPEval, targetUrl),
+        runScanner("api-versioning", scanApiVersioning, targetUrl),
+        runScanner("proto-pollution", scanProtoPollution, targetUrl),
+        runScanner("cache-poisoning", scanCachePoisoning, targetUrl),
+        runScanner("swagger-exposure", scanSwaggerExposure, targetUrl),
+        runScanner("git-exposure", scanGitExposure, targetUrl),
+        runScanner("env-exposure", scanEnvExposure, targetUrl),
+        runScanner("ldap-injection", scanLDAPInjection, targetUrl),
+        runScanner("xpath-injection", scanXPathInjection, targetUrl),
+        runScanner("grpc-security", scanGRPCSecurity, targetUrl),
+        runScanner("redis-exposure", scanRedisExposure, targetUrl),
       ]);
 
       const allFindings = [
@@ -284,7 +385,43 @@ const runInProcess = (scan, targetUrl, scanIdString) => {
         ...traversalFindings,
         ...commandFindings,
         ...exposedFileFindings,
+        ...graphqlFindings,
+        ...clickjackingFindings,
+        ...subdomainTakeoverFindings,
+        ...csrfFindings,
+        ...cloudMetadataFindings,
+        ...websocketsFindings,
+        ...nosqlFindings,
+        ...oauthFindings,
+        ...ssrfFindings,
+        ...xxeFindings,
+        ...sstiFindings,
+        ...openRedirectFindings,
+        ...bolaFindings,
+        ...bflaFindings,
+        ...massAssignmentFindings,
+        ...jwtWeakSecretFindings,
+        ...httpSmugglingFindings,
+        ...directoryBruteforceFindings,
+        ...corsNullOriginFindings,
+        ...hstsFindings,
+        ...contentTypeSniffingFindings,
+        ...referrerPolicyFindings,
+        ...cspEvalFindings,
+        ...apiVersioningFindings,
+        ...protoPollutionFindings,
+        ...cachePoisoningFindings,
+        ...swaggerExposureFindings,
+        ...gitExposureFindings,
+        ...envExposureFindings,
+        ...ldapInjectionFindings,
+        ...xpathInjectionFindings,
+        ...grpcSecurityFindings,
+        ...redisExposureFindings,
       ];
+
+
+
 
       // Deduplicate findings by Title (no repetition)
       const seenTitles = new Set();

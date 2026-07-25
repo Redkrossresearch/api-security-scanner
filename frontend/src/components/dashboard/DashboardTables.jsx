@@ -18,7 +18,7 @@ function DashboardTables({
   setSelectedSeverity,
 }) {
   return (
-    <div style={styles.gridTables}>
+    <div className="dashboard-tables-grid" style={styles.gridTables}>
       <LatestScansTable
         scans={latestScans}
         page={page}

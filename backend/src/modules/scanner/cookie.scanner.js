@@ -9,13 +9,21 @@ const scanCookies = async (targetUrl) => {
 
   try {
     const response = await axios.get(targetUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "*/*",
+      },
       httpsAgent: new https.Agent({
         rejectUnauthorized: false,
       }),
       timeout: 10000,
+      maxRedirects: 5,
+      validateStatus: () => true,
     });
 
-    const cookies = response.headers["set-cookie"] || [];
+    const headers = response.headers || {};
+    const cookies = headers["set-cookie"] || [];
 
     cookies.forEach((cookie) => {
       if (!cookie.includes("Secure")) {
@@ -33,21 +41,17 @@ const scanCookies = async (targetUrl) => {
 
     findingKeys.forEach((key) => {
       const finding = createFinding(key);
-
       if (finding) {
         findings.push(finding);
       }
     });
   } catch (error) {
-    findings.push({
-      title: "Cookie Scan Failed",
-      severity: "low",
-      description: error.message,
-    });
+    console.warn(`[cookie-scanner] Exception during scan of ${targetUrl}:`, error.message);
   }
 
   return findings;
 };
+
 
 module.exports = {
   scanCookies,

@@ -1665,8 +1665,18 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
       console.warn("[copilot-memory] Retrieval failed:", memErr.message);
     }
 
+    // 4g. Perform AI Critic Self-Learning Rules Retrieval
+    let criticLearnedContext = "";
+    try {
+      const criticEvaluator = require("../llm/autonomous/critic.evaluator.service");
+      criticLearnedContext = await criticEvaluator.getActiveLearnedInsights(userId, userQuery);
+    } catch (criticErr) {
+      console.warn("[copilot-critic] Learning retrieval failed:", criticErr.message);
+    }
+
     const combinedPrompt =
-      promptTemplate + kbPromptContext + webContext + fileContext + ragContext + memoryContext;
+      promptTemplate + kbPromptContext + webContext + fileContext + ragContext + memoryContext + criticLearnedContext;
+
 
     // 5. Build message history and inject enriched system prompt with file context
     let selectedModel = model;
@@ -2143,30 +2153,35 @@ const deleteTraining = async (req, res) => {
 };
 
 const submitFeedback = async (req, res) => {
-  const { messageId, correctness, reason } = req.body;
-  if (!messageId || !correctness) {
-    return res.status(400).json({ success: false, message: "messageId and correctness are required." });
+  const { messageId, correctness, rating, feedbackText, comment, query, aiResponse } = req.body;
+  const userId = req.user?.id;
+
+  if (!messageId && !query) {
+    return res.status(400).json({ success: false, message: "messageId or query is required." });
   }
 
   try {
-    const { confidenceEngine } = require("../llm/consensus/confidence.engine");
-    await confidenceEngine.recordFeedback(messageId, correctness, reason);
+    const feedbackType = rating || (correctness === "correct" ? "thumbs_up" : "thumbs_down");
 
-    const { CopilotMessage } = require("./copilot.model");
-    const msg = await CopilotMessage.findById(messageId);
-    if (msg && msg.metadata) {
-      const model = msg.metadata.model || "openai";
-      const category = msg.metadata.category || "general";
-      
-      const selfLearning = require("../llm/router/llm.selflearning");
-      selfLearning.logFeedback(model, category, correctness === "correct");
+    const { confidenceEngine } = require("../llm/consensus/confidence.engine");
+    if (messageId) {
+      await confidenceEngine.recordFeedback(messageId, correctness || (feedbackType === "thumbs_up" ? "correct" : "incorrect"), comment || feedbackText);
     }
 
-    return res.json({ success: true, message: "Feedback recorded successfully." });
+    const criticEvaluator = require("../llm/autonomous/critic.evaluator.service");
+    await criticEvaluator.processFeedback(userId, {
+      query: query || "Security response feedback",
+      aiResponse: aiResponse || "",
+      feedbackType,
+      comment: comment || feedbackText,
+    });
+
+    return res.json({ success: true, message: "Feedback and self-learning insight recorded successfully." });
   } catch (err) {
     return res.status(500).json({ success: false, message: err.message });
   }
 };
+
 
 const getRAGSources = async (req, res) => {
   try {

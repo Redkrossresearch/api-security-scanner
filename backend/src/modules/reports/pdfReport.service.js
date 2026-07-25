@@ -196,7 +196,8 @@ const generatePdfReport = async (vulnerability, analysis, res) => {
     } else {
       if (!vulnerability || !analysis) throw new Error("Missing data");
       html = reportTemplate(vulnerability, analysis);
-      filename = `${vulnerability.title || "finding"}.pdf`;
+      const safeTitle = (vulnerability?.title || "finding").replace(/[^a-zA-Z0-9_-]/g, "_");
+      filename = `${safeTitle}.pdf`;
     }
 
     // Launch Headless Chromium via Puppeteer
@@ -214,15 +215,32 @@ const generatePdfReport = async (vulnerability, analysis, res) => {
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "0", bottom: "0", left: "0", right: "0" },
+      displayHeaderFooter: true,
+      headerTemplate: `
+        <div style="width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 8px; color: #64748B; padding: 0 16mm; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-weight: 800; color: #4F46E5; letter-spacing: 0.8px;">ATHX SECURITY INTELLIGENCE</span>
+          <span style="font-weight: 700; color: #DC2626; letter-spacing: 0.5px;">CONFIDENTIAL REPORT</span>
+        </div>
+      `,
+      footerTemplate: `
+        <div style="width: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 8px; color: #94A3B8; padding: 0 16mm; display: flex; justify-content: space-between; align-items: center;">
+          <span>ATHX Autonomous Penetration Testing Platform</span>
+          <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+        </div>
+      `,
+      margin: { top: "14mm", bottom: "14mm", left: "0", right: "0" },
     });
 
-    finalRes.setHeader("Content-Type", "application/pdf");
-    finalRes.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${filename}"`,
-    );
+
+    if (!finalRes.headersSent) {
+      finalRes.setHeader("Content-Type", "application/pdf");
+      finalRes.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`,
+      );
+    }
     finalRes.send(pdfBuffer);
+
   } catch (error) {
     console.error(
       "PDF Puppeteer Error, falling back to PDFKit:",

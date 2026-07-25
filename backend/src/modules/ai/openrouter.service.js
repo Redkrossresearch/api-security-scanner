@@ -6,8 +6,91 @@ const SECURITY_PROMPT = require("../../prompts/security-analysis.prompt");
 
 const OUTPUT_SCHEMA = require("./output.schema");
 
+const getRelevantReferences = (vuln) => {
+  const title = (vuln?.title || "").toLowerCase();
+  const cwe = (vuln?.cwe || "").toUpperCase();
+
+  if (title.includes("clickjacking") || title.includes("x-frame-options") || title.includes("frame-ancestors") || cwe.includes("1021")) {
+    return [
+      "https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html",
+      "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options",
+      "https://cwe.mitre.org/data/definitions/1021.html",
+      "https://portswigger.net/web-security/clickjacking",
+    ];
+  }
+
+  if (title.includes("graphql") || title.includes("introspection")) {
+    return [
+      "https://graphql.org/learn/security/",
+      "https://cheatsheetseries.owasp.org/cheatsheets/GraphQL_Cheat_Sheet.html",
+      "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/",
+      "https://portswigger.net/web-security/graphql",
+    ];
+  }
+
+  if (title.includes("cors") || title.includes("cross-origin") || cwe.includes("942")) {
+    return [
+      "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS",
+      "https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html",
+      "https://cwe.mitre.org/data/definitions/942.html",
+      "https://portswigger.net/web-security/cors",
+    ];
+  }
+
+  if (title.includes("sql") || title.includes("sqli") || cwe.includes("89")) {
+    return [
+      "https://owasp.org/www-community/attacks/SQL_Injection",
+      "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+      "https://cwe.mitre.org/data/definitions/89.html",
+      "https://portswigger.net/web-security/sql-injection",
+    ];
+  }
+
+  if (title.includes("xss") || title.includes("cross-site scripting") || cwe.includes("79")) {
+    return [
+      "https://owasp.org/www-community/attacks/xss/",
+      "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+      "https://cwe.mitre.org/data/definitions/79.html",
+      "https://portswigger.net/web-security/cross-site-scripting",
+    ];
+  }
+
+  if (title.includes("jwt") || title.includes("token") || cwe.includes("347")) {
+    return [
+      "https://jwt.io/introduction",
+      "https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html",
+      "https://cwe.mitre.org/data/definitions/347.html",
+      "https://portswigger.net/web-security/jwt",
+    ];
+  }
+
+  if (title.includes("rate") || title.includes("limit") || title.includes("throttling")) {
+    return [
+      "https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/",
+      "https://cheatsheetseries.owasp.org/cheatsheets/Denial_of_Service_Cheat_Sheet.html",
+      "https://cwe.mitre.org/data/definitions/770.html",
+    ];
+  }
+
+  if (title.includes("ssl") || title.includes("tls") || title.includes("https") || title.includes("certificate")) {
+    return [
+      "https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html",
+      "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Strict-Transport-Security",
+      "https://cwe.mitre.org/data/definitions/319.html",
+    ];
+  }
+
+  return [
+    "https://owasp.org/www-project-api-security/",
+    `https://cwe.mitre.org/data/definitions/${cwe.replace("CWE-", "") || "200"}.html`,
+    "https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html",
+    "https://nvd.nist.gov/vuln-metrics/cvss",
+  ];
+};
+
 // Generates an extremely high-quality, professional fallback security report in case OpenRouter fails
 const generateLocalSecurityReport = (vuln) => {
+
   const title = vuln.title || "Unknown Vulnerability";
   const severity = (vuln.severity || "Medium").toUpperCase();
   const cwe = vuln.cwe || "CWE-200";
@@ -112,11 +195,8 @@ We recommend implementing the following defense-in-depth measures:
 * **Least Privilege Access**: Apply zero-trust access controls to all internal system interfaces.
 * **Continuous Auditing**: Integrate automated security testing into your CI/CD pipeline.`,
 
-    references: [
-      `https://owasp.org/www-project-api-security/`,
-      `https://cwe.mitre.org/data/definitions/${cwe.replace("CWE-", "")}.html`,
-      `https://nvd.nist.gov/vuln-metrics/cvss`,
-    ],
+    references: getRelevantReferences(vuln),
+
 
     riskRating: {
       score: cvssScore,
@@ -195,89 +275,54 @@ We recommend implementing the following defense-in-depth measures:
 
 const analyzeWithAI = async (vulnerability) => {
   try {
-    if (
-      !config.openRouterApiKey ||
-      config.openRouterApiKey.includes("YOUR_API_KEY") ||
-      config.openRouterApiKey === ""
-    ) {
-      console.log(
-        "⚠️ No OpenRouter API key found. Using local security analysis engine.",
-      );
-      return generateLocalSecurityReport(vulnerability);
-    }
+    const llmRegistry = require("../llm/llm.registry");
+    const adapter = llmRegistry.getAdapter("gemini"); // Target Gemini Flash / Groq LLM Engine
 
-    const response = await axios.post(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        model: config.openRouterModel,
-
-        messages: [
-          {
-            role: "system",
-            content: SECURITY_PROMPT,
-          },
-
-          {
-            role: "system",
-            content: OUTPUT_SCHEMA,
-          },
-
-          {
-            role: "user",
-            content: `
-Analyze the following security finding.
+    const prompt = `Analyze the following security finding.
 
 Generate a professional security intelligence report.
 
 Use markdown formatting where appropriate.
+Use headings, subheadings, bullet points, numbered steps, tables, and supporting details.
 
-Use:
-- headings
-- subheadings
-- nested bullet points
-- numbered steps
-- tables
-- supporting details
+Respond strictly with a JSON object following this exact schema structure:
+{
+  "verdict": { "summary": "...", "score": 8.5 },
+  "executiveSummary": "...",
+  "executiveMetrics": { "overallRiskScore": 8.5, "exploitabilityIndex": 9.0, "dataExposureRisk": "HIGH", "remediationPriority": "P1 - CRITICAL" },
+  "businessImpact": "...",
+  "financialRisk": "...",
+  "technicalAnalysis": "...",
+  "mitre": { "tactic": "Initial Access", "technique": "T1190" },
+  "owaspContext": "...",
+  "attackScenario": "...",
+  "remediationPlan": "...",
+  "patchCode": "...",
+  "references": ["https://owasp.org"]
+}
 
-Use diagrams only when useful.
-
-Finding:
-
+Finding details:
 ${JSON.stringify(vulnerability, null, 2)}
-`,
-          },
-        ],
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${config.openRouterApiKey}`,
+`;
 
-          "Content-Type": "application/json",
-        },
-        timeout: 15000,
-      },
-    );
+    const res = await adapter.generate([{ role: "user", content: prompt }], { temperature: 0.2 });
+    let content = res.content || "";
 
-    let content = response.data.choices[0].message.content;
-
-    // Strip markdown formatting wrapping tags if present
     if (content.includes("```json")) {
       content = content.split("```json")[1].split("```")[0].trim();
     } else if (content.includes("```")) {
       content = content.split("```")[1].split("```")[0].trim();
     }
 
-    // Try parsing. If invalid, throw error to trigger fallback
+    // Validate JSON structure
     JSON.parse(content);
     return content;
   } catch (error) {
-    console.error(
-      "⚠️ AI API call failed or returned invalid JSON. Triggering local security analysis engine.",
-      error.message,
-    );
+    console.warn("⚠️ Primary LLM Engine analysis failed/returned invalid format. Generating fallback security report.", error.message);
     return generateLocalSecurityReport(vulnerability);
   }
 };
+
 
 module.exports = {
   analyzeWithAI,

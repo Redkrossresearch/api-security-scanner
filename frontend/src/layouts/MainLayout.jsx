@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "../components/layouts/Sidebar";
 import ParticleBackground from "../components/layouts/ParticleBackground";
 import { Outlet, useLocation } from "react-router-dom";
@@ -142,7 +142,7 @@ export default function MainLayout() {
           }}
         >
           {/* Left: Dynamic Title */}
-          <div>
+          <div style={{ display: "flex", alignItems: "center" }}>
             <h2
               style={{
                 fontSize: "18px",
@@ -156,6 +156,7 @@ export default function MainLayout() {
               {getPageTitle(location.pathname)}
             </h2>
           </div>
+
 
           {/* Right: Security Status Info */}
           <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>

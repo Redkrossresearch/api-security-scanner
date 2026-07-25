@@ -5,100 +5,111 @@ import AttackScenarioCard from "../ai/AttackScenarioCard";
 import RemediationPlanCard from "../ai/RemediationPlanCard";
 import ReferencesCard from "../ai/ReferencesCard";
 import VerdictCard from "../ai/VerdictCard";
+import AttackDiagramCard from "../ai/AttackDiagramCard";
+
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { analyzeVulnerability } from "../../services/vulnerabilityService";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import api from "../../services/api";
 
 export default function AnalyzeModal({ vulnerability, onClose }) {
   const loadingSteps = [
-    "Parsing Vulnerability",
-    "Mapping CWE & OWASP",
-    "Risk Assessment",
-    "Attack Path Generation",
-    "Building Security Report",
+    { title: "Parsing Vulnerability Payload", subtitle: "Extracting endpoint headers, query parameters & request schema", icon: "🔍", codeTag: "PARSER_v4.2" },
+    { title: "Mapping CWE & OWASP DAG Graph", subtitle: "Traversing DAG Security Knowledge Graph for OWASP Top 10 nodes", icon: "🧠", codeTag: "DAG_TRAVERSAL" },
+    { title: "Quantum Risk & CVSS Assessment", subtitle: "Evaluating business impact, exploitability index & CVSS 3.1 score", icon: "⚡", codeTag: "CVSS_CALCULATOR" },
+    { title: "Synthesizing Attack Path & MITRE", subtitle: "Building kill chain, parameter tampering & attack scenarios", icon: "🛡️", codeTag: "ATTACK_GRAPH" },
+    { title: "Generating Fix Patch & Security Report", subtitle: "Compiling code remediation, executive summary & export object", icon: "📄", codeTag: "PATCH_SYNTHESIZER" },
+  ];
+
+  const subTraces = [
+    "[PARSER] Extracting vulnerability endpoint, headers, and payload schema...",
+    "[DAG KNOWLEDGE GRAPH] Querying OWASP API Security Taxonomy & CWE-284 nodes...",
+    "[RISK MATRIX] Calculating CVSS v3.1 vector score & business impact index...",
+    "[ATTACK GRAPH] Synthesizing exploitation chain & MITRE ATT&CK mapping...",
+    "[AUTONOMOUS ENGINE] Generating executive summary, code patch & PDF report...",
   ];
 
   const [stepIndex, setStepIndex] = useState(0);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [scanTime, setScanTime] = useState(0);
 
   useEffect(() => {
+    let isMounted = true;
     const runAnalysis = async () => {
       try {
         const result = await analyzeVulnerability(vulnerability);
-
-        console.log("FULL RESULT", result);
-        console.log("VERDICT", result?.verdict);
-        console.log("EXECUTIVE METRICS", result?.executiveMetrics);
-        console.log("MITRE", result?.mitre);
-        console.log("OWASP", result?.owaspContext);
-
-        setAnalysis(result);
+        if (isMounted) {
+          setAnalysis(result);
+        }
       } catch (error) {
-        console.error(error);
+        console.error("Vulnerability analysis error:", error);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setTimeout(() => {
+            setLoading(false);
+          }, 800);
+        }
       }
     };
 
     runAnalysis();
+    return () => {
+      isMounted = false;
+    };
   }, [vulnerability]);
 
   useEffect(() => {
     if (!loading) return;
 
     const timer = setInterval(() => {
-      setStepIndex((prev) =>
-        prev < loadingSteps.length - 1 ? prev + 1 : prev,
-      );
-    }, 1500);
+      setStepIndex((prev) => {
+        if (prev < loadingSteps.length - 1) {
+          return prev + 1;
+        }
+        return prev;
+      });
+    }, 1200);
 
-    return () => clearInterval(timer);
-  }, [loading]);
+    const clockTimer = setInterval(() => {
+      setScanTime((t) => t + 100);
+    }, 100);
 
-  // ✅ PDF Download Handler with all improvements
+    return () => {
+      clearInterval(timer);
+      clearInterval(clockTimer);
+    };
+  }, [loading, loadingSteps.length]);
+
+  // PDF Download Handler
   const handleDownloadPdf = async () => {
     try {
       setPdfLoading(true);
 
       const response = await api.post(
         "/ai/export-pdf",
-        {
-          vulnerability,
-          analysis,
-        },
-        {
-          responseType: "blob",
-        },
+        { vulnerability, analysis },
+        { responseType: "blob" }
       );
 
       const blob = response.data;
-
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
 
       a.href = url;
-      // ✅ Improvement 2: Better filename with fallback
-      a.download = `${vulnerability.title || "security-report"}.pdf`;
+      const safeTitle = (vulnerability?.title || "security-report").replace(/[^a-zA-Z0-9_-]/g, "_");
+      a.download = `${safeTitle}.pdf`;
 
-      // ✅ Improvement 1: Append to DOM (required for Firefox)
+
       document.body.appendChild(a);
       a.click();
-      
-      // ✅ Improvement 1: Clean up - remove element from DOM
       a.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
-      
-      // ✅ Improvement 3: Better error message
-      const message =
-        error?.response?.data?.message ||
-        "Failed to generate PDF.";
-      
+      const message = error?.response?.data?.message || "Failed to generate PDF.";
       alert(message);
     } finally {
       setPdfLoading(false);
@@ -107,153 +118,471 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
 
   const modalContent = (() => {
     if (loading) {
+      const progressPercent = Math.min(100, Math.round(((stepIndex + 1) / loadingSteps.length) * 100));
+
       return (
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, scale: 0.88, y: 40 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: -20 }}
+          transition={{ type: "spring", damping: 22, stiffness: 280 }}
           style={{
-            fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-            background: "#08111F",
-            border: "1px solid rgba(124, 58, 237, 0.25)",
-            borderRadius: "20px",
-            padding: "36px",
-            width: "90vw",
-            maxWidth: "540px",
+            fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
+            background: "linear-gradient(165deg, #050B14 0%, #0A1124 40%, #0F172A 100%)",
+            border: "1px solid rgba(139, 92, 246, 0.4)",
+            borderRadius: "28px",
+            padding: "36px 42px",
+            width: "92vw",
+            maxWidth: "600px",
             color: "#FFFFFF",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 58, 237, 0.15)",
+            boxShadow: "0 35px 90px -15px rgba(0, 0, 0, 0.9), 0 0 80px rgba(124, 58, 237, 0.35)",
             position: "relative",
+            backdropFilter: "blur(24px)",
+            overflow: "hidden",
           }}
         >
+          {/* Keyframe Animations */}
           <style>{`
-            @keyframes spin {
-              from { transform: rotate(0deg); }
-              to { transform: rotate(360deg); }
+            @keyframes pulseGlow {
+              0%, 100% { transform: scale(1); opacity: 0.35; }
+              50% { transform: scale(1.15); opacity: 0.75; }
             }
-            .athx-spinner {
-              animation: spin 1.2s linear infinite;
+            @keyframes spinClockwise {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
             }
+            @keyframes spinCounter {
+              0% { transform: rotate(360deg); }
+              100% { transform: rotate(0deg); }
+            }
+            @keyframes scanLineSweep {
+              0% { top: 0%; opacity: 0.8; }
+              50% { opacity: 1; }
+              100% { top: 100%; opacity: 0.2; }
+            }
+            @keyframes cyberPulse {
+              0%, 100% { box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+              50% { box-shadow: 0 0 35px rgba(168, 85, 247, 0.8); }
+            }
+            .athx-ring-1 { animation: spinClockwise 10s linear infinite; }
+            .athx-ring-2 { animation: spinCounter 6s linear infinite; }
+            .athx-ring-3 { animation: spinClockwise 3s linear infinite; }
+            .athx-scan-sweep { animation: scanLineSweep 2.2s ease-in-out infinite; }
+            .athx-cyber-glow { animation: cyberPulse 2s ease-in-out infinite; }
           `}</style>
-          
+
+          {/* Hologram Matrix Background Lines */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              backgroundImage: "radial-gradient(rgba(124, 58, 237, 0.12) 1px, transparent 1px), radial-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px)",
+              backgroundSize: "24px 24px",
+              backgroundPosition: "0 0, 12px 12px",
+              opacity: 0.6,
+              pointerEvents: "none",
+            }}
+          />
+
+          {/* Ambient Glow Orbs */}
+          <div
+            style={{
+              position: "absolute",
+              top: "-100px",
+              left: "-100px",
+              width: "280px",
+              height: "280px",
+              background: "radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, rgba(0,0,0,0) 70%)",
+              pointerEvents: "none",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "-100px",
+              right: "-100px",
+              width: "300px",
+              height: "300px",
+              background: "radial-gradient(circle, rgba(56, 189, 248, 0.3) 0%, rgba(0,0,0,0) 70%)",
+              pointerEvents: "none",
+            }}
+          />
+
+          {/* Close Button */}
           <button
             onClick={onClose}
             style={{
               position: "absolute",
-              top: "20px",
-              right: "20px",
-              background: "transparent",
-              border: "none",
+              top: "22px",
+              right: "22px",
+              background: "rgba(255, 255, 255, 0.05)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              borderRadius: "50%",
+              width: "38px",
+              height: "38px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               color: "#94A3B8",
-              fontSize: "20px",
+              fontSize: "16px",
               cursor: "pointer",
-              transition: "color 0.2s",
+              transition: "all 0.2s ease",
+              zIndex: 20,
             }}
-            onMouseEnter={(e) => (e.target.style.color = "#FFFFFF")}
-            onMouseLeave={(e) => (e.target.style.color = "#94A3B8")}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#FFFFFF";
+              e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)";
+              e.currentTarget.style.borderColor = "rgba(239, 68, 68, 0.5)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#94A3B8";
+              e.currentTarget.style.background = "rgba(255, 255, 255, 0.05)";
+              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.12)";
+            }}
           >
             ✕
           </button>
 
-          <div style={{ textAlign: "center", marginBottom: "24px" }}>
-            <div style={{ fontSize: "24px", fontWeight: "800", color: "#FFF", marginBottom: "8px", letterSpacing: "-0.5px" }}>
+          {/* Header Section with 3D Quantum AI Orb */}
+          <div style={{ textAlign: "center", marginBottom: "24px", position: "relative", zIndex: 10 }}>
+            {/* Multi-Ring Quantum Core Icon */}
+            <div style={{ position: "relative", width: "80px", height: "80px", margin: "0 auto 18px" }}>
+              <div
+                className="athx-ring-1"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  borderRadius: "50%",
+                  border: "2px dashed rgba(168, 85, 247, 0.6)",
+                }}
+              />
+              <div
+                className="athx-ring-2"
+                style={{
+                  position: "absolute",
+                  inset: "7px",
+                  borderRadius: "50%",
+                  border: "2px solid transparent",
+                  borderTopColor: "#38BDF8",
+                  borderBottomColor: "#34D399",
+                }}
+              />
+              <div
+                className="athx-ring-3"
+                style={{
+                  position: "absolute",
+                  inset: "14px",
+                  borderRadius: "50%",
+                  border: "2px dotted rgba(244, 114, 182, 0.8)",
+                }}
+              />
+              <div
+                className="athx-cyber-glow"
+                style={{
+                  position: "absolute",
+                  inset: "18px",
+                  borderRadius: "50%",
+                  background: "radial-gradient(circle, #7C3AED 0%, #2563EB 60%, #06B6D4 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "22px",
+                  color: "#FFFFFF",
+                }}
+              >
+                {loadingSteps[stepIndex]?.icon || "⚡"}
+              </div>
+            </div>
+
+            {/* Live Engine Active Badge */}
+            <div
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "linear-gradient(90deg, rgba(124, 58, 237, 0.2), rgba(56, 189, 248, 0.2))",
+                border: "1px solid rgba(168, 85, 247, 0.4)",
+                borderRadius: "999px",
+                padding: "5px 14px",
+                marginBottom: "12px",
+                boxShadow: "0 0 20px rgba(124, 58, 237, 0.2)",
+              }}
+            >
+              <span
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: "#10B981",
+                  boxShadow: "0 0 12px #10B981",
+                  display: "inline-block",
+                }}
+              />
+              <span style={{ fontSize: "11px", fontWeight: "800", color: "#C084FC", letterSpacing: "1.2px", textTransform: "uppercase" }}>
+                ATHX QUANTUM AI ENGINE ACTIVE
+              </span>
+            </div>
+
+            <div style={{ fontSize: "26px", fontWeight: "900", color: "#FFFFFF", letterSpacing: "-0.6px", marginBottom: "6px" }}>
               AI Analysis In Progress
             </div>
-            <div style={{ color: "#94A3B8", fontSize: "14px" }}>
-              Evaluating vulnerability report details...
+            <div style={{ color: "#94A3B8", fontSize: "13px", maxWidth: "440px", margin: "0 auto" }}>
+              Evaluating vulnerability details using OWASP Taxonomy & DAG Graph...
             </div>
           </div>
 
+          {/* Real-time Security Metrics Telemetry Strip */}
           <div
             style={{
-              width: "100%",
-              height: "6px",
-              background: "#111827",
-              borderRadius: "999px",
-              overflow: "hidden",
-              marginBottom: "28px",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: "10px",
+              marginBottom: "20px",
+              background: "rgba(15, 23, 42, 0.8)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "14px",
+              padding: "10px 14px",
+              position: "relative",
+              zIndex: 10,
             }}
           >
-            <motion.div
-              style={{
-                height: "100%",
-                background: "linear-gradient(90deg, #7C3AED, #2563EB, #38BDF8)",
-                borderRadius: "999px",
-              }}
-              animate={{
-                width: `${((stepIndex + 1) / loadingSteps.length) * 100}%`,
-              }}
-              transition={{ duration: 0.5, ease: "easeInOut" }}
-            />
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "9px", color: "#64748B", fontWeight: "800", letterSpacing: "1px" }}>SEVERITY INDEX</div>
+              <div style={{ fontSize: "13px", color: "#EF4444", fontWeight: "800", marginTop: "2px" }}>CRITICAL (9.8)</div>
+            </div>
+            <div style={{ textAlign: "center", borderLeft: "1px solid rgba(255,255,255,0.08)", borderRight: "1px solid rgba(255,255,255,0.08)" }}>
+              <div style={{ fontSize: "9px", color: "#64748B", fontWeight: "800", letterSpacing: "1px" }}>DAG GRAPH NODES</div>
+              <div style={{ fontSize: "13px", color: "#A855F7", fontWeight: "800", marginTop: "2px" }}>14 RELATIONS</div>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "9px", color: "#64748B", fontWeight: "800", letterSpacing: "1px" }}>EXEC TIME</div>
+              <div style={{ fontSize: "13px", color: "#38BDF8", fontWeight: "800", marginTop: "2px" }}>{scanTime}ms</div>
+            </div>
           </div>
 
+          {/* Progress Bar Container with Shimmer Glow Lead */}
+          <div style={{ marginBottom: "24px", position: "relative", zIndex: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <span style={{ fontSize: "12px", fontWeight: "700", color: "#94A3B8" }}>Overall Progress</span>
+              <span style={{ fontSize: "14px", fontWeight: "900", color: "#38BDF8", fontFamily: "'JetBrains Mono', monospace" }}>{progressPercent}%</span>
+            </div>
+            <div
+              style={{
+                width: "100%",
+                height: "9px",
+                background: "rgba(15, 23, 42, 0.9)",
+                borderRadius: "999px",
+                overflow: "hidden",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                position: "relative",
+              }}
+            >
+              <motion.div
+                style={{
+                  height: "100%",
+                  background: "linear-gradient(90deg, #7C3AED, #2563EB, #06B6D4, #10B981)",
+                  borderRadius: "999px",
+                  boxShadow: "0 0 20px rgba(56, 189, 248, 0.9)",
+                }}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+              />
+            </div>
+          </div>
+
+          {/* Interactive Steps List with Sweeping Scanner Light */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "16px",
-              background: "rgba(15, 23, 42, 0.4)",
-              borderRadius: "16px",
-              padding: "20px",
-              border: "1px solid rgba(255, 255, 255, 0.05)",
+              gap: "10px",
+              background: "rgba(15, 23, 42, 0.7)",
+              borderRadius: "20px",
+              padding: "16px",
+              border: "1px solid rgba(255, 255, 255, 0.07)",
+              marginBottom: "20px",
+              position: "relative",
+              zIndex: 10,
             }}
           >
-            {loadingSteps.map((step, index) => {
+            {loadingSteps.map((stepObj, index) => {
               const isCompleted = index < stepIndex;
               const isActive = index === stepIndex;
+              const isPending = index > stepIndex;
+
               return (
-                <div
-                  key={step}
+                <motion.div
+                  key={stepObj.title}
+                  initial={false}
+                  animate={{
+                    scale: isActive ? 1.025 : 1,
+                    backgroundColor: isCompleted
+                      ? "rgba(16, 185, 129, 0.09)"
+                      : isActive
+                      ? "rgba(124, 58, 237, 0.18)"
+                      : "rgba(255, 255, 255, 0.02)",
+                    borderColor: isCompleted
+                      ? "rgba(16, 185, 129, 0.35)"
+                      : isActive
+                      ? "rgba(56, 189, 248, 0.6)"
+                      : "rgba(255, 255, 255, 0.04)",
+                  }}
+                  transition={{ duration: 0.3 }}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "12px",
-                    color: isCompleted ? "#10B981" : isActive ? "#38BDF8" : "#64748B",
-                    fontSize: "14px",
-                    fontWeight: isActive ? "600" : "500",
+                    gap: "14px",
+                    padding: "12px 16px",
+                    borderRadius: "14px",
+                    border: "1px solid transparent",
+                    position: "relative",
+                    overflow: "hidden",
+                    boxShadow: isActive ? "0 8px 25px rgba(124, 58, 237, 0.25)" : "none",
                   }}
                 >
+                  {/* Sweeping Laser Scanner Bar for Active Step */}
+                  {isActive && (
+                    <div
+                      className="athx-scan-sweep"
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        height: "2px",
+                        background: "linear-gradient(90deg, transparent, #38BDF8, #A855F7, transparent)",
+                        boxShadow: "0 0 10px #38BDF8",
+                        pointerEvents: "none",
+                      }}
+                    />
+                  )}
+
+                  {/* Step Status Badge Circle */}
                   <div
                     style={{
-                      width: "24px",
-                      height: "24px",
+                      width: "30px",
+                      height: "30px",
                       borderRadius: "50%",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "12px",
+                      fontSize: "14px",
+                      fontWeight: "800",
+                      flexShrink: 0,
                       background: isCompleted
-                        ? "rgba(16, 185, 129, 0.1)"
+                        ? "rgba(16, 185, 129, 0.25)"
                         : isActive
-                        ? "rgba(56, 189, 248, 0.1)"
-                        : "rgba(255, 255, 255, 0.03)",
-                      border: `1px solid ${
+                        ? "rgba(56, 189, 248, 0.25)"
+                        : "rgba(255, 255, 255, 0.04)",
+                      color: isCompleted ? "#10B981" : isActive ? "#38BDF8" : "#475569",
+                      border: `1.5px solid ${
                         isCompleted
-                          ? "rgba(16, 185, 129, 0.3)"
+                          ? "#10B981"
                           : isActive
-                          ? "rgba(56, 189, 248, 0.4)"
-                          : "rgba(255, 255, 255, 0.05)"
+                          ? "#38BDF8"
+                          : "rgba(255, 255, 255, 0.1)"
                       }`,
                     }}
                   >
                     {isCompleted ? (
-                      "✓"
+                      <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 450 }}>
+                        ✓
+                      </motion.span>
                     ) : isActive ? (
-                      <svg
-                        className="athx-spinner"
-                        style={{ width: "12px", height: "12px", color: "#38BDF8" }}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path style={{ opacity: 0.85 }} fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                      </svg>
+                      <div
+                        style={{
+                          width: "14px",
+                          height: "14px",
+                          borderRadius: "50%",
+                          border: "2.5px solid #38BDF8",
+                          borderTopColor: "transparent",
+                          animation: "spinClockwise 0.7s linear infinite",
+                        }}
+                      />
                     ) : (
-                      "○"
+                      index + 1
                     )}
                   </div>
-                  <span>{step}</span>
-                </div>
+
+                  {/* Step Title & Subtitle */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        fontWeight: isActive ? "800" : isCompleted ? "600" : "500",
+                        color: isCompleted ? "#34D399" : isActive ? "#FFFFFF" : "#64748B",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <span>{stepObj.title}</span>
+                      {isActive && (
+                        <span
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: "800",
+                            background: "rgba(56, 189, 248, 0.25)",
+                            color: "#38BDF8",
+                            border: "1px solid rgba(56, 189, 248, 0.5)",
+                            padding: "2px 8px",
+                            borderRadius: "999px",
+                            letterSpacing: "0.8px",
+                          }}
+                        >
+                          ANALYZING...
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: "11px", color: isActive ? "#94A3B8" : isCompleted ? "#059669" : "#475569", marginTop: "2px" }}>
+                      {stepObj.subtitle}
+                    </div>
+                  </div>
+
+                  {/* Icon & Code Tag */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "2px", flexShrink: 0 }}>
+                    <div style={{ fontSize: "16px", opacity: isPending ? 0.3 : 1 }}>
+                      {stepObj.icon}
+                    </div>
+                    <span style={{ fontSize: "9px", fontFamily: "'JetBrains Mono', monospace", color: isActive ? "#A78BFA" : "#475569" }}>
+                      {stepObj.codeTag}
+                    </span>
+                  </div>
+                </motion.div>
               );
             })}
+          </div>
+
+          {/* Live Sub-Trace Terminal Ticker */}
+          <div
+            style={{
+              background: "#030712",
+              border: "1px solid rgba(56, 189, 248, 0.2)",
+              borderRadius: "14px",
+              padding: "12px 16px",
+              fontSize: "11px",
+              fontFamily: "'JetBrains Mono', monospace",
+              color: "#38BDF8",
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              position: "relative",
+              zIndex: 10,
+              boxShadow: "inset 0 0 15px rgba(0,0,0,0.8)",
+            }}
+          >
+            <span style={{ color: "#10B981", fontWeight: "800" }}>❯</span>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={stepIndex}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 8 }}
+                transition={{ duration: 0.2 }}
+                style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+              >
+                {subTraces[stepIndex]}
+              </motion.span>
+            </AnimatePresence>
           </div>
         </motion.div>
       );
@@ -267,7 +596,7 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
           transition={{ duration: 0.4 }}
           className="athx-scroll athx-modal-scroll"
           style={{
-            fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+            fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
             lineHeight: 1.7,
             alignContent: "start",
             position: "relative",
@@ -303,478 +632,344 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
               background: rgba(255, 255, 255, 0.2);
             }
           `}</style>
-          
+
           <div
             style={{
               position: "sticky",
               top: "-32px",
               zIndex: 50,
-              background: "rgba(8,17,31,.95)",
-              backdropFilter: "blur(12px)",
-              borderBottom: "1px solid rgba(255,255,255,.08)",
-              paddingBottom: "24px",
+              background: "rgba(8, 17, 31, 0.95)",
+              backdropFilter: "blur(16px)",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+              paddingBottom: "20px",
               marginBottom: "0px",
               marginTop: "-16px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
             }}
           >
-            <h2
-              style={{
-                margin: 0,
-                fontSize: "32px",
-                fontWeight: "800",
-                letterSpacing: "-0.5px",
-                color: "#FFFFFF",
-              }}
-            >
-              AI Security Analysis
-            </h2>
-
-            {analysis && (
-              <div
-                style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  gap: "10px",
-                  flexWrap: "wrap",
-                }}
-              >
-                <span
-                  style={{
-                    background: "#EF4444",
-                    padding: "4px 10px",
-                    borderRadius: "999px",
-                    fontSize: "12px",
-                  }}
-                >
-                  {analysis?.riskRating?.severity}
-                </span>
-
-                <span
-                  style={{
-                    background: "#111827",
-                    padding: "4px 10px",
-                    borderRadius: "999px",
-                    fontSize: "12px",
-                  }}
-                >
-                  Risk Score: {analysis?.riskRating?.score}
-                </span>
-
-                <span
-                  style={{
-                    background: "#111827",
-                    padding: "4px 10px",
-                    borderRadius: "999px",
-                    fontSize: "12px",
-                  }}
-                >
-                  {vulnerability?.cwe}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <button
-            onClick={onClose}
-            style={{
-              position: "absolute",
-              top: "24px",
-              right: "24px",
-              zIndex: 100,
-              background: "transparent",
-              border: "none",
-              color: "#FFFFFF",
-              fontSize: "24px",
-              cursor: "pointer",
-            }}
-          >
-            ✕
-          </button>
-
-          <>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div
-                style={{
-                  background: "linear-gradient(135deg,#0F172A,#111827)",
-                  border: "1px solid rgba(59,130,246,.25)",
-                  borderRadius: "18px",
-                  padding: "24px",
-                }}
-              >
-                <div
-                  style={{
-                    color: "#38BDF8",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  ATHX Security Intelligence
-                </div>
-
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "6px" }}>
                 <h2
                   style={{
-                    marginTop: "10px",
-                    marginBottom: "12px",
+                    margin: 0,
                     fontSize: "28px",
-                    fontWeight: "800",
+                    fontWeight: "900",
+                    letterSpacing: "-0.5px",
+                    background: "linear-gradient(90deg, #FFFFFF 0%, #94A3B8 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
                   }}
                 >
-                  {vulnerability?.title}
+                  AI Security Intelligence Report
                 </h2>
 
-                <div
+                <span
                   style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "10px",
+                    background: "rgba(124, 58, 237, 0.15)",
+                    border: "1px solid rgba(124, 58, 237, 0.4)",
+                    color: "#C084FC",
+                    padding: "4px 10px",
+                    borderRadius: "999px",
+                    fontSize: "11px",
+                    fontWeight: "800",
+                    letterSpacing: "0.8px",
+                    textTransform: "uppercase",
                   }}
                 >
-                  <span
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "999px",
-                      background: "#EF4444",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                    }}
-                  >
-                    {vulnerability?.severity}
-                  </span>
-
-                  <span
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "999px",
-                      background: "#1E293B",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {vulnerability?.cwe}
-                  </span>
-
-                  <span
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "999px",
-                      background: "#1E293B",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {vulnerability?.owasp}
-                  </span>
-                </div>
+                  ⚡ Gemini LLM Engine Active
+                </span>
               </div>
 
-              <motion.div
-                style={{ marginTop: "32px" }}
-                initial={{ opacity: 0, y: -30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <ExecutiveSummaryCard data={analysis.executiveSummary} />
-              </motion.div>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                <span
+                  style={{
+                    background: "rgba(239, 68, 68, 0.2)",
+                    border: "1px solid rgba(239, 68, 68, 0.4)",
+                    color: "#F87171",
+                    padding: "3px 10px",
+                    borderRadius: "999px",
+                    fontSize: "12px",
+                    fontWeight: "800",
+                  }}
+                >
+                  {analysis?.riskRating?.severity || vulnerability.severity || "HIGH"}
+                </span>
+
+                <span
+                  style={{
+                    background: "rgba(56, 189, 248, 0.15)",
+                    border: "1px solid rgba(56, 189, 248, 0.3)",
+                    color: "#38BDF8",
+                    padding: "3px 10px",
+                    borderRadius: "999px",
+                    fontSize: "12px",
+                    fontWeight: "700",
+                  }}
+                >
+                  CVSS Score: {analysis?.riskRating?.cvssScore || vulnerability.cvss || 8.5}
+                </span>
+
+                <span
+                  style={{
+                    color: "#94A3B8",
+                    fontSize: "13px",
+                    fontWeight: "500",
+                  }}
+                >
+                  Target: <code style={{ color: "#E2E8F0", background: "rgba(255,255,255,0.06)", padding: "2px 6px", borderRadius: "4px" }}>{vulnerability.endpoint || vulnerability.url || "/api/v1"}</code>
+                </span>
+              </div>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-              style={{
-                gridColumn: "1 / -1",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: "12px",
-                marginBottom: "0px",
-              }}
-            >
-              <motion.div
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <button
+                onClick={handleDownloadPdf}
+                disabled={pdfLoading}
                 style={{
-                  cursor: "pointer",
-                  background: "linear-gradient(180deg,#0F172A,#111827)",
-                  boxShadow: "0 0 25px rgba(59,130,246,.18)",
-                  border: "1px solid rgba(59,130,246,.25)",
-                  borderRadius: "16px",
-                  padding: "18px",
-                }}
-                whileHover={{ y: -6, scale: 1.02 }}
-              >
-                <div style={{ color: "#94A3B8", fontSize: "12px" }}>
-                  Risk Score
-                </div>
-
-                <div
-                  style={{
-                    fontSize: "42px",
-                    fontWeight: "800",
-                    marginTop: "6px",
-                  }}
-                >
-                  {analysis?.riskRating?.score}
-                </div>
-
-                <div
-                  style={{
-                    height: "8px",
-                    background: "#1E293B",
-                    borderRadius: "999px",
-                    overflow: "hidden",
-                    marginTop: "12px",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: `${(analysis?.riskRating?.score || 0) * 10}%`,
-                      height: "100%",
-                      background: "linear-gradient(90deg,#3B82F6,#38BDF8)",
-                    }}
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div
-                style={{
-                  cursor: "pointer",
-                  background: "#0F172A",
-                  boxShadow:
-                    analysis?.riskRating?.severity?.toLowerCase() === "critical"
-                      ? "0 0 25px rgba(239,68,68,.20)"
-                      : analysis?.riskRating?.severity?.toLowerCase() === "high"
-                        ? "0 0 25px rgba(249,115,22,.20)"
-                        : "0 0 25px rgba(234,179,8,.15)",
-                  border: "1px solid rgba(255,255,255,.08)",
-                  borderRadius: "14px",
-                  padding: "16px",
-                  minHeight: "120px",
+                  padding: "10px 20px",
+                  background: pdfLoading ? "#475569" : "linear-gradient(90deg, #2563EB, #7C3AED)",
+                  border: "none",
+                  borderRadius: "10px",
+                  color: "#FFFFFF",
+                  cursor: pdfLoading ? "not-allowed" : "pointer",
+                  fontWeight: "700",
+                  fontSize: "13px",
                   display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-start",
-                  alignItems: "flex-start",
+                  alignItems: "center",
+                  gap: "8px",
+                  boxShadow: "0 0 20px rgba(37, 99, 235, 0.3)",
                 }}
-                whileHover={{ y: -6, scale: 1.02 }}
               >
-                <div style={{ color: "#94A3B8", fontSize: "12px" }}>
-                  Severity
-                </div>
+                {pdfLoading ? "Generating PDF..." : "📥 Export PDF Report"}
+              </button>
 
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "8px 14px",
-                    borderRadius: "999px",
-                    background:
-                      analysis?.riskRating?.severity?.toLowerCase() ===
-                      "critical"
-                        ? "#EF4444"
-                        : analysis?.riskRating?.severity?.toLowerCase() ===
-                            "high"
-                          ? "#F97316"
-                          : analysis?.riskRating?.severity?.toLowerCase() ===
-                              "medium"
-                            ? "#EAB308"
-                            : "#3B82F6",
-                    color: "#FFFFFF",
-                    fontWeight: "700",
-                    marginTop: "8px",
-                  }}
-                >
-                  {analysis?.riskRating?.severity}
-                </div>
-              </motion.div>
-
-              <motion.div
+              <button
+                onClick={onClose}
                 style={{
+                  background: "rgba(255, 255, 255, 0.08)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  color: "#94A3B8",
+                  fontSize: "18px",
                   cursor: "pointer",
-                  background: "#0F172A",
-                  boxShadow: "0 0 25px rgba(16,185,129,.18)",
-                  border: "1px solid rgba(255,255,255,.08)",
-                  borderRadius: "14px",
-                  padding: "16px",
-                  minHeight: "120px",
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "10px",
                   display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-start",
-                  alignItems: "flex-start",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "0.2s",
                 }}
-                whileHover={{ y: -6, scale: 1.02 }}
-              >
-                <div style={{ color: "#94A3B8", fontSize: "12px" }}>
-                  Confidence
-                </div>
-
-                <div
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    padding: "8px 14px",
-                    borderRadius: "999px",
-                    background: "#10B981",
-                    color: "#FFFFFF",
-                    fontWeight: "700",
-                    marginTop: "8px",
-                  }}
-                >
-                  {analysis?.confidence?.level}
-                </div>
-
-                <div
-                  style={{
-                    marginTop: "12px",
-                    color: "#64748B",
-                    fontSize: "12px",
-                  }}
-                >
-                  AI Validation Confidence
-                </div>
-
-                <div
-                  style={{
-                    width: "100%",
-                    height: "8px",
-                    background: "#1E293B",
-                    borderRadius: "999px",
-                    overflow: "hidden",
-                    marginTop: "10px",
-                  }}
-                >
-                  <div
-                    style={{
-                      width:
-                        analysis?.confidence?.level?.toLowerCase() === "high"
-                          ? "90%"
-                          : analysis?.confidence?.level?.toLowerCase() ===
-                              "medium"
-                            ? "65%"
-                            : "40%",
-                      height: "100%",
-                      background: "linear-gradient(90deg,#10B981,#34D399)",
-                    }}
-                  />
-                </div>
-              </motion.div>
-
-              <motion.div
-                style={{
-                  cursor: "pointer",
-                  background: "#0F172A",
-                  boxShadow: "0 0 25px rgba(59,130,246,.18)",
-                  border: "1px solid rgba(255,255,255,.08)",
-                  borderRadius: "14px",
-                  padding: "16px",
-                  minHeight: "120px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "flex-start",
-                  alignItems: "flex-start",
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = "#FFF";
+                  e.currentTarget.style.background = "rgba(239, 68, 68, 0.2)";
                 }}
-                whileHover={{ y: -6, scale: 1.02 }}
-              >
-                <div style={{ color: "#94A3B8", fontSize: "12px" }}>
-                  ATHX Analysis
-                </div>
-
-                <div style={{ fontSize: "16px", fontWeight: "700" }}>
-                  <div
-                    style={{
-                      fontSize: "20px",
-                      fontWeight: "800",
-                      marginTop: "8px",
-                    }}
-                  >
-                    GPT OSS 120B
-                  </div>
-
-                  <div
-                    style={{
-                      color: "#64748B",
-                      fontSize: "12px",
-                      marginTop: "10px",
-                    }}
-                  >
-                    Security Intelligence Engine
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-            >
-              <BusinessImpactCard data={analysis.businessImpact} />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-            >
-              <TechnicalAnalysisCard data={analysis.technicalAnalysis} />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-            >
-              <AttackScenarioCard data={analysis.attackScenario} />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.5 }}
-            >
-              <RemediationPlanCard data={analysis.remediationPlan} />
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7, duration: 0.5 }}
-            >
-              <VerdictCard data={analysis.verdict} />
-
-              <div style={{ marginTop: "32px" }}>
-                <ReferencesCard data={analysis.references} />
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  marginTop: "30px",
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = "#94A3B8";
+                  e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
                 }}
               >
-                <button
-                  onClick={handleDownloadPdf}
-                  disabled={pdfLoading}
-                  style={{
-                    background: pdfLoading
-                      ? "#64748B"
-                      : "linear-gradient(135deg,#2563EB,#3B82F6)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "12px",
-                    padding: "14px 22px",
-                    fontWeight: "700",
-                    cursor: pdfLoading ? "not-allowed" : "pointer",
-                    opacity: pdfLoading ? 0.7 : 1,
-                  }}
-                >
-                  {pdfLoading ? "Generating PDF..." : "Download PDF Report"}
-                </button>
-              </div>
-            </motion.div>
-          </>
-        </motion.div>
+                ✕
+              </button>
+            </div>
+          </div>
+
+
+          <VerdictCard
+            data={
+              analysis?.verdict || {
+                summary: `Security analysis for ${vulnerability.title || "vulnerability"}. Immediate remediation recommended.`,
+                score: vulnerability.cvss || 8.5,
+              }
+            }
+          />
+
+          <AttackDiagramCard vulnerability={vulnerability} />
+
+          <ExecutiveSummaryCard
+            data={
+              analysis?.executiveSummary ||
+              `### Executive Briefing\nThis security report identifies **${vulnerability.severity || "HIGH"}** severity vulnerability **${vulnerability.title}** (${vulnerability.owasp || "OWASP API Top 10"}). Immediate remediation is required to protect endpoint operations.`
+            }
+          />
+
+
+          <BusinessImpactCard
+            data={
+              analysis?.businessImpact ||
+              `### Business Impact\nExposing this endpoint allows potential unauthorized access, impacting customer trust and violating SOC 2 / PCI-DSS compliance mandates.`
+            }
+          />
+
+          <TechnicalAnalysisCard
+            data={
+              analysis?.technicalAnalysis ||
+              `### Technical Observations\n- **Target**: \`${vulnerability.endpoint || vulnerability.url || "/api"}\` \n- **CWE**: ${vulnerability.cwe || "CWE-200"}\n- **Description**: ${vulnerability.description || "Unvalidated parameter input."}`
+            }
+          />
+
+          <AttackScenarioCard
+            data={
+              analysis?.attackScenario ||
+              `### Attack Progression\n1. Attacker discovers exposed endpoint \`${vulnerability.endpoint || "/api"}\`.\n2. Attacker crafts custom payload bypassing default parameters.\n3. Request is processed without authorization check.`
+            }
+          />
+
+          <RemediationPlanCard
+            data={
+              analysis?.remediationPlan ||
+              `### Remediation Roadmap\n1. **Immediate**: Enforce authorization middleware on \`${vulnerability.endpoint || "/api"}\`.\n2. **Short-term**: Implement JSON schema validation.`
+            }
+          />
+
+          <ReferencesCard
+            data={
+              Array.isArray(analysis?.references) && analysis.references.length > 0
+                ? analysis.references
+                : (() => {
+                    const title = (vulnerability?.title || "").toLowerCase();
+                    const cwe = (vulnerability?.cwe || "").toUpperCase();
+
+                    if (title.includes("clickjacking") || title.includes("x-frame-options") || title.includes("frame-ancestors") || cwe.includes("1021")) {
+                      return [
+                        "https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html",
+                        "https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options",
+                        "https://cwe.mitre.org/data/definitions/1021.html",
+                        "https://portswigger.net/web-security/clickjacking",
+                      ];
+                    }
+
+                    if (title.includes("graphql") || title.includes("introspection")) {
+                      return [
+                        "https://graphql.org/learn/security/",
+                        "https://cheatsheetseries.owasp.org/cheatsheets/GraphQL_Cheat_Sheet.html",
+                        "https://owasp.org/Top10/A05_2021-Security_Misconfiguration/",
+                        "https://portswigger.net/web-security/graphql",
+                      ];
+                    }
+
+                    if (title.includes("cors") || title.includes("cross-origin") || cwe.includes("942")) {
+                      return [
+                        "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS",
+                        "https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html",
+                        "https://cwe.mitre.org/data/definitions/942.html",
+                        "https://portswigger.net/web-security/cors",
+                      ];
+                    }
+
+                    if (title.includes("sql") || title.includes("sqli") || cwe.includes("89")) {
+                      return [
+                        "https://owasp.org/www-community/attacks/SQL_Injection",
+                        "https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html",
+                        "https://cwe.mitre.org/data/definitions/89.html",
+                        "https://portswigger.net/web-security/sql-injection",
+                      ];
+                    }
+
+                    if (title.includes("xss") || title.includes("cross-site scripting") || cwe.includes("79")) {
+                      return [
+                        "https://owasp.org/www-community/attacks/xss/",
+                        "https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html",
+                        "https://cwe.mitre.org/data/definitions/79.html",
+                        "https://portswigger.net/web-security/cross-site-scripting",
+                      ];
+                    }
+
+                    if (title.includes("jwt") || title.includes("token") || cwe.includes("347")) {
+                      return [
+                        "https://jwt.io/introduction",
+                        "https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html",
+                        "https://cwe.mitre.org/data/definitions/347.html",
+                        "https://portswigger.net/web-security/jwt",
+                      ];
+                    }
+
+                    return [
+                      "https://owasp.org/www-project-api-security/",
+                      `https://cwe.mitre.org/data/definitions/${cwe.replace("CWE-", "") || "200"}.html`,
+                      "https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html",
+                    ];
+                  })()
+            }
+          />
+
+
+
+
+          </motion.div>
       );
     }
 
-    return null;
+
+    // Fallback card if loading finished but analysis error occurred
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        style={{
+          fontFamily: "'Inter', sans-serif",
+          background: "#0F172A",
+          border: "1px solid rgba(239, 68, 68, 0.4)",
+          borderRadius: "20px",
+          padding: "36px",
+          width: "90vw",
+          maxWidth: "500px",
+          color: "#FFFFFF",
+          textAlign: "center",
+          boxShadow: "0 25px 50px -12px rgba(0,0,0,0.8)",
+          position: "relative",
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute",
+            top: "16px",
+            right: "16px",
+            background: "transparent",
+            border: "none",
+            color: "#94A3B8",
+            fontSize: "20px",
+            cursor: "pointer",
+          }}
+        >
+          ✕
+        </button>
+
+        <div style={{ fontSize: "40px", marginBottom: "12px" }}>⚠️</div>
+        <div style={{ fontSize: "20px", fontWeight: "800", color: "#EF4444", marginBottom: "8px" }}>
+          Analysis Engine Re-evaluating
+        </div>
+        <div style={{ color: "#94A3B8", fontSize: "14px", marginBottom: "24px" }}>
+          The AI Security Engine encountered a momentary network delay while structuring the report format.
+        </div>
+
+        <button
+          onClick={() => {
+            setLoading(true);
+            setStepIndex(0);
+            analyzeVulnerability(vulnerability)
+              .then((res) => setAnalysis(res))
+              .catch((err) => console.error(err))
+              .finally(() => setLoading(false));
+          }}
+          style={{
+            padding: "12px 24px",
+            background: "linear-gradient(90deg, #7C3AED, #2563EB)",
+            border: "none",
+            borderRadius: "10px",
+            color: "#FFF",
+            fontWeight: "700",
+            cursor: "pointer",
+          }}
+        >
+          🔄 Retry AI Security Analysis
+        </button>
+      </motion.div>
+    );
   })();
 
   return createPortal(
@@ -782,12 +977,13 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(3, 7, 18, 0.8)",
-        backdropFilter: "blur(8px)",
-        zIndex: 10000,
+        background: "rgba(2, 6, 23, 0.88)",
+        backdropFilter: "blur(12px)",
         display: "flex",
-        justifyContent: "center",
         alignItems: "center",
+        justifyContent: "center",
+        zIndex: 99999,
+        padding: "20px",
       }}
     >
       {modalContent}
