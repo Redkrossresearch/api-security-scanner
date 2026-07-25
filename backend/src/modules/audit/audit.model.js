@@ -97,4 +97,4 @@ const AuditLogSchema = new mongoose.Schema(
 AuditLogSchema.index({ action: 1, risk: 1 });
 AuditLogSchema.index({ correlationId: 1, timestamp: 1 });
 
-module.exports = mongoose.model("AuditLog", AuditLogSchema);
+module.exports = mongoose.models.AuditLog || mongoose.model("AuditLog", AuditLogSchema);
