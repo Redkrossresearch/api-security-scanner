@@ -1277,16 +1277,17 @@ export default function LoginPage() {
       <style>{`
         @keyframes pulse     { 0%,100%{opacity:1} 50%{opacity:0.3} }
         @keyframes scrollLeft{ 0%{transform:translateX(0)} 100%{transform:translateX(-33.33%)} }
+        html, body, #root {
+          margin: 0;
+          padding: 0;
+          overflow-x: hidden;
+          overflow-y: auto !important;
+          height: auto !important;
+          min-height: 100% !important;
+        }
         * { box-sizing: border-box; }
-        html, body { margin:0; padding:0; overflow-x:hidden; }
 
         @media (max-width: 1024px) {
-          html, body, #root {
-            overflow: auto !important;
-            overflow-y: auto !important;
-            height: auto !important;
-            min-height: 100% !important;
-          }
           .login-navbar-item {
             display: none !important;
           }
