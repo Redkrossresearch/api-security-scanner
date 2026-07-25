@@ -1281,6 +1281,12 @@ export default function LoginPage() {
         html, body { margin:0; padding:0; overflow-x:hidden; }
 
         @media (max-width: 1024px) {
+          html, body, #root {
+            overflow: auto !important;
+            overflow-y: auto !important;
+            height: auto !important;
+            min-height: 100% !important;
+          }
           .login-navbar-item {
             display: none !important;
           }
