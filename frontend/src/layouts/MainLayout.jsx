@@ -5,6 +5,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import SocketProvider from "../sockets/SocketProvider";
 import useSocketEvent from "../sockets/useSocketEvent";
 import toast from "react-hot-toast";
+import { Menu, X } from "lucide-react";
 
 function GlobalSocketListener() {
   useSocketEvent("scan:completed", (data) => {
@@ -33,8 +34,10 @@ export default function MainLayout() {
   const location = useLocation();
   const mainRef = useRef(null);
   const layoutRef = useRef(null);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   useEffect(() => {
+    setIsMobileOpen(false);
     window.scrollTo(0, 0);
     document.documentElement.scrollTop = 0;
     document.body.scrollTop = 0;
@@ -111,7 +114,15 @@ export default function MainLayout() {
         }}
       />
 
-      <Sidebar />
+      {/* Mobile Drawer Overlay Backdrop */}
+      {isMobileOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setIsMobileOpen(false)}
+        />
+      )}
+
+      <Sidebar isMobileOpen={isMobileOpen} onClose={() => setIsMobileOpen(false)} />
 
       {/* Right Column Container */}
       <div
@@ -141,8 +152,28 @@ export default function MainLayout() {
             zIndex: 10,
           }}
         >
-          {/* Left: Dynamic Title */}
+          {/* Left: Hamburger & Dynamic Title */}
           <div style={{ display: "flex", alignItems: "center" }}>
+            <button
+              className="mobile-nav-toggle"
+              onClick={() => setIsMobileOpen(!isMobileOpen)}
+              style={{
+                display: "none",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(255, 255, 255, 0.05)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                color: "#FFF",
+                borderRadius: "8px",
+                padding: "8px",
+                cursor: "pointer",
+                marginRight: "12px",
+              }}
+              aria-label="Toggle Navigation"
+            >
+              {isMobileOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+
             <h2
               style={{
                 fontSize: "18px",

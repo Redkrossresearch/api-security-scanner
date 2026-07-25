@@ -84,7 +84,7 @@ const menuItems = [
   },
 ];
 
-function Sidebar() {
+function Sidebar({ isMobileOpen, onClose }) {
   const location = useLocation();
   const { currentUser, logout } = useAuth();
   const [teams, setTeams] = useState([]);
@@ -131,6 +131,7 @@ function Sidebar() {
 
   return (
     <aside
+      className={`responsive-sidebar ${isMobileOpen ? "mobile-open" : ""}`}
       style={{
         width: "265px",
         minWidth: "265px",
