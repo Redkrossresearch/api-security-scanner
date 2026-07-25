@@ -228,8 +228,17 @@ Extract: ${match.snippet}`;
       }
     }
 
+    // Query DAG Security Knowledge Graph for graph traversal context
+    let dagContext = "";
+    try {
+      const dagGraph = require("./dag.knowledge.graph");
+      dagContext = dagGraph.queryGraph(query);
+    } catch (dagErr) {
+      console.warn("[rag-pipeline] DAG graph traversal error:", dagErr.message);
+    }
+
     if (results.length === 0) {
-      return "";
+      return dagContext;
     }
 
     // Sprint 51: Reranking Step — Score top-20 candidates with BM25 + Vector composite weighting
@@ -243,8 +252,9 @@ ${doc.text}`)
     return `\n\n================================================================================
 ## ENTERPRISE RAG CONTEXT (Hybrid Retrieved & Reranked Knowledge)
 ${contextBlock}
-================================================================================\n`;
+================================================================================\n${dagContext}`;
   }
+
 
 
   /**

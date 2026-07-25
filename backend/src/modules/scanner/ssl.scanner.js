@@ -88,17 +88,12 @@ const scanSSL = async (targetUrl) => {
       });
     });
   } catch (error) {
-    const finding = createFinding("SSL_SCAN_FAILED");
-
-    if (finding) {
-      finding.description = error.message;
-
-      findings.push(finding);
-    }
+    console.warn(`[ssl-scanner] Exception during SSL scan of ${targetUrl}:`, error.message);
   }
 
   return findings;
 };
+
 
 module.exports = {
   scanSSL,

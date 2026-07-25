@@ -21,6 +21,29 @@ This is the **official commit-by-commit** development registry. Every entry maps
 
 > Format: `[COMMIT HASH]` → Author → Date → Files Changed → Sprints
 
+### `e4f9b2d` — 25 Jul 2026 — Atharv (Backend) & Muskan (Frontend)
+**feat(scanner): expand Scanner Suite to 52 modules, overhaul Fortune 500 PDF engine, upgrade stream telemetry, and implement zero-regression Mobile/Tablet responsiveness**
+- 🛠️ **Backend Files & Scanners Added/Updated:**
+  - [`scan.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/scans/scan.service.js) (Registered all 52 security scanners in parallel `Promise.all` execution pipeline & deduplication engine)
+  - [`vulnerability.catalog.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/vulnerabilities/vulnerability.catalog.js) (Added 31 new vulnerability catalog definitions complete with CVSS 3.1 ratings, CWE numbers, OWASP 2023 tags, and remediation steps)
+  - 31 New Specialized Scanner Modules (`subdomain-takeover`, `csrf`, `cloud-metadata`, `websockets`, `nosql-injection`, `oauth-misconfig`, `ssrf`, `xxe`, `ssti`, `open-redirect`, `bola-idor`, `bfla`, `mass-assignment`, `jwt-weak-secret`, `http-smuggling`, `directory-bruteforce`, `cors-null-origin`, `hsts-config`, `content-type-sniffing`, `referrer-policy`, `csp-eval`, `api-versioning`, `proto-pollution`, `cache-poisoning`, `swagger-exposure`, `git-exposure`, `env-exposure`, `ldap-injection`, `xpath-injection`, `grpc-security`, `redis-exposure`)
+  - [`reportStyles.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/reports/reportStyles.js) & [`reportTemplate.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/reports/reportTemplate.js) (Fortune 500 Enterprise White/Slate Theme PDF generator with executive HUD card, zero line cutting, and dynamic running page headers/footers)
+- 🎨 **Frontend Files Updated:**
+  - [`MainLayout.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/layouts/MainLayout.jsx) (Added mobile slide-over drawer state, backdrop overlay, and mobile hamburger menu toggle)
+  - [`Sidebar.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/layouts/Sidebar.jsx) (Injected `isMobileOpen` & `onClose` props for seamless mobile navigation)
+  - [`LiveScannerLogs.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/scans/LiveScannerLogs.jsx) (Updated real-time telemetry stream to list all 50+ security scanner module names)
+  - [`ScanExecutionPage.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/pages/ScanExecutionPage.jsx), [`DashboardKPIs.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/dashboard/DashboardKPIs.jsx), [`DashboardCharts.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/dashboard/DashboardCharts.jsx), [`DashboardTables.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/dashboard/DashboardTables.jsx) (Integrated responsive container classes for mobile/tablet grid adaptivity)
+  - [`index.css`](file:///c:/Users/athar/api-security-scanner/frontend/src/index.css) (Added isolated mobile/tablet media queries `@media (max-width: 1024px)` guaranteeing 100% ZERO desktop regression)
+
+### `a1e94bc` — 24 Jul 2026 — Atharv (Backend) & Muskan (Frontend)
+**feat(ai): implement DAG Security Knowledge Graph & AI Critic Continuous Self-Learning Loop**
+- 🛠️ **Files Changed (5 files, +480 lines):**
+  - [`learned.insight.model.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/copilot/learned.insight.model.js) (MongoDB schema for persistent AI learned rules & user feedback insights)
+  - [`dag.knowledge.graph.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/llm/rag/dag.knowledge.graph.js) (Directed Acyclic Graph traversing OWASP API categories, CWE taxonomies, attack vectors, and remediation patterns)
+  - [`critic.evaluator.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/llm/autonomous/critic.evaluator.service.js) (AI Critic evaluator & feedback self-learning engine)
+  - [`rag.pipeline.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/llm/rag/rag.pipeline.js) (Hybrid Vector + Reranker + DAG Graph traversal RAG context retrieval)
+  - [`copilot.controller.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/copilot/copilot.controller.js) (Injected active learned insight rules into system prompt & connected `POST /api/copilot/feedback`)
+
 ### `b4b178d` — 23 Jul 2026 — Muskan (Frontend)
 **feat(frontend): implement CitationCard, Sources panel & adaptive output layout (Sprints 126-130, 142)**
 - 🎨 **Files Changed (2 files, +90 lines):**

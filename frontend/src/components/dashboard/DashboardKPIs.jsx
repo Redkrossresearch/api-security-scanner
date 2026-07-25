@@ -5,7 +5,7 @@ import { styles } from "../../styles/dashboardStyles";
 
 function DashboardKPIs({ dashboardData }) {
   return (
-    <div style={styles.gridKPI}>
+    <div className="dashboard-kpi-grid" style={styles.gridKPI}>
       <StatCard
         icon={<ShieldCheck size={20} />}
         title="Security Score"

@@ -8,14 +8,14 @@ const analyze = async (req, res) => {
 
     const result = await analyzeWithAI(vulnerability);
 
-    const parsed = JSON.parse(result);
+    const parsed = typeof result === "string" ? JSON.parse(result) : result;
 
     res.status(200).json({
       success: true,
       data: parsed,
     });
   } catch (error) {
-    console.error(error);
+    console.error("AI Analysis error:", error);
 
     res.status(500).json({
       success: false,
@@ -24,27 +24,31 @@ const analyze = async (req, res) => {
   }
 };
 
+
 const exportPdf = async (req, res) => {
   try {
     const { vulnerability, analysis } = req.body;
+    const safeTitle = (vulnerability?.title || "security-report").replace(/[^a-zA-Z0-9_-]/g, "_");
 
     res.setHeader("Content-Type", "application/pdf");
-
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=${vulnerability.title}.pdf`,
+      `attachment; filename="${safeTitle}.pdf"`,
     );
 
     await generatePdfReport(vulnerability, analysis, res);
   } catch (error) {
-    console.error(error);
+    console.error("PDF export error:", error);
 
-    res.status(500).json({
-      success: false,
-      message: "PDF export failed",
-    });
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: "PDF export failed",
+      });
+    }
   }
 };
+
 
 module.exports = {
   analyze,

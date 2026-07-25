@@ -146,6 +146,7 @@ function Sidebar() {
         boxShadow: "10px 0 30px rgba(0,0,0,0.25)",
       }}
     >
+
       {/* Sidebar Header */}
       <div style={{ marginBottom: "34px", paddingLeft: "8px" }}>
         <h1

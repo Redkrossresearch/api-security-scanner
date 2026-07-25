@@ -385,6 +385,7 @@ export default function ScanExecutionPage() {
       {/* Row 1 */}
 
       <div
+        className="responsive-grid-3"
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr 1.15fr",
@@ -402,12 +403,13 @@ export default function ScanExecutionPage() {
       {/* Row 2 */}
 
       <div
+        className="responsive-grid-3"
         style={{
           display: "grid",
           gridTemplateColumns: "1.15fr 1.4fr 1fr",
           gap: "20px",
           alignItems: "stretch",
-          height: "780px",
+          minHeight: "780px",
         }}
       >
         <FindingsPanel

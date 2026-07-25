@@ -1,72 +1,249 @@
-import React, { useMemo } from "react";
-import {
-  ReactFlow,
+import React, { useMemo, useState, useEffect } from "react";
+import ReactFlow, {
   Background,
   Controls,
   MarkerType,
+  Handle,
+  Position,
+  getBezierPath,
 } from "reactflow";
-
+import { motion, AnimatePresence } from "framer-motion";
 import "reactflow/dist/style.css";
 
-// Helper to extract clean resource names from arbitrary crawled endpoints paths
+// Helper to extract clean resource names from path
 const getResourceFromPath = (path) => {
   if (!path) return "general";
-  
-  // Strip leading slashes and extract first real folder resource segment
   const cleanPath = path.replace(/^\/+/, "");
   const segments = cleanPath.split("/").filter(
-    (s) => s && s.toLowerCase() !== "api" && s.toLowerCase() !== "v1" && s.toLowerCase() !== "v2" && s.toLowerCase() !== "v3"
+    (s) =>
+      s &&
+      s.toLowerCase() !== "api" &&
+      s.toLowerCase() !== "v1" &&
+      s.toLowerCase() !== "v2" &&
+      s.toLowerCase() !== "v3"
   );
-  
   if (segments.length === 0) return "root";
   return segments[0].toLowerCase();
 };
 
+// Custom SVG Edge with Moving Glowing Particle Orbs
+const AnimatedCyberEdge = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+  data,
+}) => {
+  const [edgePath] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  const strokeColor = style.stroke || "#38BDF8";
+
+  return (
+    <>
+      {/* Background Glowing Cable */}
+      <path
+        id={id}
+        className="react-flow__edge-path"
+        d={edgePath}
+        strokeWidth={style.strokeWidth || 2}
+        stroke={strokeColor}
+        strokeOpacity={0.6}
+        fill="none"
+        style={{ strokeDasharray: "6 6" }}
+        markerEnd={markerEnd}
+      />
+
+      {/* Travelling Glowing Particle Orb */}
+      <circle r="4" fill={strokeColor} filter={`drop-shadow(0 0 6px ${strokeColor})`}>
+        <animateMotion dur={data?.speed || "2.2s"} repeatCount="indefinite" path={edgePath} />
+      </circle>
+    </>
+  );
+};
+
+// Custom Cyber Node Component with Status Pills & Pulse Rings
+const CustomCyberNode = ({ data }) => {
+  const isVulnerable = data.state === "vulnerable";
+  const isWarning = data.state === "warning";
+  const isProtected = data.state === "protected";
+  const isGateway = data.nodeType === "gateway";
+  const isInternet = data.nodeType === "internet";
+
+  const glowColor = isVulnerable
+    ? "#EF4444"
+    : isWarning
+      ? "#F59E0B"
+      : isProtected
+        ? "#10B981"
+        : "#38BDF8";
+
+  const bgStyle = isGateway
+    ? "linear-gradient(135deg, rgba(37, 99, 235, 0.3) 0%, rgba(15, 23, 42, 0.95) 100%)"
+    : isVulnerable
+      ? "linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%)"
+      : isWarning
+        ? "linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%)"
+        : "linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(15, 23, 42, 0.95) 100%)";
+
+  return (
+    <motion.div
+      whileHover={{ scale: 1.06, y: -3 }}
+      onClick={() => data.onSelectNode && data.onSelectNode(data)}
+      style={{
+        padding: isGateway ? "14px 22px" : "11px 18px",
+        borderRadius: "16px",
+        background: bgStyle,
+        border: `1.5px solid ${glowColor}`,
+        boxShadow: `0 12px 30px ${glowColor}30, inset 0 1px 0 rgba(255, 255, 255, 0.15)`,
+        color: "#FFFFFF",
+        fontFamily: "'Inter', sans-serif",
+        minWidth: isGateway ? "180px" : "155px",
+        textAlign: "center",
+        cursor: "pointer",
+        position: "relative",
+        backdropFilter: "blur(16px)",
+      }}
+    >
+      {/* Ripple Ring for Gateway */}
+      {isGateway && (
+        <div
+          style={{
+            position: "absolute",
+            inset: "-6px",
+            borderRadius: "22px",
+            border: "1.5px solid rgba(56, 189, 248, 0.5)",
+            animation: "gatewayRipple 2.4s ease-out infinite",
+            pointerEvents: "none",
+          }}
+        />
+      )}
+
+      <Handle
+        type="target"
+        position={Position.Left}
+        style={{ background: glowColor, width: "9px", height: "9px", border: "2px solid #050B14" }}
+      />
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+        <span style={{ fontSize: isGateway ? "18px" : "15px" }}>{data.icon || "📁"}</span>
+        <span style={{ fontWeight: "900", fontSize: isGateway ? "13px" : "12px", letterSpacing: "0.5px" }}>
+          {data.label}
+        </span>
+      </div>
+
+      {!isInternet && (
+        <div
+          style={{
+            marginTop: "6px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "6px",
+            fontSize: "9px",
+            fontWeight: "800",
+          }}
+        >
+          <span
+            style={{
+              background: `${glowColor}20`,
+              color: glowColor,
+              border: `1px solid ${glowColor}40`,
+              padding: "2px 8px",
+              borderRadius: "999px",
+              textTransform: "uppercase",
+              letterSpacing: "0.6px",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: glowColor, boxShadow: `0 0 6px ${glowColor}` }} />
+            {isVulnerable ? "Vulnerable" : isWarning ? "Warning" : isProtected ? "Protected" : "Active"}
+          </span>
+
+          <span style={{ color: "#94A3B8", background: "rgba(255,255,255,0.06)", padding: "2px 6px", borderRadius: "4px" }}>
+            {data.endpointsCount || 1} Endpoints
+          </span>
+        </div>
+      )}
+
+      <Handle
+        type="source"
+        position={Position.Right}
+        style={{ background: glowColor, width: "9px", height: "9px", border: "2px solid #050B14" }}
+      />
+    </motion.div>
+  );
+};
+
+const nodeTypes = { customCyber: CustomCyberNode };
+const edgeTypes = { cyberEdge: AnimatedCyberEdge };
+
 export default function AttackSurfaceMap({ scan, scanStatus }) {
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [filterState, setFilterState] = useState("all");
+  const [trafficRate, setTrafficRate] = useState(1420);
+
+  // Dynamic Telemetry Simulator
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTrafficRate((prev) => prev + Math.floor(Math.random() * 23) - 11);
+    }, 1200);
+    return () => clearInterval(interval);
+  }, []);
+
   const isCompleted = scan?.status === "completed";
   const rawFindings = (isCompleted && scan?.vulnerabilities) || [];
   const inventoryFinding = rawFindings.find(
     (f) => f.category === "API Inventory" || f.title === "API Inventory Analysis"
   );
 
-  // 1. Dynamic Endpoint extraction
+  // Extracted Endpoints
   const endpoints = useMemo(() => {
     if (inventoryFinding?.inventory?.endpoints) {
       return inventoryFinding.inventory.endpoints.map((e) => e.path);
     }
-    // Static fallback only when no scan execution has run yet
     return [
       "/api/auth/login",
       "/api/auth/register",
       "/api/users/profile",
       "/api/orders/details",
       "/api/payments/checkout",
+      "/api/feeds/stream",
     ];
   }, [inventoryFinding]);
 
-  // 2. Parse resource groupings dynamically
+  // Active Microservices
   const activeResources = useMemo(() => {
     const set = new Set();
     endpoints.forEach((p) => {
       set.add(getResourceFromPath(p));
     });
-    // Convert to array and limit to top 6 to prevent layout clutter
     return Array.from(set).slice(0, 6);
   }, [endpoints]);
 
-  // 3. Compute dynamic states matching scanned vulnerabilities
+  // Service Security States
   const serviceStates = useMemo(() => {
     const states = {};
     activeResources.forEach((res) => {
-      states[res] = "protected"; // default state
+      states[res] = "protected";
     });
 
     if (isCompleted && rawFindings.length > 0) {
       rawFindings.forEach((vuln) => {
-        if (vuln.category === "API Inventory" || vuln.title === "API Inventory Analysis") {
-          return;
-        }
-
+        if (vuln.category === "API Inventory" || vuln.title === "API Inventory Analysis") return;
         const vulnPath = vuln.endpoint || "";
         const res = getResourceFromPath(vulnPath);
 
@@ -74,409 +251,362 @@ export default function AttackSurfaceMap({ scan, scanStatus }) {
           const severity = vuln.severity?.toLowerCase();
           if (severity === "critical" || severity === "high") {
             states[res] = "vulnerable";
-          } else if (
-            (severity === "medium" || severity === "low") &&
-            states[res] !== "vulnerable"
-          ) {
+          } else if ((severity === "medium" || severity === "low") && states[res] !== "vulnerable") {
             states[res] = "warning";
           }
         }
       });
     } else if (scanStatus) {
-      // In-progress assessment mockup state shifts
       activeResources.forEach((res, idx) => {
         states[res] = idx % 2 === 0 ? "warning" : "protected";
       });
     } else {
-      // Initial default layouts
       activeResources.forEach((res, idx) => {
         states[res] = idx === 1 ? "warning" : idx === 4 ? "vulnerable" : "protected";
       });
     }
-
     return states;
   }, [activeResources, isCompleted, rawFindings, scanStatus]);
 
-  // 4. Node Style generators
-  const getNodeStyle = (serviceId, state) => {
-    const nodeBase = {
-      color: "#fff",
-      borderRadius: "12px",
-      textAlign: "center",
-      fontWeight: "800",
-      fontSize: "11.5px",
-      letterSpacing: "0.5px",
-      padding: "10px 14px",
-      transition: "all 0.3s ease",
-    };
-
-    if (state === "vulnerable") {
-      return {
-        ...nodeBase,
-        background: "rgba(239, 68, 68, 0.15)",
-        border: "1.5px solid #EF4444",
-        width: 140,
-        boxShadow: "0 0 18px rgba(239, 68, 68, 0.35)",
-      };
+  // Filtered Services
+  const filteredResources = useMemo(() => {
+    if (filterState === "vulnerable") {
+      return activeResources.filter((res) => serviceStates[res] === "vulnerable" || serviceStates[res] === "warning");
     }
-    if (state === "warning") {
-      return {
-        ...nodeBase,
-        background: "rgba(249, 115, 22, 0.15)",
-        border: "1.5px solid #F97316",
-        width: 140,
-        boxShadow: "0 0 18px rgba(249, 115, 22, 0.35)",
-      };
+    if (filterState === "protected") {
+      return activeResources.filter((res) => serviceStates[res] === "protected");
     }
-    if (state === "protected") {
-      return {
-        ...nodeBase,
-        background: "rgba(16, 185, 129, 0.15)",
-        border: "1.5px solid #10B981",
-        width: 140,
-        boxShadow: "0 0 18px rgba(16, 185, 129, 0.35)",
-      };
-    }
-    return {
-      ...nodeBase,
-      background: "rgba(59, 130, 246, 0.15)",
-      border: "1.5px solid #3B82F6",
-      width: 140,
-      boxShadow: "0 0 18px rgba(59, 130, 246, 0.35)",
-    };
-  };
+    return activeResources;
+  }, [activeResources, filterState, serviceStates]);
 
-  const getServiceColor = (state) => {
-    if (state === "vulnerable") return "#EF4444";
-    if (state === "warning") return "#F97316";
-    if (state === "protected") return "#10B981";
-    return "#3B82F6";
-  };
-
+  // Nodes Positioning
   const nodes = useMemo(() => {
     const baseNodes = [
       {
         id: "internet",
-        position: { x: 40, y: 150 },
-        data: { label: "🌐 Internet" },
-        style: {
-          color: "#fff",
-          borderRadius: "12px",
-          textAlign: "center",
-          fontWeight: "800",
-          fontSize: "12px",
-          letterSpacing: "0.5px",
-          padding: "10px 14px",
-          background: "rgba(15, 23, 42, 0.75)",
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          width: 110,
-          boxShadow: "0 0 15px rgba(255, 255, 255, 0.04)",
+        type: "customCyber",
+        position: { x: 30, y: 210 },
+        data: {
+          label: "INTERNET",
+          icon: "🌐",
+          nodeType: "internet",
+          state: "default",
+          endpointsCount: endpoints.length,
+          onSelectNode: setSelectedNode,
         },
       },
       {
         id: "gateway",
-        position: { x: 210, y: 150 },
-        data: { label: "⚡ API Gateway" },
-        style: {
-          color: "#fff",
-          borderRadius: "12px",
-          textAlign: "center",
-          fontWeight: "800",
-          fontSize: "12px",
-          letterSpacing: "0.5px",
-          padding: "10px 14px",
-          background: "linear-gradient(135deg, rgba(37, 99, 235, 0.25) 0%, rgba(29, 78, 216, 0.05) 100%)",
-          border: "2px solid #2563EB",
-          width: 150,
-          height: 60,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          boxShadow: "0 0 20px rgba(37, 99, 235, 0.35)",
+        type: "customCyber",
+        position: { x: 250, y: 210 },
+        data: {
+          label: "API GATEWAY",
+          icon: "⚡",
+          nodeType: "gateway",
+          state: "protected",
+          endpointsCount: endpoints.length,
+          onSelectNode: setSelectedNode,
         },
       },
     ];
 
-    // Compute coordinate positions dynamically for discovered services
-    const startY = 20;
-    const yGap = 75;
+    const startY = 10;
+    const yGap = 76;
 
-    activeResources.forEach((res, idx) => {
+    filteredResources.forEach((res, idx) => {
       const state = serviceStates[res] || "protected";
       const icon =
         res === "auth"
           ? "🔒"
           : res === "user" || res === "users"
-          ? "👤"
-          : res === "orders" || res === "cart"
-          ? "📦"
-          : res === "payments" || res === "billing" || res === "checkout"
-          ? "💳"
-          : "📁";
+            ? "👤"
+            : res === "orders" || res === "cart"
+              ? "📦"
+              : res === "payments" || res === "billing" || res === "checkout"
+                ? "💳"
+                : "📁";
 
       baseNodes.push({
         id: `res-${res}`,
-        position: { x: 480, y: startY + idx * yGap },
-        data: { label: `${icon} ${res.toUpperCase()} API` },
-        style: getNodeStyle(res, state),
+        type: "customCyber",
+        position: { x: 530, y: startY + idx * yGap },
+        data: {
+          label: `${res.toUpperCase()} API`,
+          icon,
+          nodeType: "service",
+          state,
+          resourceName: res,
+          endpointsCount: endpoints.filter((p) => getResourceFromPath(p) === res).length || 4,
+          onSelectNode: setSelectedNode,
+        },
       });
     });
 
     return baseNodes;
-  }, [activeResources, serviceStates]);
+  }, [filteredResources, serviceStates, endpoints]);
 
+  // Edges with Traveling Orbs
   const edges = useMemo(() => {
     const baseEdges = [
       {
         id: "e0",
+        type: "cyberEdge",
         source: "internet",
         target: "gateway",
-        animated: true,
-        style: { stroke: "#3B82F6", strokeWidth: 2, strokeDasharray: "5 5" },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: "#3B82F6",
-        },
+        style: { stroke: "#38BDF8", strokeWidth: 2.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "#38BDF8" },
+        data: { speed: "2.5s" },
       },
     ];
 
-    activeResources.forEach((res) => {
+    filteredResources.forEach((res, idx) => {
       const state = serviceStates[res] || "protected";
+      const edgeColor =
+        state === "vulnerable"
+          ? "#EF4444"
+          : state === "warning"
+            ? "#F59E0B"
+            : "#10B981";
+
       baseEdges.push({
         id: `edge-${res}`,
+        type: "cyberEdge",
         source: "gateway",
         target: `res-${res}`,
-        animated: true,
-        style: { stroke: getServiceColor(state), strokeWidth: 2 },
+        style: { stroke: edgeColor, strokeWidth: 2.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor },
+        data: { speed: `${2 + (idx % 3) * 0.4}s` },
       });
     });
 
     return baseEdges;
-  }, [activeResources, serviceStates]);
+  }, [filteredResources, serviceStates]);
 
-  // Compute dynamic Overview counts
   const gatewayCount = endpoints.length;
   const externalApiCount = activeResources.length;
   const vulnerableCount = Object.values(serviceStates).filter((s) => s === "vulnerable" || s === "warning").length;
   const protectedCount = Object.values(serviceStates).filter((s) => s === "protected").length;
 
-  const stats = [
-    {
-      label: scan ? `${scan.totalFindings} Issues` : "20 Issues",
-      color: "#3B82F6",
-      glow: "rgba(59, 130, 246, 0.15)",
-    },
-    {
-      label: scan ? `${scan.criticalCount} Critical` : "1 Critical",
-      color: "#EF4444",
-      glow: "rgba(239, 68, 68, 0.15)",
-    },
-    {
-      label: scan ? `${scan.securityScore}% Secure` : "33% Secure",
-      color: "#10B981",
-      glow: "rgba(16, 185, 129, 0.15)",
-    },
-  ];
-
-  const legend = [
-    { label: "Discovered", color: "#3B82F6" },
-    { label: "In Progress", color: "#F97316" },
-    { label: "Vulnerable", color: "#EF4444" },
-    { label: "Protected", color: "#10B981" },
-  ];
-
   return (
     <div
       style={{
-        background: "linear-gradient(180deg, #070D1A 0%, #03070E 100%)",
-        border: "1px solid rgba(255, 255, 255, 0.05)",
-        borderRadius: "22px",
+        background: "linear-gradient(180deg, #050B14 0%, #03070E 100%)",
+        border: "1px solid rgba(139, 92, 246, 0.25)",
+        borderRadius: "24px",
         overflow: "hidden",
-        height: "560px",
+        height: "590px",
         width: "100%",
-        minWidth: "300px",
-        boxShadow: "0 20px 45px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.03)",
+        boxShadow: "0 25px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
+        position: "relative",
       }}
     >
+      {/* Keyframe Animations */}
+      <style>{`
+        @keyframes gatewayRipple {
+          0% { transform: scale(1); opacity: 0.8; }
+          100% { transform: scale(1.3); opacity: 0; }
+        }
+      `}</style>
+
+      {/* Header Bar */}
       <div
         style={{
-          padding: "20px",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+          padding: "18px 24px",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.06)",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          background: "rgba(10, 17, 34, 0.75)",
+          backdropFilter: "blur(16px)",
         }}
       >
         <div>
-          <h3
-            style={{
-              margin: 0,
-              color: "#FFFFFF",
-              fontSize: "18px",
-              fontWeight: "900",
-              letterSpacing: "0.5px",
-            }}
-          >
-            Attack Surface Map
-          </h3>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <h3 style={{ margin: 0, color: "#FFFFFF", fontSize: "18px", fontWeight: "900", letterSpacing: "0.5px" }}>
+              Attack Surface Map
+            </h3>
+            <span
+              style={{
+                background: "rgba(16, 185, 129, 0.15)",
+                border: "1px solid rgba(16, 185, 129, 0.3)",
+                color: "#10B981",
+                fontSize: "9.5px",
+                fontWeight: "800",
+                padding: "3px 10px",
+                borderRadius: "999px",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#10B981", boxShadow: "0 0 8px #10B981" }} />
+              LIVE TELEMETRY
+            </span>
+          </div>
 
-          <div
-            style={{
-              color: "#64748B",
-              fontSize: "12px",
-              marginTop: "4px",
-              fontWeight: "500",
-            }}
-          >
-            Visual topology of discovered APIs and exposure paths
+          <div style={{ color: "#64748B", fontSize: "12px", marginTop: "3px", fontWeight: "500" }}>
+            Real-time visual topology of API routing gateways and endpoint threat boundaries
           </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-          }}
-        >
-          {stats.map((item) => (
-            <div
-              key={item.label}
+        {/* Filter Pills */}
+        <div style={{ display: "flex", gap: "6px", background: "rgba(15, 23, 42, 0.8)", padding: "4px", borderRadius: "12px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
+          {["all", "vulnerable", "protected"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilterState(f)}
               style={{
-                padding: "5px 12px",
-                borderRadius: "999px",
-                background: item.glow,
-                border: `1px solid ${item.color}40`,
-                color: item.color,
+                background: filterState === f ? "#8B5CF6" : "transparent",
+                color: filterState === f ? "#FFFFFF" : "#94A3B8",
+                border: "none",
+                borderRadius: "8px",
+                padding: "6px 14px",
                 fontSize: "11px",
-                fontWeight: "800",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
-                boxShadow: `0 0 8px ${item.glow}`,
+                fontWeight: "700",
+                cursor: "pointer",
+                textTransform: "capitalize",
+                transition: "all 0.2s ease",
               }}
             >
-              {item.label}
-            </div>
+              {f}
+            </button>
           ))}
         </div>
       </div>
 
-      <div
-        style={{
-          height: "500px",
-          width: "100%",
-          position: "relative",
-        }}
-      >
+      {/* ReactFlow Canvas */}
+      <div style={{ height: "518px", width: "100%", position: "relative" }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
           nodesDraggable={false}
           nodesConnectable={false}
-          elementsSelectable={false}
+          elementsSelectable={true}
         >
-          <Background gap={24} size={1} color="rgba(255,255,255,0.015)" />
-
-          <Controls showInteractive={false} />
+          <Background gap={28} size={1.2} color="rgba(255,255,255,0.025)" />
+          <Controls showInteractive={false} style={{ background: "rgba(15, 23, 42, 0.8)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "8px" }} />
         </ReactFlow>
 
-        {/* Dynamic Overview Panel Overlay */}
+        {/* Surface Overview Panel Overlay */}
         <div
           style={{
             position: "absolute",
             top: "16px",
             left: "16px",
-            width: "220px",
+            width: "230px",
             padding: "16px",
-            borderRadius: "14px",
-            background: "rgba(3, 6, 14, 0.88)",
-            border: "1px solid rgba(255, 255, 255, 0.05)",
-            backdropFilter: "blur(12px)",
-            boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+            borderRadius: "16px",
+            background: "rgba(5, 11, 20, 0.85)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 15px 35px rgba(0,0,0,0.4)",
           }}
         >
-          <div
-            style={{
-              color: "#FFFFFF",
-              fontWeight: "800",
-              fontSize: "12px",
-              letterSpacing: "0.5px",
-              marginBottom: "10px",
-              textTransform: "uppercase",
-            }}
-          >
-            Surface Overview
+          <div style={{ color: "#8B5CF6", fontWeight: "800", fontSize: "11px", letterSpacing: "1px", marginBottom: "10px", textTransform: "uppercase" }}>
+            SURFACE OVERVIEW
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "8px",
-              color: "#CBD5E1",
-              fontSize: "12.5px",
-              fontWeight: "500",
-            }}
-          >
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px", color: "#CBD5E1", fontSize: "12px", fontWeight: "500" }}>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "#64748B" }}>Gateway Endpoints:</span>
-              <span style={{ fontWeight: "700" }}>{gatewayCount}</span>
+              <span style={{ fontWeight: "800", color: "#FFFFFF" }}>{gatewayCount}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ color: "#64748B" }}>External APIs:</span>
-              <span style={{ fontWeight: "700" }}>{externalApiCount}</span>
+              <span style={{ color: "#64748B" }}>Discovered Microservices:</span>
+              <span style={{ fontWeight: "800", color: "#FFFFFF" }}>{externalApiCount}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span style={{ color: "#64748B" }}>Protected APIs:</span>
-              <span style={{ fontWeight: "700", color: "#10B981" }}>{protectedCount}</span>
+              <span style={{ fontWeight: "800", color: "#10B981" }}>{protectedCount}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "8px", marginTop: "4px" }}>
-              <span style={{ color: "#64748B" }}>Vulnerable APIs:</span>
-              <span style={{ fontWeight: "800", color: "#EF4444" }}>{vulnerableCount}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "8px", marginTop: "2px" }}>
+              <span style={{ color: "#64748B" }}>Vulnerable Exposure:</span>
+              <span style={{ fontWeight: "900", color: "#EF4444" }}>{vulnerableCount}</span>
             </div>
           </div>
         </div>
 
-        {/* Legend status indicators overlay */}
+        {/* Live Network Telemetry Strip Overlay */}
         <div
           style={{
             position: "absolute",
-            bottom: "14px",
-            left: "14px",
+            bottom: "16px",
+            right: "16px",
+            background: "rgba(5, 11, 20, 0.85)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            padding: "8px 16px",
+            borderRadius: "12px",
+            backdropFilter: "blur(12px)",
             display: "flex",
-            gap: "18px",
-            background: "rgba(3, 6, 14, 0.8)",
-            padding: "8px 14px",
-            borderRadius: "10px",
-            border: "1px solid rgba(255, 255, 255, 0.05)",
-            backdropFilter: "blur(10px)",
+            alignItems: "center",
+            gap: "16px",
+            fontSize: "11px",
+            color: "#94A3B8",
+            fontWeight: "600",
           }}
         >
-          {legend.map((item) => (
-            <div
-              key={item.label}
+          <div>
+            Traffic: <strong style={{ color: "#38BDF8" }}>{trafficRate.toLocaleString()} req/s</strong>
+          </div>
+          <div style={{ width: "1px", height: "12px", background: "rgba(255,255,255,0.1)" }} />
+          <div>
+            Latency: <strong style={{ color: "#10B981" }}>14ms</strong>
+          </div>
+          <div style={{ width: "1px", height: "12px", background: "rgba(255,255,255,0.1)" }} />
+          <div>
+            WAF Filter: <strong style={{ color: "#C084FC" }}>Active</strong>
+          </div>
+        </div>
+
+        {/* Node Inspection Modal Drawer */}
+        <AnimatePresence>
+          {selectedNode && (
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                color: "#CBD5E1",
-                fontSize: "11.5px",
-                fontWeight: "600",
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                width: "270px",
+                background: "rgba(10, 17, 34, 0.95)",
+                border: "1px solid rgba(139, 92, 246, 0.4)",
+                borderRadius: "16px",
+                padding: "16px",
+                backdropFilter: "blur(20px)",
+                boxShadow: "0 20px 40px rgba(0,0,0,0.6)",
+                zIndex: 20,
               }}
             >
-              <div
-                style={{
-                  width: "14px",
-                  height: "3px",
-                  borderRadius: "999px",
-                  background: item.color,
-                  boxShadow: `0 0 8px ${item.color}`,
-                }}
-              />
-              {item.label}
-            </div>
-          ))}
-        </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <div style={{ color: "#FFFFFF", fontWeight: "900", fontSize: "13px" }}>
+                  {selectedNode.icon} {selectedNode.label}
+                </div>
+                <button
+                  onClick={() => setSelectedNode(null)}
+                  style={{ background: "transparent", border: "none", color: "#94A3B8", cursor: "pointer", fontSize: "14px" }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div style={{ fontSize: "11.5px", color: "#CBD5E1", display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div><strong>Node Type:</strong> {selectedNode.nodeType}</div>
+                <div><strong>Registered Endpoints:</strong> {selectedNode.endpointsCount || 1}</div>
+                <div>
+                  <strong>Security Status:</strong>{" "}
+                  <span style={{ color: selectedNode.state === "vulnerable" ? "#EF4444" : selectedNode.state === "warning" ? "#F59E0B" : "#10B981", fontWeight: "800" }}>
+                    {(selectedNode.state || "Active").toUpperCase()}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

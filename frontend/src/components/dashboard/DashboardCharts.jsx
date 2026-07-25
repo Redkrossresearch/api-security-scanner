@@ -13,7 +13,7 @@ function DashboardCharts({
   criticalFindings,
 }) {
   return (
-    <div style={styles.gridCharts}>
+    <div className="dashboard-charts-grid" style={styles.gridCharts}>
       <ScanTrendChart
         data={securityTrend}
         range={trendRange}
