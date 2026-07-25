@@ -24,10 +24,12 @@ const mcpRoutes = require("./modules/mcp/mcp.routes");
 const ragRoutes = require("./modules/llm/rag/rag.routes");
 const auditRoutes = require("./modules/audit/audit.routes");
 const requestLogger = require("./middleware/requestLogger");
+const auditLoggerMiddleware = require("./middleware/auditLogger");
 
 const app = express();
 
 app.use(requestLogger);
+app.use(auditLoggerMiddleware);
 
 // Disable ETag to prevent HTTP 304 Not Modified responses and force HTTP 200 OK
 app.disable("etag");
