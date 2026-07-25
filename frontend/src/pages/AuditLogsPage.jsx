@@ -567,7 +567,7 @@ export default function AuditLogsPage() {
                   <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                     <span style={{ fontSize: "10px", color: "#64748B", fontWeight: "700" }}>Correlation ID</span>
                     <span style={{ fontSize: "11px", fontFamily: "monospace", color: "#3B82F6", fontWeight: "700", marginTop: "2px" }}>
-                      {selectedLog.correlationId.split("-")[1] || selectedLog.correlationId}
+                      {(selectedLog.correlationId || "").split("-")[1] || selectedLog.correlationId || "N/A"}
                     </span>
                   </div>
                 </div>

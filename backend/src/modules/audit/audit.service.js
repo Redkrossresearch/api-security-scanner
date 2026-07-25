@@ -4,18 +4,24 @@ const AuditLog = require("./audit.model");
 // Recalculates the SHA-256 integrity hash of a log
 const calculateHash = (log) => {
   const changesStr = log.changes ? JSON.stringify(log.changes) : "";
+  let dateStr = "";
+  try {
+    dateStr = log.timestamp ? new Date(log.timestamp).toISOString() : new Date().toISOString();
+  } catch (e) {
+    dateStr = new Date().toISOString();
+  }
   const payload = [
-    log.eventId,
-    new Date(log.timestamp).toISOString(),
-    log.action,
-    log.actor,
-    log.ipAddress,
-    log.device,
-    log.session,
-    log.correlationId,
-    log.affectedResource,
+    log.eventId || "",
+    dateStr,
+    log.action || "",
+    log.actor || "",
+    log.ipAddress || "",
+    log.device || "",
+    log.session || "",
+    log.correlationId || "",
+    log.affectedResource || "",
     changesStr,
-    log.risk
+    log.risk || "low"
   ].join("|");
 
   return crypto.createHash("sha256").update(payload).digest("hex");
