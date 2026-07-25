@@ -75,7 +75,6 @@ const menuItems = [
     name: "Audit Logs",
     path: "/audit-logs",
     icon: <ClipboardList size={17} />,
-    comingSoon: true,
   },
   {
     name: "Settings",

@@ -15,6 +15,7 @@ import SettingsPage from "./pages/SettingsPage";
 import CopilotPage from "./pages/CopilotPage";
 import QueueMonitorPage from "./pages/QueueMonitorPage";
 import WorkflowBuilderPage from "./pages/WorkflowBuilderPage";
+import AuditLogsPage from "./pages/AuditLogsPage";
 import WorkspacePage from "./pages/WorkspacePage";
 import DownloadsPage from "./pages/DownloadsPage";
 
@@ -67,6 +68,7 @@ function App() {
           <Route path="/downloads" element={<DownloadsPage />} />
           <Route path="/queue" element={<QueueMonitorPage />} />
           <Route path="/workflows" element={<WorkflowBuilderPage />} />
+          <Route path="/audit-logs" element={<AuditLogsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
