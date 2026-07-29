@@ -24,6 +24,7 @@ export default function ScanHistoryDrawer({
   open = true,
   onClose = () => {},
   selectedScan = null,
+  onRerun = null,
 }) {
   const [scan, setScan] = useState(selectedScan);
   const [loading, setLoading] = useState(false);
@@ -206,8 +207,8 @@ export default function ScanHistoryDrawer({
           top: 0,
           width: "min(500px, 92vw)",
           height: "100vh",
-          background: "linear-gradient(180deg, #071126 0%, #0A0F1F 100%)",
-          borderLeft: "1px solid rgba(255,255,255,.07)",
+          background: "#080c14",
+          borderLeft: "1px solid rgba(255,255,255,.08)",
           zIndex: 1000,
           overflowY: "auto",
           padding: "28px",
@@ -219,21 +220,19 @@ export default function ScanHistoryDrawer({
         <style>{`
           @keyframes drawerFadeIn { from { opacity: 0; } to { opacity: 1; } }
           @keyframes drawerSlideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-          @keyframes drawerPulseGlow { 0%, 100% { box-shadow: 0 0 20px rgba(239,68,68,.12); } 50% { box-shadow: 0 0 32px rgba(239,68,68,.22); } }
           @keyframes drawerShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
           @keyframes drawerBarFill { from { width: 0; } }
-          .sd-close:hover { background: #111B2E !important; color: #fff !important; }
-          .sd-kpi:hover { border-color: rgba(255,255,255,.12) !important; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,.3); }
+          .sd-close:hover { background: rgba(255,255,255,0.06) !important; color: #fff !important; }
+          .sd-kpi:hover { border-color: rgba(255,255,255,.12) !important; transform: translateY(-2px); }
           .sd-finding:hover { transform: translateX(4px); border-color: rgba(255,255,255,.12) !important; }
-          .sd-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(124,58,237,.35); }
-          .sd-btn-secondary:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.18) !important; background: #111B2E !important; }
-          .sd-risk-card { animation: drawerPulseGlow 3s ease-in-out infinite; }
+          .sd-btn-primary:hover { transform: translateY(-2px); }
+          .sd-btn-secondary:hover { transform: translateY(-2px); border-color: rgba(255,255,255,.18) !important; background: rgba(255,255,255,0.04) !important; }
           .sd-shimmer { position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent); background-size: 200% 100%; animation: drawerShimmer 3s infinite; }
           .sd-bar-fill { animation: drawerBarFill 1s ease-out; }
           *::-webkit-scrollbar { width: 5px; }
           *::-webkit-scrollbar-track { background: transparent; }
-          *::-webkit-scrollbar-thumb { background: rgba(124,58,237,.3); border-radius: 10px; }
-          *::-webkit-scrollbar-thumb:hover { background: rgba(124,58,237,.5); }
+          *::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 10px; }
+          *::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.3); }
         `}</style>
 
         {/* ─── Header ─── */}
@@ -1151,8 +1150,14 @@ export default function ScanHistoryDrawer({
           </button>
 
           <button
+            onClick={() => {
+              if (onRerun) {
+                onRerun(scanData);
+                onClose();
+              }
+            }}
             className="sd-btn-secondary"
-            disabled
+            disabled={!onRerun || scanData.status === "running"}
             style={{
               height: "48px",
               borderRadius: "12px",
@@ -1160,14 +1165,14 @@ export default function ScanHistoryDrawer({
               background: "#0B1220",
               color: "#FFFFFF",
               fontWeight: "600",
-              cursor: "not-allowed",
+              cursor: (!onRerun || scanData.status === "running") ? "not-allowed" : "pointer",
               fontSize: "14px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               gap: "8px",
               transition: "all .25s ease",
-              opacity: 0.5,
+              opacity: (!onRerun || scanData.status === "running") ? 0.5 : 1,
             }}
           >
             <Zap size={16} color="#7C3AED" />

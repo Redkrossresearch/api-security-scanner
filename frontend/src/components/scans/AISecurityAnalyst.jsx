@@ -160,6 +160,7 @@ export default function AISecurityAnalyst({
 
       {/* ─── Scrollable Body Container ─── */}
       <div
+        className="athx-scroll"
         style={{
           flex: 1,
           overflowY: "auto",
@@ -168,6 +169,7 @@ export default function AISecurityAnalyst({
           display: "flex",
           flexDirection: "column",
           gap: "16px",
+          minHeight: 0,
         }}
       >
         {/* ─── Score Cards ─── */}

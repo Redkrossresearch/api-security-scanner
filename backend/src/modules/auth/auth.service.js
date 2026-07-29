@@ -25,6 +25,9 @@ const registerUser = async ({ name, email, password }) => {
     passwordHash,
   });
 
+  // Auto-link pending invitations
+  await autoLinkTeamInvitations(user._id, user.email);
+
   return {
     id: user._id,
     name: user.name,
@@ -145,6 +148,8 @@ const googleLoginUser = async ({ name, email }) => {
       email,
       passwordHash: dummyPasswordHash,
     });
+    // Auto-link pending invitations
+    await autoLinkTeamInvitations(user._id, user.email);
   }
 
   const accessToken = generateAccessToken(user);
@@ -168,6 +173,27 @@ const googleLoginUser = async ({ name, email }) => {
       role: user.role,
     },
   };
+};
+
+const autoLinkTeamInvitations = async (userId, email) => {
+  try {
+    const Team = require("../teams/team.model");
+    const emailLower = email.toLowerCase().trim();
+    // Update all team documents where there is a member matching email and status pending
+    await Team.updateMany(
+      { "members.email": emailLower, "members.status": "pending" },
+      { 
+        $set: { 
+          "members.$[elem].userId": userId, 
+          "members.$[elem].status": "active" 
+        } 
+      },
+      { arrayFilters: [{ "elem.email": emailLower, "elem.status": "pending" }] }
+    );
+    console.log(`[Auth Service] Auto-linked user ${emailLower} to pending team invitations.`);
+  } catch (teamErr) {
+    console.error("[Auth Service] Failed to auto-link team invitations:", teamErr.message);
+  }
 };
 
 module.exports = {

@@ -17,12 +17,22 @@ const teamSchema = new mongoose.Schema(
         userId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "User",
+          required: false,
+        },
+        email: {
+          type: String,
           required: true,
+          trim: true,
         },
         role: {
           type: String,
           enum: ["owner", "admin", "member"],
           default: "member",
+        },
+        status: {
+          type: String,
+          enum: ["active", "pending"],
+          default: "active",
         },
       },
     ],

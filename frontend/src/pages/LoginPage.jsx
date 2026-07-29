@@ -339,7 +339,7 @@ const WaveformIcon = () => (
 );
 
 const Navbar = () => (
-  <nav style={{
+  <nav className="login-navbar" style={{
     position:"fixed", top:0, left:0, right:0, zIndex:100, height:"60px",
     padding:"0 40px", display:"flex", alignItems:"center", justifyContent:"space-between",
     borderBottom:"1px solid rgba(255,255,255,0.04)",
@@ -370,7 +370,7 @@ const Navbar = () => (
         <span style={{ color:"#F97316", fontSize:"10.5px", fontWeight:800, letterSpacing:"0.7px" }}>LIVE THREAT FEED</span>
       </motion.div>
     </div>
-    <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+    <div className="login-navbar-item" style={{ display:"flex", alignItems:"center", gap:9 }}>
       <motion.div
         animate={{ opacity:[1,0.4,1] }} transition={{ duration:2, repeat:Infinity }}
         style={{ width:7, height:7, borderRadius:"50%", background:"#10B981",
@@ -379,7 +379,7 @@ const Navbar = () => (
       <span style={{ color:"#64748B", fontSize:"11px", fontWeight:600 }}>GLOBAL NETWORK STATUS</span>
       <span style={{ color:"#10B981", fontSize:"11px", fontWeight:800 }}>OPERATIONAL</span>
     </div>
-    <div style={{
+    <div className="login-navbar-item" style={{
       padding:"7px 15px", background:"rgba(16,185,129,0.07)",
       borderRadius:8, border:"1px solid rgba(16,185,129,0.22)",
       display:"flex", alignItems:"center", gap:7,
@@ -1124,7 +1124,7 @@ const LeftColumn = () => {
     { icon:Activity,    label:"Real-time",    sub:"Protection",  color:"#F97316" },
   ];
   return (
-    <motion.div initial={{ opacity:0, x:-24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.2, duration:0.6 }}
+    <motion.div className="login-left-column" initial={{ opacity:0, x:-24 }} animate={{ opacity:1, x:0 }} transition={{ delay:0.2, duration:0.6 }}
       style={{ paddingTop:28 }}>
 
       <div style={{
@@ -1154,7 +1154,7 @@ const LeftColumn = () => {
         AI-powered threat detection, vulnerability scanning, and compliance monitoring to protect your APIs across the globe.
       </p>
 
-      <div style={{
+      <div className="login-stats-box" style={{
         padding:"17px 20px", marginBottom:18,
         background:"rgba(255,255,255,0.022)",
         border:"1px solid rgba(255,255,255,0.07)", borderRadius:13,
@@ -1167,7 +1167,7 @@ const LeftColumn = () => {
           <ShieldCheck size={12} color="#10B981" />
           Trusted by security teams worldwide
         </div>
-        <div style={{ display:"flex", gap:28 }}>
+        <div className="login-stats-container" style={{ display:"flex", gap:28 }}>
           {[["24","Regions"],["12,458","APIs Protected"],["99.98%","Uptime"]].map(([v,l],i) => (
             <div key={i} style={{ borderRight: i<2 ? "1px solid rgba(255,255,255,0.06)" : "none", paddingRight: i<2 ? 24:0 }}>
               <div style={{ color:"#F97316", fontSize:22, fontWeight:900, textShadow:"0 0 14px rgba(249,115,22,0.5)" }}>{v}</div>
@@ -1177,7 +1177,7 @@ const LeftColumn = () => {
         </div>
       </div>
 
-      <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+      <div className="login-badges-container" style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
         {badges.map((b,i) => {
           const Icon = b.icon;
           return (
@@ -1238,13 +1238,13 @@ export default function LoginPage() {
       <Navbar />
       <LiveAttackTicker />
 
-      <div style={{ width:"100%", maxWidth:1780, margin:"0 auto", padding:"72px 40px 56px", position:"relative", zIndex:2 }}>
-        <div style={{
+      <div className="login-container" style={{ width:"100%", maxWidth:1780, margin:"0 auto", padding:"72px 40px 56px", position:"relative", zIndex:2 }}>
+        <div className="login-grid" style={{
           display:"grid", gridTemplateColumns:"0.76fr 1.55fr 0.84fr",
           gap:36, alignItems:"start",
         }}>
           <LeftColumn />
-          <motion.div initial={{ opacity:0, y:24 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.6 }}
+          <motion.div className="login-globe-wrapper" initial={{ opacity:0, y:24 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3, duration:0.6 }}
             style={{ display:"flex", flexDirection:"column", alignItems:"center", paddingTop:8 }}>
             <GlobeSection />
           </motion.div>
@@ -1254,7 +1254,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <div style={{
+      <div className="login-footer" style={{
         padding:"16px 40px 50px", position:"relative", zIndex:2,
         display:"flex", alignItems:"center", justifyContent:"center", gap:44,
         borderTop:"1px solid rgba(255,255,255,0.04)",
@@ -1277,8 +1277,68 @@ export default function LoginPage() {
       <style>{`
         @keyframes pulse     { 0%,100%{opacity:1} 50%{opacity:0.3} }
         @keyframes scrollLeft{ 0%{transform:translateX(0)} 100%{transform:translateX(-33.33%)} }
+        html, body, #root {
+          margin: 0;
+          padding: 0;
+          overflow-x: hidden;
+          overflow-y: auto !important;
+          height: auto !important;
+          min-height: 100% !important;
+        }
         * { box-sizing: border-box; }
-        html, body { margin:0; padding:0; overflow-x:hidden; }
+
+        @media (max-width: 1024px) {
+          .login-navbar-item {
+            display: none !important;
+          }
+          .login-navbar {
+            padding: 0 16px !important;
+          }
+          .login-globe-wrapper {
+            display: none !important;
+          }
+          .login-grid {
+            grid-template-columns: 1fr !important;
+            gap: 40px !important;
+            justify-items: center !important;
+            text-align: center !important;
+          }
+          .login-container {
+            padding: 80px 16px 40px !important;
+          }
+          .login-footer {
+            flex-direction: column !important;
+            gap: 16px !important;
+            padding: 24px 20px !important;
+          }
+          .login-left-column {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            padding-top: 0 !important;
+          }
+          .login-left-column h1 {
+            text-align: center !important;
+          }
+          .login-left-column p {
+            text-align: center !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+          }
+          .login-stats-box {
+            margin-left: auto !important;
+            margin-right: auto !important;
+            width: 100% !important;
+            max-width: 380px !important;
+          }
+          .login-stats-container {
+            justify-content: center !important;
+            gap: 16px !important;
+          }
+          .login-badges-container {
+            justify-content: center !important;
+          }
+        }
       `}</style>
     </div>
   );

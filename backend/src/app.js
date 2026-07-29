@@ -22,14 +22,11 @@ const autonomousRoutes = require("./modules/llm/autonomous/autonomous.routes");
 const workflowRoutes = require("./modules/workflows/workflow.routes");
 const mcpRoutes = require("./modules/mcp/mcp.routes");
 const ragRoutes = require("./modules/llm/rag/rag.routes");
-const auditRoutes = require("./modules/audit/audit.routes");
 const requestLogger = require("./middleware/requestLogger");
-const auditLoggerMiddleware = require("./middleware/auditLogger");
 
 const app = express();
 
 app.use(requestLogger);
-app.use(auditLoggerMiddleware);
 
 // Disable ETag to prevent HTTP 304 Not Modified responses and force HTTP 200 OK
 app.disable("etag");
@@ -112,7 +109,6 @@ app.use("/api/autonomous", autonomousRoutes);
 app.use("/api/workflows", workflowRoutes);
 app.use("/api/mcp", mcpRoutes);
 app.use("/api/rag", ragRoutes);
-app.use("/api/audit-logs", auditRoutes);
 
 // 🟡 Recommended 2 — 404 Handler (Express 5 compatible - no "*" wildcard)
 app.use((req, res) => {

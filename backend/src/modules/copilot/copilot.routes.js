@@ -20,6 +20,8 @@ const {
   deleteTraining,
   submitFeedback,
   getRAGSources,
+  generateRemediationFix,
+  explainVulnerabilityRisk,
 } = require("./copilot.controller");
 
 // Public model registry (no auth needed)
@@ -27,6 +29,10 @@ router.get("/models", authenticate, getAvailableModels);
 
 // Real RAG Indexed Knowledge Sources endpoint
 router.get("/sources", authenticate, getRAGSources);
+
+// Real AI Remediation & Risk Analysis
+router.post("/remediate", authenticate, generateRemediationFix);
+router.post("/explain-risk", authenticate, explainVulnerabilityRisk);
 
 // Conversation CRUD
 router.get("/conversations", authenticate, getConversations);
@@ -41,6 +47,7 @@ router.post(
 router.put("/conversations/:id/archive", authenticate, archiveConversation);
 
 // Messages
+router.post("/messages", authenticate, handleChatRequest);
 router.get(
   "/conversations/:id/messages",
   authenticate,

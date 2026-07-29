@@ -19,7 +19,9 @@ export const SocketProvider = ({ children }) => {
     const token = localStorage.getItem("token");
     if (currentUser && token) {
       socket.auth = { token };
-      socket.connect();
+      if (!socket.connected) {
+        socket.connect();
+      }
     } else {
       socket.disconnect();
     }

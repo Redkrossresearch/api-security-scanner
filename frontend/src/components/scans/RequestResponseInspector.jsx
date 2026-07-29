@@ -169,6 +169,7 @@ export default function RequestResponseInspector({ selectedVuln }) {
 
       {/* ─── Scrollable body container ─── */}
       <div
+        className="athx-scroll"
         style={{
           flex: 1,
           overflowY: "auto",
@@ -177,6 +178,7 @@ export default function RequestResponseInspector({ selectedVuln }) {
           flexDirection: "column",
           gap: "16px",
           marginBottom: "12px",
+          minHeight: 0,
         }}
       >
         {/* 2. Request Panel — boxShadow + emoji title + icon buttons */}
@@ -208,7 +210,7 @@ export default function RequestResponseInspector({ selectedVuln }) {
               </button>
             </div>
           </div>
-          <pre style={{ margin: 0, padding: "16px", color: "#CBD5E1", fontSize: "13px", fontFamily: "JetBrains Mono, monospace", lineHeight: "1.7", overflow: "auto", height: "160px" }}>
+          <pre className="athx-scroll" style={{ margin: 0, padding: "16px", color: "#CBD5E1", fontSize: "13px", fontFamily: "JetBrains Mono, monospace", lineHeight: "1.7", overflow: "auto", height: "160px" }}>
             {requestData}
           </pre>
         </div>
@@ -234,7 +236,7 @@ export default function RequestResponseInspector({ selectedVuln }) {
               </button>
             </div>
           </div>
-          <pre style={{ margin: 0, padding: "16px", color: "#CBD5E1", fontSize: "13px", fontFamily: "JetBrains Mono, monospace", lineHeight: "1.7", overflow: "auto", height: "180px" }}>
+          <pre className="athx-scroll" style={{ margin: 0, padding: "16px", color: "#CBD5E1", fontSize: "13px", fontFamily: "JetBrains Mono, monospace", lineHeight: "1.7", overflow: "auto", height: "180px" }}>
             {getFormattedResponse()}
           </pre>
         </div>

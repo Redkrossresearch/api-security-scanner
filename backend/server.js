@@ -21,12 +21,6 @@ const startServer = async () => {
       console.error("GitHub advisory sync failed:", e.message),
     );
 
-    // Seed Forensic Audit Logs (Black Box Recorder)
-    const auditService = require("./src/modules/audit/audit.service");
-    auditService.seedAuditLogs().catch((e) =>
-      console.error("Audit log seeding failed:", e.message)
-    );
-
     // Start automated background scanner service
     scheduler.start();
 
@@ -49,6 +43,14 @@ const startServer = async () => {
     const { createSocketServer } = require("./src/sockets");
     const server = http.createServer(app);
     createSocketServer(server);
+
+    server.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        console.error(`❌ Port ${env.port} is already in use by another process. Please stop existing background node processes.`);
+      } else {
+        console.error("❌ Server socket error:", err.message);
+      }
+    });
 
     server.listen(env.port, () => {
       console.log(`🚀 Server running on port ${env.port}`);

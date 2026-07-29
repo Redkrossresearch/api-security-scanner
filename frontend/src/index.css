@@ -28,16 +28,13 @@ html,
 body,
 #root {
   width: 100%;
-  height: 100%;
   min-height: 100%;
-  overflow: hidden;
 }
 
 body {
   font-family: var(--font-ui);
   background: #020617;
   color: var(--color-warm-text);
-  overflow: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -80,6 +77,115 @@ button {
     #38bdf8
   );
   border-radius: 3px;
+}
+
+/* ==========================================================================
+   Responsive Mobile & Tablet Rules - Guaranteed Zero Desktop Regression
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .responsive-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    transform: translateX(-100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 20px 0 50px rgba(0, 0, 0, 0.8) !important;
+  }
+  .responsive-sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
+  .mobile-nav-toggle {
+    display: flex !important;
+  }
+  .mobile-header-hide {
+    display: none !important;
+  }
+  .sidebar-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(3, 7, 18, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 9998;
+  }
+}
+
+@media (min-width: 1025px) {
+  .mobile-nav-toggle {
+    display: none !important;
+  }
+  .sidebar-backdrop {
+    display: none !important;
+  }
+}
+
+/* Mobile Screen Utilities (Phones & Small Tablets) */
+@media (max-width: 768px) {
+  .responsive-grid-4,
+  .responsive-grid-3,
+  .responsive-grid-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+  .responsive-flex-stack {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .responsive-padding {
+    padding: 12px 14px !important;
+  }
+  .responsive-modal {
+    max-width: 96vw !important;
+    padding: 16px !important;
+    margin: 10px !important;
+  }
+  .responsive-table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .responsive-grid-4,
+  .responsive-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* AI Modal Animations */
+@keyframes aiNeuralRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes aiNeuralRotateRev {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes aiOrbPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(124,58,237,0.7)); }
+  50% { transform: scale(1.12); filter: drop-shadow(0 0 30px rgba(236,72,153,0.9)); }
+}
+@keyframes aiModalEntry {
+  0% { transform: scale(0.94) translateY(12px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+@keyframes aiGlowBar {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.ai-glow-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(124,58,237,0.4) !important;
+}
+.ai-copy-btn:hover {
+  background: rgba(255,255,255,0.15) !important;
+  border-color: rgba(255,255,255,0.3) !important;
 }
 
 

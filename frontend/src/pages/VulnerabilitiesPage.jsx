@@ -6,6 +6,9 @@ import {
 } from "../services/vulnerabilityService";
 import VulnerabilityPanel from "../components/dashboard/VulnerabilityPanel";
 import FeatureGuide from "../components/common/FeatureGuide";
+import socket from "../sockets/socketClient";
+import AnalyzeModal from "../components/dashboard/AnalyzeModal";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Radar, 
   RadarChart, 
@@ -690,8 +693,8 @@ const styles = {
     marginTop: "2px",
   },
   endpointCell: {
-    color: COLORS.muted,
-    fontFamily: "monospace",
+    color: "#38BDF8",
+    fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
   },
   actionBtn: {
     background: "transparent",
@@ -755,6 +758,29 @@ export default function VulnerabilitiesPage() {
   // Detail Panel State
   const [selectedVuln, setSelectedVuln] = useState(null);
   const [isPatching, setIsPatching] = useState(false);
+  const [aiVuln, setAiVuln] = useState(null);
+
+  // WebSocket Live Updates
+  useEffect(() => {
+    socket.connect();
+    
+    const onUpdate = () => {
+      fetchVulnerabilityList();
+      fetchIntelligence();
+    };
+
+    socket.on("scan:progress", onUpdate);
+    socket.on("scan:completed", onUpdate);
+    socket.on("scan:complete", onUpdate);
+    socket.on("dashboard:update", onUpdate);
+
+    return () => {
+      socket.off("scan:progress", onUpdate);
+      socket.off("scan:completed", onUpdate);
+      socket.off("scan:complete", onUpdate);
+      socket.off("dashboard:update", onUpdate);
+    };
+  }, [debouncedSearch, severity, status, matrixFilter, page]);
 
   // Search Debouncer (1.5 seconds)
   useEffect(() => {
@@ -789,7 +815,11 @@ export default function VulnerabilitiesPage() {
   // Fetch Intelligence Analytics (non-blocking - independent load)
   const fetchIntelligence = async () => {
     try {
-      const data = await getVulnerabilityIntelligence();
+      const params = {
+        profile: scanProfile !== "all" ? scanProfile : undefined,
+        target: targetAsset !== "all" ? targetAsset : undefined,
+      };
+      const data = await getVulnerabilityIntelligence(params);
       setIntelligence(data);
     } catch (err) {
       // Set a fallback so the page doesn't stay blocked
@@ -807,6 +837,8 @@ export default function VulnerabilitiesPage() {
         search: debouncedSearch || undefined,
         severity: severity !== "all" ? severity : undefined,
         status: status !== "all" ? status : undefined,
+        profile: scanProfile !== "all" ? scanProfile : undefined,
+        target: targetAsset !== "all" ? targetAsset : undefined,
       };
 
       const res = await getVulnerabilities(params);
@@ -848,7 +880,7 @@ export default function VulnerabilitiesPage() {
       fetchIntelligence();
     };
     loadAll();
-  }, [page, debouncedSearch, severity, status, matrixFilter]);
+  }, [page, debouncedSearch, severity, status, matrixFilter, scanProfile, targetAsset]);
 
   // Handle status change
   const handleStatusChange = async (vulnId, newStatus) => {
@@ -862,19 +894,17 @@ export default function VulnerabilitiesPage() {
     }
   };
 
-  // Simulate AI remediation
+  // Real AI remediation handler via RAG
   const triggerAiRemediation = () => {
-    setIsPatching(true);
-    toast.promise(
-      new Promise((resolve) => setTimeout(resolve, 3000)),
-      {
-        loading: "AI Engine generating secure validation interceptor code...",
-        success: "AI Secure Patch proposal generated! Review inside settings page.",
-        error: "AI Engine error."
-      }
-    ).then(() => {
-      setIsPatching(false);
-    });
+    if (!vulnerabilities || vulnerabilities.length === 0) {
+      toast.error("No active vulnerabilities found to analyze.");
+      return;
+    }
+    const targetVuln = vulnerabilities.find(v => v.severity?.toLowerCase() === "critical") || 
+                       vulnerabilities.find(v => v.severity?.toLowerCase() === "high") || 
+                       vulnerabilities[0];
+    
+    setAiVuln(targetVuln);
   };
 
   if (loading) {
@@ -898,6 +928,18 @@ export default function VulnerabilitiesPage() {
 
   return (
     <div style={styles.container}>
+      <style>{`
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        .table-row { transition: background 0.15s ease, transform 0.15s ease; }
+        .table-row:hover { background: rgba(255,255,255,0.02) !important; }
+        .vuln-btn:hover { color: #A78BFA !important; }
+        .action-btn { transition: all 0.2s ease; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; }
+        .action-btn:hover { background: rgba(255,255,255,0.06) !important; color: #FFF !important; }
+        .page-btn { transition: all 0.2s ease; }
+        .page-btn:hover:not(:disabled) { background: rgba(255,255,255,0.06) !important; border-color: rgba(255,255,255,0.15) !important; color: #FFF !important; }
+        .status-select { background: #0d1527 !important; border: 1px solid rgba(255,255,255,0.08) !important; color: #E2E8F0 !important; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; outline: none; transition: all 0.2s ease; }
+        .status-select:hover { border-color: rgba(255,255,255,0.18) !important; }
+      `}</style>
       
       {/* 1. Header Banner */}
       <div style={styles.header}>
@@ -940,28 +982,35 @@ export default function VulnerabilitiesPage() {
             Last scan: 2 hours ago
           </button>
         </div>
-      </div>
-
-      {/* 2. Top Metrics Section */}
-      <div style={styles.kpiGrid}>
+      </div>      {/* 2. Top Metrics Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        style={styles.kpiGrid}
+      >
         {/* KPI Cards */}
         {[
-          { title: "TOTAL VULNERABILITIES", count: intelligence?.total ?? "—", diff: "+18%", color: COLORS.purple },
-          { title: "CRITICAL", count: intelligence?.counts?.critical ?? "—", diff: "+27%", color: COLORS.critical },
-          { title: "HIGH", count: intelligence?.counts?.high ?? "—", diff: "+12%", color: COLORS.warning },
-          { title: "MEDIUM", count: intelligence?.counts?.medium ?? "—", diff: "-9%", color: COLORS.yellow },
-          { title: "LOW", count: intelligence?.counts?.low ?? "—", diff: "+22%", color: COLORS.success },
+          { title: "TOTAL VULNERABILITIES", count: intelligence?.total ?? 0, diff: `${intelligence?.total > 0 ? "LIVE" : "0"}`, color: COLORS.purple },
+          { title: "CRITICAL", count: intelligence?.counts?.critical ?? 0, diff: `${intelligence?.total > 0 ? Math.round(((intelligence?.counts?.critical || 0) / (intelligence.total || 1)) * 100) + "%" : "0%"}`, color: COLORS.critical },
+          { title: "HIGH", count: intelligence?.counts?.high ?? 0, diff: `${intelligence?.total > 0 ? Math.round(((intelligence?.counts?.high || 0) / (intelligence.total || 1)) * 100) + "%" : "0%"}`, color: COLORS.warning },
+          { title: "MEDIUM", count: intelligence?.counts?.medium ?? 0, diff: `${intelligence?.total > 0 ? Math.round(((intelligence?.counts?.medium || 0) / (intelligence.total || 1)) * 100) + "%" : "0%"}`, color: COLORS.yellow },
+          { title: "LOW", count: intelligence?.counts?.low ?? 0, diff: `${intelligence?.total > 0 ? Math.round(((intelligence?.counts?.low || 0) / (intelligence.total || 1)) * 100) + "%" : "0%"}`, color: COLORS.success },
         ].map((kpi, idx) => (
-          <div key={idx} style={styles.kpiCard}>
+          <motion.div 
+            whileHover={{ y: -2, borderColor: "rgba(255,255,255,0.12)" }}
+            key={idx} 
+            style={styles.kpiCard}
+          >
             <div style={styles.kpiTitle}>{kpi.title}</div>
             <div style={styles.kpiBodyRow}>
               <div style={{ ...styles.kpiCount, color: kpi.color }}>{kpi.count}</div>
-              <div style={{ ...styles.kpiDiff, color: kpi.diff.startsWith("+") ? COLORS.critical : COLORS.success }}>
+              <div style={{ ...styles.kpiDiff, color: kpi.title === "TOTAL VULNERABILITIES" ? COLORS.purple : kpi.color }}>
                 {kpi.diff}
               </div>
             </div>
-            <div style={styles.kpiFooter}>from last scan</div>
-          </div>
+            <div style={styles.kpiFooter}>{kpi.title === "TOTAL VULNERABILITIES" ? "active database findings" : "share of total findings"}</div>
+          </motion.div>
         ))}
 
         {/* Circular Risk Exposure Score Card */}
@@ -980,22 +1029,24 @@ export default function VulnerabilitiesPage() {
                   strokeDasharray={`${intelligence?.riskExposureScore ?? 0}, 100`}
                   strokeWidth="3.5"
                   strokeLinecap="round"
-                  stroke={COLORS.critical}
+                  stroke={intelligence?.riskExposureScore > 75 ? COLORS.critical : intelligence?.riskExposureScore > 40 ? COLORS.warning : COLORS.success}
                   fill="none"
                   d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                 />
               </svg>
               <span style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", fontSize: "14px", fontWeight: "900" }}>
-                {intelligence.riskExposureScore}
+                {intelligence?.riskExposureScore ?? 0}
               </span>
             </div>
             <div style={styles.scoreInfo}>
-              <div style={styles.scoreLabel}>{intelligence.riskExposureText} Risk</div>
+              <div style={{ ...styles.scoreLabel, color: intelligence?.riskExposureScore > 75 ? COLORS.critical : intelligence?.riskExposureScore > 40 ? COLORS.warning : COLORS.success }}>
+                {intelligence?.riskExposureText || "Low"} Risk
+              </div>
               <div style={styles.scoreSub}>Overall system vector</div>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* 3. Interactive Filters Control Bar */}
       <div style={styles.filterBar}>
@@ -1009,9 +1060,10 @@ export default function VulnerabilitiesPage() {
                 onChange={(e) => setScanProfile(e.target.value)}
                 style={styles.select}
               >
-                <option value="all">Full Security Scan</option>
-                <option value="api">API Vulnerability Audit</option>
-                <option value="quick">Quick Header Verification</option>
+                <option value="all">All Profiles</option>
+                <option value="Full Security Audit">Full Security Audit</option>
+                <option value="API Vulnerability Audit">API Vulnerability Audit</option>
+                <option value="Quick Header Verification">Quick Header Verification</option>
               </select>
             </div>
 
@@ -1115,10 +1167,18 @@ export default function VulnerabilitiesPage() {
       </div>
 
       {/* 4. Dashboard Primary Layout: Heatmap, 3x3 Matrix, Top Vulnerabilities */}
-      <div style={styles.mainGrid}>
+      <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        style={styles.mainGrid}
+      >
         
         {/* Heatmap (Radar) */}
-        <div style={styles.dashboardCard}>
+        <motion.div 
+          whileHover={{ y: -2, borderColor: "rgba(255,255,255,0.12)" }}
+          style={{ ...styles.dashboardCard, transition: "border-color 0.2s" }}
+        >
           <div>
             <div style={styles.cardTitleRow}>
               <h3 style={styles.cardTitle}>Vulnerability Heatmap</h3>
@@ -1127,19 +1187,32 @@ export default function VulnerabilitiesPage() {
             <p style={styles.cardSub}>Visual distribution across API threat vectors</p>
           </div>
 
-          <div style={{ width: "100%", height: "240px", marginTop: "16px" }}>
+          <div style={{ width: "100%", height: "285px", marginTop: "16px" }}>
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="75%" data={intelligence?.heatmapData || []}>
+              <RadarChart cx="50%" cy="50%" outerRadius="82%" data={intelligence?.heatmapData || []}>
+                <defs>
+                  <linearGradient id="radarGlow" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#A78BFA" stopOpacity={0.6} />
+                    <stop offset="100%" stopColor="#8B5CF6" stopOpacity={0.15} />
+                  </linearGradient>
+                  <linearGradient id="radarLine" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#C084FC" />
+                    <stop offset="100%" stopColor="#6366F1" />
+                  </linearGradient>
+                </defs>
                 <PolarGrid stroke="rgba(255,255,255,0.06)" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: COLORS.muted, fontSize: 10, fontWeight: 600 }} />
-                <Radar name="Threat Vector" dataKey="A" stroke={COLORS.purple} fill={COLORS.purple} fillOpacity={0.25} />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: COLORS.muted, fontSize: 9, fontWeight: 600 }} />
+                <Radar name="Threat Vector" dataKey="A" stroke="url(#radarLine)" fill="url(#radarGlow)" fillOpacity={1} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
         {/* 3x3 Exploitability vs Impact Matrix */}
-        <div style={styles.dashboardCard}>
+        <motion.div 
+          whileHover={{ y: -2, borderColor: "rgba(255,255,255,0.12)" }}
+          style={{ ...styles.dashboardCard, transition: "border-color 0.2s" }}
+        >
           <div>
             <div style={styles.cardTitleRow}>
               <h3 style={styles.cardTitle}>Exploitability vs Impact Matrix</h3>
@@ -1180,7 +1253,9 @@ export default function VulnerabilitiesPage() {
                   }
 
                   return (
-                    <button
+                    <motion.button
+                      whileHover={{ scale: 1.04, y: -1 }}
+                      whileTap={{ scale: 0.98 }}
                       key={`${imp}-${exp}`}
                       onClick={() => {
                         if (isSelected) {
@@ -1195,13 +1270,14 @@ export default function VulnerabilitiesPage() {
                         background: cellBg,
                         borderColor: cellBorder,
                         borderStyle: "solid",
-                        borderWidth: "1px"
+                        borderWidth: "1px",
+                        transition: "background 0.2s, border-color 0.2s"
                       }}
                     >
                       <span style={{ ...styles.matrixBadge, background: badgeBg, color: badgeText }}>
                         {val}
                       </span>
-                    </button>
+                    </motion.button>
                   );
                 })}
               </div>
@@ -1218,10 +1294,13 @@ export default function VulnerabilitiesPage() {
               Exploitability
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Top Critical Findings List */}
-        <div style={styles.dashboardCard}>
+        <motion.div 
+          whileHover={{ y: -2, borderColor: "rgba(255,255,255,0.12)" }}
+          style={{ ...styles.dashboardCard, transition: "border-color 0.2s" }}
+        >
           <div>
             <div style={styles.cardTitleRow}>
               <h3 style={styles.cardTitle}>Top Critical Vulnerabilities</h3>
@@ -1232,7 +1311,9 @@ export default function VulnerabilitiesPage() {
 
           <div style={styles.topFindingsList}>
             {(intelligence?.topFindings || []).map((f, idx) => (
-              <button
+              <motion.button
+                whileHover={{ x: 2, background: "rgba(255,255,255,0.03)" }}
+                whileTap={{ scale: 0.99 }}
                 key={idx}
                 onClick={async () => {
                   if (f._id) {
@@ -1241,7 +1322,7 @@ export default function VulnerabilitiesPage() {
                     toast.error("Vulnerability payload not found in local sandbox");
                   }
                 }}
-                style={styles.topFindingItem}
+                style={{ ...styles.topFindingItem, transition: "background 0.2s" }}
               >
                 <div style={styles.topFindingLeft}>
                   <span style={styles.topFindingDot}></span>
@@ -1256,12 +1337,12 @@ export default function VulnerabilitiesPage() {
                     {f.cvss}
                   </span>
                 </div>
-              </button>
+              </motion.button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-      </div>
+      </motion.div>
 
       {/* 5. Second Row Layout: Area Trends, Predictions, Remediation & Insights Panels */}
       <div style={styles.secondRowGrid}>
@@ -1449,8 +1530,12 @@ export default function VulnerabilitiesPage() {
                 {vulnerabilities.map((v) => {
                   const badgeStyles = getSeverityStyles(v.severity);
                   return (
-                    <tr 
+                    <motion.tr 
                       key={v._id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="table-row"
                       style={{ borderBottom: "1px solid rgba(255,255,255,.04)" }}
                     >
                       <td style={styles.td}>
@@ -1471,6 +1556,7 @@ export default function VulnerabilitiesPage() {
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <button 
                             onClick={() => setSelectedVuln(v)}
+                            className="vuln-btn"
                             style={styles.vulnBtn}
                           >
                             {v.title}
@@ -1505,7 +1591,7 @@ export default function VulnerabilitiesPage() {
                         <select
                           value={v.status || "open"}
                           onChange={(e) => handleStatusChange(v._id, e.target.value)}
-                          style={styles.select}
+                          className="status-select"
                         >
                           <option value="open">Open</option>
                           <option value="in_progress">In Progress</option>
@@ -1515,12 +1601,18 @@ export default function VulnerabilitiesPage() {
                       <td style={{ ...styles.td, textAlign: "center" }}>
                         <button 
                           onClick={() => setSelectedVuln(v)}
-                          style={styles.actionBtn}
+                          className="action-btn"
+                          style={{
+                            background: "transparent",
+                            border: "none",
+                            color: COLORS.muted,
+                            cursor: "pointer",
+                          }}
                         >
                           <Eye style={{ width: "16px", height: "16px" }} />
                         </button>
                       </td>
-                    </tr>
+                    </motion.tr>
                   );
                 })}
               </tbody>
@@ -1559,6 +1651,15 @@ export default function VulnerabilitiesPage() {
         <VulnerabilityPanel
           vulnerability={selectedVuln}
           onClose={() => setSelectedVuln(null)}
+        />
+      )}
+
+      {/* 9. AI Copilot / RAG Secure Patch generation modal */}
+      {aiVuln && (
+        <AnalyzeModal
+          open={!!aiVuln}
+          onClose={() => setAiVuln(null)}
+          vulnerability={aiVuln}
         />
       )}
 

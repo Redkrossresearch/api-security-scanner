@@ -153,13 +153,14 @@ export default function FindingsPanel({ scan, scanStatus, selectedVuln, onSelect
       {/* Findings */}
 
       <div
+        className="athx-scroll"
         style={{
           display: "flex",
           flexDirection: "column",
           gap: "10px",
           flex: 1,
           overflowY: "auto",
-          paddingRight: "4px",
+          paddingRight: "6px",
           minHeight: 0,
         }}
       >

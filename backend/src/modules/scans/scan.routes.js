@@ -18,6 +18,7 @@ const {
   getHeatmap,
   getAIInsights,
   getScanStatus,
+  reAuditScan,
 } = require("./scan.controller");
 
 // ==================== CORE ROUTES ====================
@@ -49,6 +50,8 @@ router.get("/dashboard/heatmap", authenticate, getHeatmap);
 router.get("/dashboard/ai-insights", authenticate, getAIInsights);
 
 // ==================== DYNAMIC ROUTES (LAST) ====================
+
+router.post("/:id/reaudit", authenticate, reAuditScan);
 
 router.get("/:id/status", authenticate, getScanStatus);
 
