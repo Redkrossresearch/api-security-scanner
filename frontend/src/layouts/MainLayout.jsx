@@ -77,13 +77,14 @@ export default function MainLayout() {
       <div
         ref={layoutRef}
         style={{
-        height: "100%",
-        display: "flex",
-        background: "#030712",
-        overflow: "hidden",
-        position: "relative",
-      }}
-    >
+          height: "100vh",
+          width: "100vw",
+          display: "flex",
+          background: "#030712",
+          overflow: "hidden",
+          position: "relative",
+        }}
+      >
       {/* Premium glowing background mesh spots */}
       <div
         style={{
