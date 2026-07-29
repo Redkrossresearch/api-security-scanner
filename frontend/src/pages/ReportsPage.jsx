@@ -1696,11 +1696,11 @@ app.use('/api/v1', (req, res, next) => {
             </div>
 
             {/* Recharts Compliance Radar */}
-            <div style={{ width: "100%", height: "230px", marginTop: "8px" }}>
+            <div style={{ width: "100%", height: "185px", marginTop: "4px" }}>
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={radarChartData} outerRadius="75%">
+                <RadarChart data={radarChartData} outerRadius="65%">
                   <PolarGrid stroke="rgba(255, 255, 255, 0.1)" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#94A3B8", fontSize: 10, fontWeight: 700 }} />
+                  <PolarAngleAxis dataKey="subject" tick={{ fill: "#94A3B8", fontSize: 9.5, fontWeight: 700 }} />
                   <Radar name="Readiness" dataKey="score" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.45} />
                   <RechartsTooltip contentStyle={{ background: "#070E1C", border: "1px solid #1E293B", borderRadius: "8px", fontSize: "11px", color: "#FFF" }} />
                 </RadarChart>

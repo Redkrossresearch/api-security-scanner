@@ -79,7 +79,6 @@ button {
   border-radius: 3px;
 }
 
-<<<<<<< Updated upstream
 /* ==========================================================================
    Responsive Mobile & Tablet Rules - Guaranteed Zero Desktop Regression
    ========================================================================== */
@@ -157,7 +156,8 @@ button {
   .responsive-grid-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
-=======
+}
+
 /* AI Modal Animations */
 @keyframes aiNeuralRotate {
   0% { transform: rotate(0deg); }
@@ -186,7 +186,6 @@ button {
 .ai-copy-btn:hover {
   background: rgba(255,255,255,0.15) !important;
   border-color: rgba(255,255,255,0.3) !important;
->>>>>>> Stashed changes
 }
 
 
