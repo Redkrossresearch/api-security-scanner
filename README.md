@@ -11,7 +11,7 @@
 [![BullMQ](https://img.shields.io/badge/Task--Queue-BullMQ--Redis-orange?style=for-the-badge&logo=redis)](https://bullmq.io/)
 [![Multi-Agent Orchestrator](https://img.shields.io/badge/AI--Engine-DAG--RAG--Copilot-darkviolet?style=for-the-badge&logo=openai)](https://openrouter.ai/)
 
-**An autonomous API vulnerability assessment platform, multi-agent AI remediation engine, multi-framework compliance radar, and executive cryptographic audit proof generator.**
+**An enterprise autonomous API vulnerability assessment platform, 52-scanner DAST execution engine, multi-agent AI remediation copilot, multi-framework compliance radar, and cryptographic audit proof generator.**
 
 </div>
 
@@ -19,27 +19,25 @@
 
 ## 📐 System Architecture Diagram
 
-The system employs a decoupled high-concurrency architecture comprising active DAST crawlers, 52 security scanners running in parallel worker queues, a DAG Knowledge Graph + RAG Copilot Engine, and a Cryptographic Audit Certificate Generator.
-
 ```mermaid
 graph TD
-    Client["💻 React 19 + Vite Dashboard"] -->|REST API & WebSockets| Server["⚡ Express.js Server (Port 5000)"]
+    Client["💻 React 19 + Vite Dashboard UI"] -->|REST API & WebSockets| Server["⚡ Express.js Backend Server (Port 5000)"]
     
     subgraph Backend Core Engine
-        Server --> Auth["🔐 Auth & RBAC Service"]
+        Server --> Auth["🔐 Auth & RBAC Service (Firebase + JWT)"]
         Server --> ScanController["🎯 Scan Execution Controller"]
-        Server --> AIController["🤖 AI Neural Copilot (/api/ai/analyze)"]
-        Server --> ReportService["📑 Executive Report & PDF Builder"]
+        Server --> AIController["🤖 AI Copilot (/api/ai/analyze)"]
+        Server --> ReportService["📑 Executive Report & PDF Engine"]
     end
 
-    subgraph Async Queue & Security Scanner Suite
-        ScanController --> TaskQueue["🚀 Parallel Scan Worker Queue"]
+    subgraph Async Worker Queue & 52 Scanner Suite
+        ScanController --> TaskQueue["🚀 Parallel Scan Worker Queue (BullMQ)"]
         TaskQueue --> ScannerEngine["🛡️ 52 Security Scanner Modules"]
         ScannerEngine --> BOLA["BOLA / IDOR Scanner"]
-        ScannerEngine --> JWT["JWT Weak Secret & Fuzzing"]
+        ScannerEngine --> JWT["JWT Weak Secret Probe"]
         ScannerEngine --> MassAssign["Mass Assignment Scanner"]
         ScannerEngine --> SSRF["SSRF & XXE Probe"]
-        ScannerEngine --> Header["Security Headers & CORS"]
+        ScannerEngine --> SecurityHeaders["Security Headers & CORS"]
     end
 
     subgraph AI Neural Copilot & RAG Pipeline
@@ -49,7 +47,7 @@ graph TD
         DAGGraph & RAGEngine & CriticEval --> LLMProvider["✨ OpenRouter / Gemini Flash / Groq LPU"]
     end
 
-    subgraph Persistence & Cryptographic Proof
+    subgraph Persistence & Cryptographic Audit Proof
         ScannerEngine --> DB[("🍃 MongoDB Database")]
         ReportService --> CertGen["📜 Cryptographic Certificate Engine (SHA256 & Signature)"]
         CertGen --> OutputDoc["📄 Printable Diploma & PDF/CSV/JSON Package"]
@@ -70,18 +68,57 @@ sequenceDiagram
     participant AI as AI LLM Copilot Engine
     participant Cert as Cryptographic Cert Generator
 
-    Dev->>UI: Input Target URL (e.g. https://api.target.com)
-    UI->>Backend: POST /api/scans/run (Scope & Rules)
+    Dev->>UI: Input Target API URL (e.g. https://api.target.com)
+    UI->>Backend: POST /api/scans/run (Scope & Policy)
     Backend->>Worker: Dispatch Parallel Scan Jobs
-    Worker->>Worker: Run 52 Security Scanners (BOLA, JWT, CORS, SSRF...)
-    Worker-->>Backend: Stream Live Telemetry Logs via WebSockets
-    Backend-->>UI: Real-Time Event Stream Ticker
+    Worker->>Worker: Execute 52 Security Scanners (BOLA, JWT, CORS, SSRF...)
+    Worker-->>Backend: Stream Telemetry Logs via WebSockets
+    Backend-->>UI: Real-Time Telemetry Stream
     Worker->>Backend: Consolidate Findings & Risk Score
-    UI->>AI: Click "AI FIX AVAILABLE" (/api/ai/analyze)
+    UI->>AI: Click "ANALYZE NOW" (/api/ai/analyze)
     AI-->>UI: Return Express.js Remediation Code Patch
     Dev->>UI: Request Verified Compliance Certificate
     UI->>Cert: Generate SHA256 Hash + Agupta Signature Seal
-    Cert-->>UI: Render Printable A4 Executive Diploma
+    Cert-->>UI: Render Printable Executive Security Diploma
+```
+
+---
+
+## 📂 Project Directory Structure
+
+```
+api-security-scanner/
+├── backend/
+│   ├── src/
+│   │   ├── config/              # Feature flags & MongoDB connection
+│   │   ├── modules/
+│   │   │   ├── ai/              # AI Remediation engine & multi-LLM adapters
+│   │   │   ├── agents/          # Autonomous Agent Roster (Planner, Fixer, Judge)
+│   │   │   ├── copilot/         # Chat controllers & learned insight model
+│   │   │   ├── knowledge/       # Tag taxonomy & knowledge graph services
+│   │   │   ├── llm/             # RAG Vector store, Reranker, DAG Knowledge Graph
+│   │   │   ├── reports/         # PDF Report Builder & Cryptographic Cert Engine
+│   │   │   ├── scanner/         # 52 Security Scanner Modules
+│   │   │   ├── scans/           # Scan orchestrator, attack graph & stage telemetry
+│   │   │   └── vulnerabilities/ # Vulnerability catalog definitions
+│   │   └── utils/               # Storage cleanup cron, mailer, load tests
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── ai/              # Attack diagram cards & remediation panels
+│   │   │   ├── copilot/         # Chart, Image Lightbox, Copy & Citation renderers
+│   │   │   ├── dashboard/       # Dashboard KPIs, trend charts & threat feeds
+│   │   │   ├── layouts/         # Sidebar, Navbar & Particle background
+│   │   │   └── scans/           # Live scanner logs, Attack Surface Map, Findings
+│   │   ├── contexts/            # AuthContext (Firebase + JWT)
+│   │   ├── layouts/             # MainLayout (100vh viewport scroll container)
+│   │   ├── pages/               # Scans, History, Copilot, Reports, Queue, Settings
+│   │   ├── services/            # Axios API client with production Vercel auto-fallback
+│   │   └── sockets/             # Socket.IO client & ConnectionStatus badge
+│   └── index.css                # Global Design Tokens & Responsive Utilities
+├── collaboration_log.md         # Official Sprint & Teamwork Contribution Log
+├── README.md                    # Enterprise Documentation & Setup Guide
+└── vercel.json                  # Production Build & Rewrite Configuration
 ```
 
 ---
@@ -89,7 +126,7 @@ sequenceDiagram
 ## 🌟 Complete Feature Inventory
 
 ### 🛡️ 1. 52 Specialized Security Scanner Modules
-The platform embeds 52 specialized automated security scanners covering all major API threat vectors:
+The platform embeds 52 specialized automated DAST security scanners covering all major API threat vectors:
 
 - **OWASP API Top 10 (2023 Categories)**:
   - `bola-idor.scanner.js`: Broken Object-Level Authorization & IDOR probe.
@@ -113,131 +150,73 @@ The platform embeds 52 specialized automated security scanners covering all majo
 ---
 
 ### 🤖 2. AI Neural Copilot & Dynamic Remediation Engine
-- **Dynamic Patch Synthesis**: `/api/ai/analyze` connects to OpenRouter, Google Gemini Flash, and Groq LPU to analyze raw HTTP request/response vectors and generate drop-in Express.js security fixes.
-- **DAG Knowledge Graph**: Traverses OWASP categorizations, CWE taxonomies, and remediation patterns for context-aware recommendations.
+- **Multi-LLM Adapter Architecture**: Supports OpenRouter, Google Gemini Flash (`gemini-flash-latest`), and Groq LPU (`llama-3.3-70b`) with automatic failover.
+- **DAG Knowledge Graph**: Directed Acyclic Graph connecting OWASP API categories, CWE taxonomies, and remediation patterns.
 - **AI Critic Evaluator**: Self-learning feedback pipeline that refines rule accuracy based on user validation.
 
 ---
 
-### 📊 3. Multi-Framework Compliance Radar & Posture HUD
-- Interactive Recharts compliance radar matrix evaluating target readiness across 4 international frameworks:
-  - **OWASP API Top 10 (2023)**
-  - **PCI-DSS v4.0**
-  - **SOC 2 Type II**
-  - **ISO 27001 / HIPAA**
+### 📜 3. Cryptographic Compliance Certificate System
+- **Verified Audit Certificate**: Renders a printable A4 executive diploma featuring gold/emerald double borders, SHA256 audit hashes, HMAC integrity seals, and a transparent handwritten `Agupta` signature stamp.
+- **Multi-Framework Matrix**: Evaluates security compliance across **OWASP API Top 10**, **PCI-DSS v4.0**, **SOC 2 Type II**, and **ISO 27001**.
 
 ---
 
-### 📑 4. Executive Report Builder & Multi-Format Exports
-- **3 Custom Report Presets**:
-  - 🏛️ **Executive Board Deck**: High-level posture grades and executive summary.
-  - 🛠️ **Dev Remediation Playbook**: Detailed HTTP payloads, code fixes, and cURL commands.
-  - 📜 **Full Audit Package**: Complete breakdown of all controls and raw logs.
-- **Supported Export Formats**: PDF Packages, CSV Registries, JSON Security Logs, OpenAPI 3.0 Specifications, and `.ZIP` Archives.
+## 👥 Sprint & Author Ownership Matrix
+
+| Feature Module | Primary Author | Status | Deliverables |
+| :--- | :--- | :--- | :--- |
+| **Backend & 52 Scanners** | **Atharv Gupta** | 🟢 Complete | `scan.service.js`, `vulnerability.catalog.js`, 52 scanner modules |
+| **AI Copilot & DAG RAG** | **Atharv Gupta** | 🟢 Complete | `dag.knowledge.graph.js`, `openrouter.service.js`, `critic.evaluator.service.js` |
+| **Network & Deployment** | **Atharv Gupta** | 🟢 Complete | `api.js` Vercel auto-fallback, Render WebSocket integration, PostCSS fixes |
+| **Frontend UI & Layouts** | **Muskan** | 🟢 Complete | `MainLayout.jsx`, `Sidebar.jsx`, single-container scroll system in `index.css` |
+| **Reports & Certificate UI**| **Atharv & Muskan** | 🟢 Complete | `ReportsPage.jsx`, `pdfReport.service.js`, Agupta handwritten signature seal |
 
 ---
 
-### 📜 5. Cryptographic Compliance Certificate & Digital Signature
-- High-contrast gold/emerald Verified Security Certificate frame.
-- **Cryptographic Validation**: SHA256 audit hashes and HMAC verification seals.
-- **Transparent Signature Integration**: Embedded executive handwritten signature (`A. Gupta • Chief Security Officer`) using dark-mode CSS blend filtering (`invert(1) mix-blend-mode: screen`).
-- **High-Resolution Print Output**: Instant 1-click printable A4 landscape diploma window.
+## 🔮 Future Roadmap (Phase 4 / Sprints 151-200)
+
+| Feature | Description | Target Quarter |
+| :--- | :--- | :--- |
+| **eBPF Kernel Probe Agent** | Kernel-level API traffic inspection without proxy latency | Q3 2026 |
+| **Autonomous DAST Fuzzer** | AI-generated mutations for GraphQL, gRPC, and WebSockets | Q3 2026 |
+| **Kubernetes Operator** | Native K8s CRD (`APISecurityScan`) for continuous CI/CD scanning | Q4 2026 |
+| **SAML 2.0 / Enterprise SSO**| Okta, Azure AD, and PingIdentity integration | Q4 2026 |
 
 ---
 
-## 🔮 Future Roadmap & Planned Upgrades
+## 🚀 Local Setup & Installation Guide
 
-- [ ] **eBPF Kernel-Level Traffic Inspection**: Intercept zero-overhead kernel sockets for passive API discovery.
-- [ ] **GitHub Actions & Kubernetes CI/CD Gate**: Automated PR blocker for CI/CD security pipeline enforcement.
-- [ ] **Dynamic OAuth2 / OIDC Fuzzer**: Automated PKCE, state parameter, and token replay vulnerability probes.
-- [ ] **Multi-Tenant Enterprise Organizations**: Advanced RBAC with SAML 2.0 / Okta SSO integration.
+### Prerequisites
+- **Node.js**: v20.x or higher (v24 recommended)
+- **MongoDB**: Local MongoDB instance or MongoDB Atlas connection string
+- **Git**: Installed and configured
 
----
-
-## 🛠️ Local Development & Setup Guide
-
-Follow this step-by-step guide to get the platform running locally on Windows, macOS, or Linux.
-
-### 📋 Prerequisites
-- **Node.js**: v18.0+ (v20+ or v24+ recommended)
-- **npm**: v9.0+
-- **MongoDB**: Local MongoDB community server or MongoDB Atlas URI
-- **Git**: Installed on your system
-
----
-
-### 📥 1. Clone the Repository
+### 1. Clone Repository
 ```bash
 git clone https://github.com/Redkrossresearch/api-security-scanner.git
 cd api-security-scanner
 ```
 
----
-
-### ⚙️ 2. Backend Setup
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Install backend dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` configuration file in `backend/`:
-   ```env
-   PORT=5000
-   NODE_ENV=development
-   MONGODB_URI=mongodb://127.0.0.1:27017/api-security-scanner
-   JWT_ACCESS_SECRET=your_super_secret_jwt_access_key_minimum_32_characters
-   JWT_REFRESH_SECRET=your_super_secret_jwt_refresh_key_minimum_32_characters
-   CLIENT_URL=http://localhost:5173
-   
-   # Optional: AI Copilot API Keys
-   OPENROUTER_API_KEY=your_openrouter_api_key
-   GROQ_API_KEY=your_groq_api_key
-   GEMINI_API_KEY=your_gemini_api_key
-   ```
-4. Start the backend development server:
-   ```bash
-   npm run dev
-   ```
-   *The server will start on `http://localhost:5000`.*
-
----
-
-### 🎨 3. Frontend Setup
-1. Open a new terminal and navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install frontend dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the Vite frontend development server:
-   ```bash
-   npm run dev
-   ```
-   *The client will start on `http://localhost:5173`.*
-
----
-
-### 🧪 4. Running Production Build Verification
-To ensure everything compiles cleanly for production:
+### 2. Backend Setup
 ```bash
-cd frontend
-npm run build
+cd backend
+npm install
+# Create a .env file with your PORT, MONGODB_URI, and OPENROUTER_API_KEY
+npm run dev
 ```
 
+### 3. Frontend Setup
+```bash
+cd ../frontend
+npm install
+npm run dev
+```
+Open your browser at `http://localhost:5173`.
+
 ---
 
-## 👥 Branching Strategy & Team Workflow
+## 📄 License & Attribution
 
-- **`atharv-dev`**: Primary backend security engine, AI copilot, scanner algorithms, and report services.
-- **`muskan-dev`**: Frontend UI components, styling utilities, and dashboard table layouts.
-- **`main`**: Production-ready releases.
-
----
-
-## 📄 License
-Distributed under the **MIT License**. See `LICENSE` for details.
+Copyright © 2026 **ATHX Security Platform**. All Rights Reserved.  
+Engineered by **Atharv Gupta** & **Muskan**.
