@@ -1,7 +1,15 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 
-  (import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace("/api", "") : "http://localhost:5000");
+const getSocketURL = () => {
+  if (import.meta.env.VITE_SOCKET_URL) return import.meta.env.VITE_SOCKET_URL;
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace("/api", "");
+  if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
+    return "https://api-security-scanner-puum.onrender.com";
+  }
+  return "http://localhost:5000";
+};
+
+const SOCKET_URL = getSocketURL();
 
 const isVercel = typeof window !== "undefined" && window.location.hostname.includes("vercel.app");
 

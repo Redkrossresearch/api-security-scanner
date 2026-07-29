@@ -40,7 +40,6 @@ export const SocketProvider = ({ children }) => {
     const onConnectError = (err) => {
       setIsConnected(false);
       setLatency(0);
-      console.warn("[SocketProvider] Connection warning:", err.message);
     };
 
     socket.on("connect", onConnect);
