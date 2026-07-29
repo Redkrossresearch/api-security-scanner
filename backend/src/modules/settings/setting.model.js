@@ -86,6 +86,14 @@ const settingSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    emailNotificationEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    emailRecipient: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,

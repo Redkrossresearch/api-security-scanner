@@ -65,17 +65,7 @@ const menuItems = [
     path: "/workflows",
     icon: <ClipboardList size={17} />,
   },
-  {
-    name: "Compliance",
-    path: "/compliance",
-    icon: <ShieldCheck size={17} />,
-    comingSoon: true,
-  },
-  {
-    name: "Audit Logs",
-    path: "/audit-logs",
-    icon: <ClipboardList size={17} />,
-  },
+
   {
     name: "Settings",
     path: "/settings",
@@ -88,6 +78,10 @@ function Sidebar({ isMobileOpen, onClose }) {
   const { currentUser, logout } = useAuth();
   const [teams, setTeams] = useState([]);
   const [activeTeam, setActiveTeam] = useState("");
+
+  // Real data states
+  const [sidebarStats, setSidebarStats] = useState(null);
+  const [threatFeed, setThreatFeed] = useState([]);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -109,12 +103,61 @@ function Sidebar({ isMobileOpen, onClose }) {
         setTeams([{ _id: "default", name: "Enterprise Workspace" }]);
         setActiveTeam("default");
       }
-
-
     };
     if (currentUser) {
       fetchTeams();
     }
+  }, [currentUser]);
+
+  // Fetch real dashboard stats
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchStats = async () => {
+      try {
+        const dashRes = await api.get("/dashboard/stats");
+        if (dashRes.data?.success) {
+          const s = dashRes.data.stats;
+          const sevDist = s.severityDistribution || {};
+          const total = (sevDist.critical || 0) + (sevDist.high || 0) + (sevDist.medium || 0) + (sevDist.low || 0) + (sevDist.info || 0);
+          setSidebarStats({
+            totalScans: s.totalScans || 0,
+            vulnerabilities: total,
+            critical: sevDist.critical || 0,
+            high: sevDist.high || 0,
+            endpoints: s.apiInventory?.totalApis || 0,
+          });
+
+          // Build threat feed from real topFindings
+          const findings = s.topFindings || [];
+          const criticals = s.criticalFindings || [];
+
+          const feed = [];
+
+          // Add critical findings first
+          criticals.slice(0, 2).forEach((f) => {
+            feed.push({ type: "CRIT", label: f.title || "Critical Issue", color: "#EF4444" });
+          });
+
+          // Fill rest from topFindings
+          findings.slice(0, 4 - feed.length).forEach((f) => {
+            const title = f.title || "Security Issue";
+            const isHigh = title.toLowerCase().includes("cors") || title.toLowerCase().includes("injection") || title.toLowerCase().includes("auth");
+            feed.push({
+              type: isHigh ? "HIGH" : "MED",
+              label: title,
+              color: isHigh ? "#F97316" : "#FBBF24",
+            });
+          });
+
+          setThreatFeed(feed.slice(0, 4));
+        }
+      } catch (err) {
+        console.error("Sidebar stats fetch failed:", err.message, err.response?.data);
+      }
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 60000);
+    return () => clearInterval(interval);
   }, [currentUser]);
 
   const handleWorkspaceChange = (e) => {
@@ -225,6 +268,16 @@ function Sidebar({ isMobileOpen, onClose }) {
         )}
       </div>
 
+      {/* Scrollable middle: nav + widgets */}
+      <div style={{
+        flex: 1,
+        overflowY: "auto",
+        overflowX: "hidden",
+        marginRight: "-8px",
+        paddingRight: "8px",
+        scrollbarWidth: "none",
+      }}>
+
       {/* Navigation List */}
       <nav
         style={{
@@ -272,12 +325,153 @@ function Sidebar({ isMobileOpen, onClose }) {
         })}
       </nav>
 
+      {/* ── Security Stats Panel ── */}
+      <div style={{ marginTop: "24px", padding: "0 2px" }}>
+        <div style={{
+          fontSize: "9.5px", fontWeight: "800", color: "#475569",
+          textTransform: "uppercase", letterSpacing: "1px", marginBottom: "10px", paddingLeft: "4px"
+        }}>
+          Live Security Stats
+        </div>
+
+        <div style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: "12px",
+          padding: "14px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "12px",
+        }}>
+          {/* Total Scans */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{
+                width: "7px", height: "7px", borderRadius: "50%",
+                background: "#10B981", boxShadow: "0 0 6px #10B981",
+                animation: "sidebarPulse 2s infinite"
+              }} />
+              <span style={{ fontSize: "12px", color: "#94A3B8", fontWeight: "600" }}>Total Scans</span>
+            </div>
+            <span style={{ fontSize: "12px", color: "#10B981", fontWeight: "800", fontFamily: "monospace" }}>
+              {sidebarStats ? sidebarStats.totalScans : "—"}
+            </span>
+          </div>
+
+          {/* Critical + High */}
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+              <span style={{ fontSize: "11.5px", color: "#94A3B8", fontWeight: "600" }}>Critical / High</span>
+              <span style={{ fontSize: "11.5px", color: "#F97316", fontWeight: "800", fontFamily: "monospace" }}>
+                {sidebarStats ? `${sidebarStats.critical} / ${sidebarStats.high}` : "— / —"}
+              </span>
+            </div>
+            <div style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "4px", overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: sidebarStats && sidebarStats.vulnerabilities > 0
+                  ? `${Math.min(100, Math.round(((sidebarStats.critical + sidebarStats.high) / sidebarStats.vulnerabilities) * 100))}%`
+                  : "0%",
+                background: "linear-gradient(90deg, #F97316, #FB923C)",
+                borderRadius: "4px",
+                transition: "width 0.8s ease",
+                boxShadow: "0 0 8px rgba(249,115,22,0.4)"
+              }} />
+            </div>
+          </div>
+
+          {/* Total Vulnerabilities */}
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+              <span style={{ fontSize: "11.5px", color: "#94A3B8", fontWeight: "600" }}>Vulnerabilities</span>
+              <span style={{ fontSize: "11.5px", color: "#EF4444", fontWeight: "800", fontFamily: "monospace" }}>
+                {sidebarStats ? sidebarStats.vulnerabilities : "—"}
+              </span>
+            </div>
+            <div style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "4px", overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: sidebarStats && sidebarStats.vulnerabilities > 0 ? "100%" : "0%",
+                background: "linear-gradient(90deg, #EF4444, #F87171)",
+                borderRadius: "4px",
+                transition: "width 0.8s ease",
+                boxShadow: "0 0 8px rgba(239,68,68,0.35)"
+              }} />
+            </div>
+          </div>
+
+          {/* Endpoints */}
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+              <span style={{ fontSize: "11.5px", color: "#94A3B8", fontWeight: "600" }}>Endpoints</span>
+              <span style={{ fontSize: "11.5px", color: "#818CF8", fontWeight: "800", fontFamily: "monospace" }}>
+                {sidebarStats ? sidebarStats.endpoints : "—"}
+              </span>
+            </div>
+            <div style={{ height: "4px", background: "rgba(255,255,255,0.06)", borderRadius: "4px", overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: sidebarStats && sidebarStats.endpoints > 0 ? `${Math.min(100, sidebarStats.endpoints * 10)}%` : "0%",
+                background: "linear-gradient(90deg, #818CF8, #A78BFA)",
+                borderRadius: "4px",
+                transition: "width 0.8s ease",
+                boxShadow: "0 0 8px rgba(129,140,248,0.35)"
+              }} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Threat Intelligence Feed ── */}
+      <div style={{ marginTop: "18px", padding: "0 2px" }}>
+        <div style={{
+          fontSize: "9.5px", fontWeight: "800", color: "#475569",
+          textTransform: "uppercase", letterSpacing: "1px", marginBottom: "10px", paddingLeft: "4px"
+        }}>
+          Threat Intel Feed
+        </div>
+        <div style={{
+          background: "rgba(255,255,255,0.02)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: "12px",
+          padding: "10px 12px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "9px",
+        }}>
+          {threatFeed.length > 0 ? threatFeed.map((item, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{
+                fontSize: "8px", fontWeight: "900", color: item.color,
+                background: `${item.color}18`,
+                border: `1px solid ${item.color}40`,
+                borderRadius: "4px", padding: "1px 5px",
+                letterSpacing: "0.5px", minWidth: "32px", textAlign: "center",
+                boxShadow: `0 0 6px ${item.color}50`
+              }}>
+                {item.type}
+              </span>
+              <span style={{ fontSize: "11px", color: "#64748B", fontWeight: "500", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {item.label}
+              </span>
+            </div>
+          )) : (
+            <div style={{ fontSize: "11px", color: "#334155", textAlign: "center", padding: "8px 0", fontStyle: "italic" }}>
+              No threats detected yet
+            </div>
+          )}
+        </div>
+      </div>
+
+      </div> {/* end scrollable middle */}
+
       {/* User Profile Info Footer */}
       <div
         style={{
-          marginTop: "auto",
-          paddingTop: "20px",
+          marginTop: "16px",
+          paddingTop: "16px",
           borderTop: "1px solid rgba(255,255,255,0.04)",
+          flexShrink: 0,
         }}
       >
         <div
@@ -438,6 +632,11 @@ function Sidebar({ isMobileOpen, onClose }) {
           color: #FFFFFF;
           box-shadow: 0 0 15px rgba(239, 68, 68, 0.35);
           border-color: #EF4444;
+        }
+
+        @keyframes sidebarPulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 6px #10B981; }
+          50% { opacity: 0.4; box-shadow: 0 0 12px #10B981; }
         }
       `}</style>
     </aside>

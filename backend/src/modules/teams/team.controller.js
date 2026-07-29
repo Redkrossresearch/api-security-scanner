@@ -1,6 +1,7 @@
 const Team = require("./team.model");
 const AuditLog = require("./audit.model");
 const User = require("../auth/auth.model");
+const { sendTeamInvitationEmail } = require("../../utils/mailer");
 
 // Create dynamic helper to log actions
 const writeLog = async (teamId, userId, action, details = {}, ip = "") => {
@@ -90,48 +91,62 @@ const addMember = async (req, res) => {
         });
     }
 
-    // Resolve user by email
-    const userToAdd = await User.findOne({
-      email: email.toLowerCase(),
-      isDeleted: { $ne: true },
-    });
-    if (!userToAdd) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found with this email" });
-    }
+    const emailLower = email.toLowerCase().trim();
 
-    // Check if user is already a member
-    const isMember = team.members.some(
-      (m) => m.userId.toString() === userToAdd._id.toString(),
+    // Check if already in the members list
+    const isAlreadyAdded = team.members.some(
+      (m) => m.email.toLowerCase().trim() === emailLower
     );
-    if (isMember) {
+    if (isAlreadyAdded) {
       return res
         .status(400)
         .json({
           success: false,
-          message: "User is already a member of this team",
+          message: "User is already a member (or invited to) this team",
         });
     }
 
-    // Push member
-    team.members.push({
-      userId: userToAdd._id,
-      role: targetRole,
+    // Resolve user by email
+    const userToAdd = await User.findOne({
+      email: emailLower,
+      isDeleted: { $ne: true },
     });
+
+    let newMemberObj = {
+      email: emailLower,
+      role: targetRole,
+    };
+
+    if (userToAdd) {
+      newMemberObj.userId = userToAdd._id;
+      newMemberObj.status = "active";
+    } else {
+      newMemberObj.status = "pending";
+    }
+
+    team.members.push(newMemberObj);
     await team.save();
+
+    // Send invitation email
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const inviteUrl = `${frontendUrl}/register?inviteEmail=${encodeURIComponent(emailLower)}`;
+    
+    // Fire and forget email send to avoid blocking the API response
+    sendTeamInvitationEmail(emailLower, team.name, inviteUrl).catch((err) => {
+      console.error("[Mailer] Team invitation email failed:", err.message);
+    });
 
     await writeLog(
       team._id,
       req.user._id,
       "member_added",
-      { invitedUser: userToAdd.email, role: targetRole },
+      { invitedUser: emailLower, role: targetRole, status: newMemberObj.status },
       req.ip || "",
     );
 
     return res.json({
       success: true,
-      message: "Member added successfully",
+      message: userToAdd ? "Member added successfully" : "Invitation email sent successfully",
       team,
     });
   } catch (err) {

@@ -7,6 +7,10 @@ const isVercel = typeof window !== "undefined" && window.location.hostname.inclu
 
 export const socket = io(SOCKET_URL, {
   autoConnect: false,
+  auth: (cb) => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    cb({ token });
+  },
   reconnection: !isVercel,
   reconnectionAttempts: isVercel ? 0 : 5,
   reconnectionDelay: 3000,

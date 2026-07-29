@@ -1497,8 +1497,9 @@ const executeChatMode = async (mode, messageHistory, userQuery, temperature, uni
 // POST /api/copilot/conversations/:id/messages — Main AI Brain
 const handleChatRequest = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { message, model, temperature, webSearch, attachments } = req.body;
+    const { id: paramId } = req.params;
+    const { message, model, temperature, webSearch, attachments, conversationId: bodyId } = req.body;
+    const targetId = paramId || bodyId;
     const userId = req.user.id;
     const userQuery = (message || "").trim();
 
@@ -1522,13 +1523,25 @@ const handleChatRequest = async (req, res) => {
       }
     }
 
-    // 1. Verify conversation ownership
-    const conversation = await CopilotConversation.findOne({ _id: id, userId });
-    if (!conversation) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Conversation not found." });
+    // 1. Verify or create conversation
+    let conversation = null;
+    if (targetId && mongoose.Types.ObjectId.isValid(targetId)) {
+      conversation = await CopilotConversation.findOne({ _id: targetId, userId });
     }
+    if (!conversation) {
+      conversation = await CopilotConversation.findOne({ userId, title: "RAG Insights" });
+      if (!conversation) {
+        conversation = new CopilotConversation({
+          userId,
+          title: "RAG Insights",
+          isPinned: false,
+          isArchived: false,
+        });
+        await conversation.save();
+      }
+    }
+
+    const id = conversation._id.toString();
 
     // 2. Save user message
     const userMsg = new CopilotMessage({
@@ -1961,6 +1974,8 @@ ${memories.map((m) => `- ${m.content}`).join("\n")}
     return res.json({
       success: true,
       reply: aiReplyText,
+      content: aiReplyText,
+      message: { role: "assistant", content: aiReplyText },
       conversationId: id,
       model: usedModel,
       searchResults: searchResults || [],
@@ -2193,6 +2208,155 @@ const getRAGSources = async (req, res) => {
   }
 };
 
+const generateRemediationFix = async (req, res) => {
+  try {
+    const { vulnerability } = req.body;
+    if (!vulnerability) {
+      return res.status(400).json({ success: false, message: "Vulnerability data is required." });
+    }
+
+    const llmRegistry = require("../llm/llm.registry");
+    const adapter = llmRegistry.getAdapter();
+
+    const title = vulnerability.title || vulnerability.raw?.title || "Security Vulnerability";
+    const severity = vulnerability.severity || vulnerability.raw?.severity || "Medium";
+    const cvss = vulnerability.cvss || vulnerability.raw?.cvss || "5.0";
+    const desc = vulnerability.description || vulnerability.raw?.description || "N/A";
+    const endpoint = vulnerability.endpoint || vulnerability.raw?.endpoint || "N/A";
+    const evidence = vulnerability.evidence || vulnerability.evidenceSnippet || vulnerability.raw?.evidence || "N/A";
+
+    const prompt = `You are a Senior Principal Application Security Engineer.
+Analyze this API security vulnerability and generate a real-world, production-ready code remediation patch and concise explanation.
+
+Vulnerability Details:
+- Title: ${title}
+- Severity: ${severity}
+- CVSS Score: ${cvss}
+- Description: ${desc}
+- Endpoint: ${endpoint}
+- Evidence/Snippet: ${evidence}
+
+Instructions:
+1. Provide a clear, actionable remediation summary in "desc".
+2. Provide real production code snippets (e.g. Node.js Express, Helmet, Nginx, or Python FastAPI) in "code".
+
+Respond strictly in valid JSON format:
+{
+  "desc": "concise remediation strategy description",
+  "code": "// production code fix snippet\\n..."
+}`;
+
+    let responseText = "";
+    let providerName = adapter.name || "AI Engine";
+
+    try {
+      const response = await adapter.generate(prompt, { temperature: 0.2 });
+      responseText = typeof response === "string" ? response : (response.content || response.text || "");
+      if (response.provider) providerName = response.provider;
+    } catch (e) {
+      console.warn("Primary LLM generation error, trying openrouter/pollinations fallback:", e.message);
+      const fallback = llmRegistry.adapters.openrouter || llmRegistry.adapters.pollinations;
+      const res = await fallback.generate(prompt);
+      responseText = typeof res === "string" ? res : (res.content || "");
+      providerName = fallback.name;
+    }
+
+    let parsed = { desc: "", code: "" };
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      }
+    } catch (pe) {}
+
+    if (!parsed.code || !parsed.desc) {
+      const codeMatch = responseText.match(/```[a-zA-Z]*\n([\s\S]*?)```/);
+      parsed.code = codeMatch ? codeMatch[1].trim() : responseText;
+      parsed.desc = responseText.split(/```/)[0].replace(/[\{\}]/g, "").trim() || "Apply recommended security patch.";
+    }
+
+    return res.json({
+      success: true,
+      provider: providerName,
+      fix: parsed,
+    });
+  } catch (err) {
+    console.error("generateRemediationFix error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const explainVulnerabilityRisk = async (req, res) => {
+  try {
+    const { vulnerability } = req.body;
+    if (!vulnerability) {
+      return res.status(400).json({ success: false, message: "Vulnerability data is required." });
+    }
+
+    const llmRegistry = require("../llm/llm.registry");
+    const adapter = llmRegistry.getAdapter();
+
+    const title = vulnerability.title || vulnerability.raw?.title || "Security Vulnerability";
+    const severity = vulnerability.severity || vulnerability.raw?.severity || "Medium";
+    const cvss = vulnerability.cvss || vulnerability.raw?.cvss || "5.0";
+    const desc = vulnerability.description || vulnerability.raw?.description || "N/A";
+    const endpoint = vulnerability.endpoint || vulnerability.raw?.endpoint || "N/A";
+
+    const prompt = `You are a Senior Principal Threat Analyst.
+Analyze this API security vulnerability and provide a deep technical risk explanation and root cause analysis.
+
+Vulnerability:
+- Title: ${title}
+- Severity: ${severity}
+- CVSS Score: ${cvss}
+- Description: ${desc}
+- Endpoint: ${endpoint}
+
+Respond strictly in valid JSON format:
+{
+  "impactStatement": "Detailed impact statement explaining how an attacker exploits this and what assets/data are compromised",
+  "rootCause": "Technical root cause explaining why this flaw existed in code or architecture"
+}`;
+
+    let responseText = "";
+    let providerName = adapter.name || "AI Engine";
+
+    try {
+      const response = await adapter.generate(prompt, { temperature: 0.2 });
+      responseText = typeof response === "string" ? response : (response.content || response.text || "");
+      if (response.provider) providerName = response.provider;
+    } catch (e) {
+      console.warn("Primary LLM risk explanation error, trying fallback:", e.message);
+      const fallback = llmRegistry.adapters.openrouter || llmRegistry.adapters.pollinations;
+      const res = await fallback.generate(prompt);
+      responseText = typeof res === "string" ? res : (res.content || "");
+      providerName = fallback.name;
+    }
+
+    let parsed = { impactStatement: "", rootCause: "" };
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsed = JSON.parse(jsonMatch[0]);
+      }
+    } catch (pe) {}
+
+    if (!parsed.impactStatement || !parsed.rootCause) {
+      parsed.impactStatement = responseText;
+      parsed.rootCause = "Unsanitized user inputs or missing architectural security boundaries.";
+    }
+
+    return res.json({
+      success: true,
+      provider: providerName,
+      analysis: parsed,
+    });
+  } catch (err) {
+    console.error("explainVulnerabilityRisk error:", err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   getAvailableModels,
   getConversations,
@@ -2212,4 +2376,6 @@ module.exports = {
   deleteTraining,
   submitFeedback,
   getRAGSources,
+  generateRemediationFix,
+  explainVulnerabilityRisk,
 };

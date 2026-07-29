@@ -66,6 +66,58 @@ export default function ScanExecutionPage() {
   const [isFixModalOpen, setIsFixModalOpen] = useState(false);
   const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
   const [liveLogs, setLiveLogs] = useState([]);
+  
+  const [loadingFix, setLoadingFix] = useState(false);
+  const [aiFixData, setAiFixData] = useState(null);
+  const [loadingRisk, setLoadingRisk] = useState(false);
+  const [aiRiskData, setAiRiskData] = useState(null);
+
+  // Fetch real LLM Code Fix when modal opens
+  useEffect(() => {
+    if (isFixModalOpen && selectedVuln) {
+      setLoadingFix(true);
+      setAiFixData(null);
+      api.post("/copilot/remediate", { vulnerability: selectedVuln })
+        .then((res) => {
+          if (res.data?.success && res.data.fix) {
+            setAiFixData({
+              desc: res.data.fix.desc,
+              code: res.data.fix.code,
+              provider: res.data.provider || "Gemini / Groq LLM",
+            });
+          } else {
+            setAiFixData({ ...getFixSnippet(selectedVuln), provider: "Fallback Engine" });
+          }
+        })
+        .catch((err) => {
+          console.warn("AI fix generation error, using fallback:", err);
+          setAiFixData({ ...getFixSnippet(selectedVuln), provider: "Rule Engine" });
+        })
+        .finally(() => setLoadingFix(false));
+    }
+  }, [isFixModalOpen, selectedVuln]);
+
+  // Fetch real LLM Risk Analysis when modal opens
+  useEffect(() => {
+    if (isRiskModalOpen && selectedVuln) {
+      setLoadingRisk(true);
+      setAiRiskData(null);
+      api.post("/copilot/explain-risk", { vulnerability: selectedVuln })
+        .then((res) => {
+          if (res.data?.success && res.data.analysis) {
+            setAiRiskData({
+              impactStatement: res.data.analysis.impactStatement,
+              rootCause: res.data.analysis.rootCause,
+              provider: res.data.provider || "Gemini / Groq LLM",
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("AI risk analysis error:", err);
+        })
+        .finally(() => setLoadingRisk(false));
+    }
+  }, [isRiskModalOpen, selectedVuln]);
 
 
   // Auto-restore active/last scan state on mount or page navigation
@@ -409,7 +461,9 @@ export default function ScanExecutionPage() {
           gridTemplateColumns: "1.15fr 1.4fr 1fr",
           gap: "20px",
           alignItems: "stretch",
-          minHeight: "780px",
+          height: "760px",
+          maxHeight: "760px",
+          overflow: "hidden",
         }}
       >
         <FindingsPanel
@@ -530,52 +584,206 @@ export default function ScanExecutionPage() {
         </div>
       )}
 
-      {/* ─── Code Fix Modal ─── */}
+      {/* ─── Real AI Code Fix Modal ─── */}
       {isFixModalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: "#071126", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "24px", padding: "28px", width: "90%", maxWidth: "680px", boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
-            <h3 style={{ margin: 0, color: "#FFFFFF", fontSize: "20px", fontWeight: "700", display: "flex", alignItems: "center", gap: "10px" }}>🛠️ Generate AI Remediation Fix</h3>
-            <p style={{ color: "#94A3B8", fontSize: "13px", marginTop: "8px", marginBottom: "16px" }}>Selected finding: <strong style={{ color: "#EF4444" }}>{selectedVuln?.title || selectedVuln?.raw?.title || "Sample Vulnerability"}</strong></p>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(3, 7, 18, 0.82)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: "linear-gradient(135deg, rgba(13,22,40,0.96) 0%, rgba(6,11,22,0.98) 100%)", border: "1px solid rgba(139,92,246,0.3)", borderRadius: "24px", padding: "32px", width: "92%", maxWidth: "700px", boxShadow: "0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(124,58,237,0.15)", animation: "aiModalEntry 0.3s ease-out" }}>
             
-            <div style={{ color: "#CBD5E1", fontSize: "13px", marginBottom: "12px", background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", padding: "12px", borderRadius: "10px" }}>
-              💡 <strong>Remediation Recommendation:</strong> {getFixSnippet(selectedVuln).desc}
+            {/* Header with Provider Badge */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg,#7C3AED,#EC4899)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 15px rgba(124,58,237,0.4)" }}>
+                  🛠️
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, color: "#FFFFFF", fontSize: "20px", fontWeight: "800", letterSpacing: "-0.3px" }}>Real AI Remediation Fix</h3>
+                  <div style={{ color: "#94A3B8", fontSize: "12px", marginTop: "2px" }}>
+                    Selected Finding: <strong style={{ color: "#EF4444" }}>{selectedVuln?.title || selectedVuln?.raw?.title || "Security Vulnerability"}</strong>
+                  </div>
+                </div>
+              </div>
+              
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(124,58,237,0.12)", border: "1px solid rgba(124,58,237,0.3)", padding: "6px 14px", borderRadius: "999px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10B981", boxShadow: "0 0 8px #10B981" }} />
+                <span style={{ color: "#C084FC", fontSize: "11px", fontWeight: "800", letterSpacing: "0.5px" }}>
+                  ⚡ {aiFixData?.provider ? `MODEL: ${aiFixData.provider.toUpperCase()}` : "AI LLM ENGINE"}
+                </span>
+              </div>
             </div>
 
-            <pre style={{ margin: 0, padding: "16px", background: "#0B1220", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "14px", color: "#F8F8F2", fontSize: "13px", fontFamily: "JetBrains Mono, monospace", lineHeight: "1.6", overflowX: "auto", maxHeight: "260px" }}>
-              {getFixSnippet(selectedVuln).code}
-            </pre>
+            {loadingFix ? (
+              /* Futuristic Animated Neural Pulse Loading State */
+              <div style={{ padding: "44px 20px", textAlign: "center", background: "#060C19", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.06)", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "relative", width: "84px", height: "84px", margin: "0 auto 20px" }}>
+                  <div style={{ position: "absolute", inset: 0, border: "2px dashed #7C3AED", borderRadius: "50%", animation: "aiNeuralRotate 8s linear infinite" }} />
+                  <div style={{ position: "absolute", inset: "8px", border: "2px solid #06B6D4", borderTopColor: "transparent", borderRadius: "50%", animation: "aiNeuralRotateRev 3s linear infinite" }} />
+                  <div style={{ position: "absolute", inset: "18px", background: "linear-gradient(135deg, #7C3AED, #EC4899)", borderRadius: "50%", animation: "aiOrbPulse 2s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    🤖
+                  </div>
+                </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "24px" }}>
-              <button onClick={() => setIsFixModalOpen(false)} style={{ background: "linear-gradient(135deg,#7C3AED,#EC4899)", border: "none", color: "#FFFFFF", padding: "10px 24px", borderRadius: "10px", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}>Close Remediation Plan</button>
+                <h4 style={{ margin: "0 0 6px 0", color: "#FFFFFF", fontSize: "16px", fontWeight: "700" }}>
+                  Synthesizing Custom Code Remediation Patch...
+                </h4>
+                <div style={{ color: "#94A3B8", fontSize: "13px", maxWidth: "440px", margin: "0 auto" }}>
+                  Querying active LLM model with vulnerability evidence snippet & target framework context
+                </div>
+
+                <div style={{ height: "4px", width: "80%", margin: "20px auto 0", background: "rgba(255,255,255,0.06)", borderRadius: "2px", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: "100%", background: "linear-gradient(90deg, #7C3AED, #EC4899, #3B82F6, #7C3AED)", backgroundSize: "200% 100%", animation: "aiGlowBar 1.5s infinite" }} />
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Strategy Header Box */}
+                <div style={{ color: "#CBD5E1", fontSize: "13px", lineHeight: "1.6", marginBottom: "16px", background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.25)", padding: "14px 16px", borderRadius: "14px", display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                  <span style={{ fontSize: "16px" }}>💡</span>
+                  <div>
+                    <strong style={{ color: "#10B981", display: "block", marginBottom: "2px" }}>AI Remediation Strategy:</strong>
+                    {aiFixData?.desc || getFixSnippet(selectedVuln).desc}
+                  </div>
+                </div>
+
+                {/* Cyber Code IDE Box */}
+                <div style={{ background: "#030712", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px", overflow: "hidden", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
+                  {/* IDE Top Bar */}
+                  <div style={{ padding: "10px 16px", background: "#0B1220", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#EF4444", display: "inline-block" }} />
+                      <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#F59E0B", display: "inline-block" }} />
+                      <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#10B981", display: "inline-block" }} />
+                      <span style={{ color: "#64748B", fontSize: "12px", fontFamily: "JetBrains Mono, monospace", marginLeft: "8px" }}>remediation_patch.js</span>
+                    </div>
+
+                    <button
+                      className="ai-copy-btn"
+                      onClick={() => {
+                        navigator.clipboard.writeText(aiFixData?.code || getFixSnippet(selectedVuln).code);
+                        toast.success("AI Fix Snippet copied to clipboard!");
+                      }}
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#FFFFFF", padding: "4px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", transition: "all 0.2s" }}
+                    >
+                      📋 Copy Patch
+                    </button>
+                  </div>
+
+                  <pre className="athx-scroll" style={{ margin: 0, padding: "18px", color: "#E2E8F0", fontSize: "13px", fontFamily: "JetBrains Mono, monospace", lineHeight: "1.7", overflowX: "auto", maxHeight: "280px" }}>
+                    {aiFixData?.code || getFixSnippet(selectedVuln).code}
+                  </pre>
+                </div>
+              </>
+            )}
+
+            {/* Footer buttons */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
+              <button
+                className="ai-glow-btn"
+                onClick={() => setIsFixModalOpen(false)}
+                style={{ background: "linear-gradient(135deg,#7C3AED,#EC4899)", border: "none", color: "#FFFFFF", padding: "12px 28px", borderRadius: "12px", fontWeight: "700", cursor: "pointer", fontSize: "13px", transition: "all 0.2s" }}
+              >
+                Close Remediation Plan
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── Explain Risk Modal ─── */}
+      {/* ─── Real AI Explain Risk Modal ─── */}
       {isRiskModalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: "#071126", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "24px", padding: "28px", width: "90%", maxWidth: "600px", boxShadow: "0 10px 40px rgba(0,0,0,0.5)" }}>
-            <h3 style={{ margin: 0, color: "#FFFFFF", fontSize: "20px", fontWeight: "700", display: "flex", alignItems: "center", gap: "10px" }}>⚠️ Detailed Risk Explanation</h3>
-            <p style={{ color: "#94A3B8", fontSize: "13px", marginTop: "8px", marginBottom: "20px" }}>Analyzing risk profile for: <strong style={{ color: "#F97316" }}>{selectedVuln?.title || selectedVuln?.raw?.title || "Sample Vulnerability"}</strong></p>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-              <div style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,0.06)", padding: "14px", borderRadius: "12px" }}>
-                <span style={{ color: "#64748B", fontSize: "11px", fontWeight: "600" }}>SEVERITY LEVEL</span>
-                <div style={{ color: "#EF4444", fontSize: "20px", fontWeight: "700", marginTop: "4px", textTransform: "uppercase" }}>{selectedVuln?.severity || selectedVuln?.raw?.severity || "High"}</div>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(3, 7, 18, 0.82)", backdropFilter: "blur(10px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: "linear-gradient(135deg, rgba(13,22,40,0.96) 0%, rgba(6,11,22,0.98) 100%)", border: "1px solid rgba(249,115,22,0.3)", borderRadius: "24px", padding: "32px", width: "92%", maxWidth: "640px", boxShadow: "0 20px 60px rgba(0,0,0,0.8), 0 0 40px rgba(249,115,22,0.15)", animation: "aiModalEntry 0.3s ease-out" }}>
+            
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "linear-gradient(135deg,#F97316,#EF4444)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 15px rgba(249,115,22,0.4)" }}>
+                  ⚠️
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, color: "#FFFFFF", fontSize: "20px", fontWeight: "800", letterSpacing: "-0.3px" }}>Real AI Threat & Risk Analysis</h3>
+                  <div style={{ color: "#94A3B8", fontSize: "12px", marginTop: "2px" }}>
+                    Analyzing Risk Profile: <strong style={{ color: "#F97316" }}>{selectedVuln?.title || selectedVuln?.raw?.title || "Security Vulnerability"}</strong>
+                  </div>
+                </div>
               </div>
-              <div style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,0.06)", padding: "14px", borderRadius: "12px" }}>
-                <span style={{ color: "#64748B", fontSize: "11px", fontWeight: "600" }}>CVSS RISK SCORE</span>
-                <div style={{ color: "#FFFFFF", fontSize: "20px", fontWeight: "700", marginTop: "4px" }}>{selectedVuln?.cvss || selectedVuln?.raw?.cvss || "7.5"} / 10</div>
+              
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.3)", padding: "6px 14px", borderRadius: "999px" }}>
+                <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#F97316", boxShadow: "0 0 8px #F97316" }} />
+                <span style={{ color: "#FB923C", fontSize: "11px", fontWeight: "800", letterSpacing: "0.5px" }}>
+                  ⚡ {aiRiskData?.provider ? `MODEL: ${aiRiskData.provider.toUpperCase()}` : "AI THREAT ENGINE"}
+                </span>
               </div>
             </div>
 
-            <div style={{ color: "#CBD5E1", fontSize: "13px", lineHeight: "1.7", background: "rgba(249,115,22,0.06)", border: "1px solid rgba(249,115,22,0.15)", padding: "16px", borderRadius: "12px", marginBottom: "24px" }}>
-              💬 <strong>Impact Statement:</strong> {selectedVuln?.description || selectedVuln?.raw?.description || "Exposing endpoints increases threat vector footprints and exposes service metadata to credential-stuffing automated brute force attempts."}
-            </div>
+            {loadingRisk ? (
+              /* Animated Loading View */
+              <div style={{ padding: "44px 20px", textAlign: "center", background: "#060C19", borderRadius: "18px", border: "1px solid rgba(255,255,255,0.06)", position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "relative", width: "84px", height: "84px", margin: "0 auto 20px" }}>
+                  <div style={{ position: "absolute", inset: 0, border: "2px dashed #F97316", borderRadius: "50%", animation: "aiNeuralRotate 8s linear infinite" }} />
+                  <div style={{ position: "absolute", inset: "8px", border: "2px solid #EF4444", borderTopColor: "transparent", borderRadius: "50%", animation: "aiNeuralRotateRev 3s linear infinite" }} />
+                  <div style={{ position: "absolute", inset: "18px", background: "linear-gradient(135deg, #F97316, #EF4444)", borderRadius: "50%", animation: "aiOrbPulse 2s ease-in-out infinite", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    🧠
+                  </div>
+                </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button onClick={() => setIsRiskModalOpen(false)} style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,0.1)", color: "#FFFFFF", padding: "10px 24px", borderRadius: "10px", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}>Close Analysis</button>
+                <h4 style={{ margin: "0 0 6px 0", color: "#FFFFFF", fontSize: "16px", fontWeight: "700" }}>
+                  Analyzing Threat Vector & Root Cause...
+                </h4>
+                <div style={{ color: "#94A3B8", fontSize: "13px", maxWidth: "420px", margin: "0 auto" }}>
+                  Evaluating impact footprint, exploitability vectors & architectural weaknesses
+                </div>
+
+                <div style={{ height: "4px", width: "80%", margin: "20px auto 0", background: "rgba(255,255,255,0.06)", borderRadius: "2px", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: "100%", background: "linear-gradient(90deg, #F97316, #EF4444, #F59E0B, #F97316)", backgroundSize: "200% 100%", animation: "aiGlowBar 1.5s infinite" }} />
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Severity Cards */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "18px" }}>
+                  <div style={{ background: "#060C19", border: "1px solid rgba(255,255,255,0.06)", padding: "14px 16px", borderRadius: "14px" }}>
+                    <span style={{ color: "#64748B", fontSize: "11px", fontWeight: "700", textTransform: "uppercase" }}>Severity Classification</span>
+                    <div style={{ color: "#EF4444", fontSize: "22px", fontWeight: "800", marginTop: "4px", textTransform: "uppercase" }}>
+                      {selectedVuln?.severity || selectedVuln?.raw?.severity || "High"}
+                    </div>
+                  </div>
+                  <div style={{ background: "#060C19", border: "1px solid rgba(255,255,255,0.06)", padding: "14px 16px", borderRadius: "14px" }}>
+                    <span style={{ color: "#64748B", fontSize: "11px", fontWeight: "700", textTransform: "uppercase" }}>CVSS v3.1 Risk Metric</span>
+                    <div style={{ color: "#FFFFFF", fontSize: "22px", fontWeight: "800", marginTop: "4px" }}>
+                      {selectedVuln?.cvss || selectedVuln?.raw?.cvss || "7.5"} / 10
+                    </div>
+                  </div>
+                </div>
+
+                {/* Impact Statement Box */}
+                <div style={{ color: "#CBD5E1", fontSize: "13px", lineHeight: "1.7", background: "rgba(249,115,22,0.06)", border: "1px solid rgba(249,115,22,0.2)", padding: "16px", borderRadius: "14px", marginBottom: "14px" }}>
+                  💬 <strong style={{ color: "#F97316" }}>AI Threat Impact Statement:</strong>
+                  <div style={{ marginTop: "4px" }}>
+                    {aiRiskData?.impactStatement || selectedVuln?.description || selectedVuln?.raw?.description}
+                  </div>
+                </div>
+
+                {/* Root Cause Box */}
+                {aiRiskData?.rootCause && (
+                  <div style={{ color: "#CBD5E1", fontSize: "13px", lineHeight: "1.7", background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.2)", padding: "16px", borderRadius: "14px" }}>
+                    🧩 <strong style={{ color: "#3B82F6" }}>AI Root Cause Analysis:</strong>
+                    <div style={{ marginTop: "4px" }}>
+                      {aiRiskData.rootCause}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Footer button */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "24px" }}>
+              <button
+                className="ai-glow-btn"
+                onClick={() => setIsRiskModalOpen(false)}
+                style={{ background: "#0B1220", border: "1px solid rgba(255,255,255,0.15)", color: "#FFFFFF", padding: "12px 28px", borderRadius: "12px", fontWeight: "700", cursor: "pointer", fontSize: "13px", transition: "all 0.2s" }}
+              >
+                Close Analysis
+              </button>
             </div>
           </div>
         </div>

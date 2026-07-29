@@ -188,10 +188,13 @@ const CustomCyberNode = ({ data }) => {
   );
 };
 
-const nodeTypes = { customCyber: CustomCyberNode };
-const edgeTypes = { cyberEdge: AnimatedCyberEdge };
+const NODE_TYPES = Object.freeze({ customCyber: CustomCyberNode });
+const EDGE_TYPES = Object.freeze({ cyberEdge: AnimatedCyberEdge });
 
 export default function AttackSurfaceMap({ scan, scanStatus }) {
+  const nodeTypes = useMemo(() => NODE_TYPES, []);
+  const edgeTypes = useMemo(() => EDGE_TYPES, []);
+
   const [selectedNode, setSelectedNode] = useState(null);
   const [filterState, setFilterState] = useState("all");
   const [trafficRate, setTrafficRate] = useState(1420);
@@ -482,6 +485,7 @@ export default function AttackSurfaceMap({ scan, scanStatus }) {
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
+          style={{ width: "100%", height: "100%", minHeight: "500px" }}
           nodesDraggable={false}
           nodesConnectable={false}
           elementsSelectable={true}

@@ -1,5 +1,8 @@
 const axios = require("axios");
 const Setting = require("./setting.model");
+const Report = require("../reports/report.model");
+const { generatePdfReportBuffer } = require("../reports/pdfReport.service");
+const { sendScanReportEmail } = require("../../utils/mailer");
 
 const dispatchScanNotification = async (scan) => {
   try {
@@ -83,6 +86,23 @@ const dispatchScanNotification = async (scan) => {
           "❌ Failed to dispatch Jira ticket mapping:",
           jiraErr.message,
         );
+      }
+    }
+
+    // 4. Send Email Notification
+    if (settings.emailNotificationEnabled && settings.emailRecipient) {
+      console.log(`📤 Dispatching Email report for scan: ${scan.scanId} to ${settings.emailRecipient}`);
+      try {
+        const report = await Report.findOne({ scanId: scan._id });
+        if (report) {
+          const pdfBuffer = await generatePdfReportBuffer(report);
+          await sendScanReportEmail(settings.emailRecipient, scan, pdfBuffer);
+          console.log("✅ Email notification sent successfully.");
+        } else {
+          console.warn("⚠️ Could not find report for email dispatch.");
+        }
+      } catch (emailErr) {
+        console.error("❌ Failed to send email notification:", emailErr.message);
       }
     }
   } catch (err) {

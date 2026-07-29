@@ -61,26 +61,23 @@ const calculateCVSS = (finding) => {
     return Number(baseScore.toFixed(1));
   }
 
-  // 2. If the catalog entry already carries a numeric cvss score, trust it
-  //    (these values are sourced from NVD/public data and are authoritative).
+  // 2. If the catalog entry already carries a numeric cvss score, trust it directly
+  //    (these values are sourced from NVD/FIRST.org standards and are authoritative).
   if (typeof finding.cvss === "number" && finding.cvss > 0) {
-    const categoryWeight = CATEGORY_WEIGHTS[finding.category] || 0;
-    const adjusted = Math.min(10, finding.cvss + categoryWeight);
-    return Number(adjusted.toFixed(1));
+    return Number(finding.cvss.toFixed(1));
   }
 
-  // 3. Last-resort fallback: derive a score from the severity label.
+  // 3. Last-resort fallback: derive a score from the severity label matching FIRST.org CVSS 3.1 standards.
   const severityDefaults = {
     critical: 9.5,
     high: 7.5,
-    medium: 5.0,
-    low: 2.5,
+    medium: 5.3,
+    low: 2.4,
     info: 0.0,
   };
   const sev = (finding.severity || "medium").toLowerCase();
   const score = severityDefaults[sev] ?? 5.0;
-  const categoryWeight = CATEGORY_WEIGHTS[finding.category] || 0;
-  return Number(Math.min(10, score + categoryWeight).toFixed(1));
+  return Number(Math.min(10, score).toFixed(1));
 };
 
 module.exports = {
