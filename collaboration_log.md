@@ -21,6 +21,18 @@ This is the **official commit-by-commit** development registry. Every entry maps
 
 > Format: `[COMMIT HASH]` → Author → Date → Files Changed → Sprints
 
+### `d08d2eb` — 29 Jul 2026 — Atharv (Backend Engine & Security Architect) & Muskan (Frontend UI Support)
+**feat(security-engine): upgrade AI remediation copilot, executive report builder, digital compliance certificate with Agupta transparent signature & collaboration log**
+- 🛠️ **Atharv (Backend & Security Architecture - Major Implementation):**
+  - [`pdfReport.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/reports/pdfReport.service.js) & [`reportService.js`](file:///c:/Users/athar/api-security-scanner/frontend/src/services/reportService.js) (Built Executive PDF report generation engine with client-side & server-side print canvas fallbacks)
+  - [`openrouter.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/ai/openrouter.service.js) & [`ai.controller.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/ai/ai.controller.js) (Engineered `/api/ai/analyze` endpoint for dynamic LLM Express.js patch code synthesis)
+  - [`ReportsPage.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/pages/ReportsPage.jsx) (Built Verified Security Certificate system with gold/emerald borders, SHA256 cryptographic hashes, HMAC seals, and transparent `Agupta` handwritten signature filter)
+  - [`ReportsPage.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/pages/ReportsPage.jsx) (Engineered Custom PDF Builder Modal with 3 Presets: Board Deck, Dev Playbook, Full Audit Package)
+  - Integrated OWASP API Top 10, PCI-DSS v4.0, SOC 2, and ISO 27001 Multi-Framework Compliance Radar matrix
+- 🎨 **Muskan (Frontend UI Support):**
+  - Assisted with OWASP Control Checklist UI filter tabs (`All`, `Passed`, `Action Required`)
+  - Formatted Archive Registry table layout and pagination styling
+
 ### `e4f9b2d` — 25 Jul 2026 — Atharv (Backend) & Muskan (Frontend)
 **feat(scanner): expand Scanner Suite to 52 modules, overhaul Fortune 500 PDF engine, upgrade stream telemetry, and implement zero-regression Mobile/Tablet responsiveness**
 - 🛠️ **Backend Files & Scanners Added/Updated:**
