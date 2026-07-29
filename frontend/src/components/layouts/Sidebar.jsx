@@ -78,10 +78,15 @@ function Sidebar({ isMobileOpen, onClose }) {
   const { currentUser, logout } = useAuth();
   const [teams, setTeams] = useState([]);
   const [activeTeam, setActiveTeam] = useState("");
+  const [imgError, setImgError] = useState(false);
 
   // Real data states
   const [sidebarStats, setSidebarStats] = useState(null);
   const [threatFeed, setThreatFeed] = useState([]);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [currentUser?.photoURL]);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -483,10 +488,11 @@ function Sidebar({ isMobileOpen, onClose }) {
             paddingLeft: "4px",
           }}
         >
-          {userPhoto ? (
+          {userPhoto && !imgError ? (
             <img
               src={userPhoto}
               alt="Profile"
+              onError={() => setImgError(true)}
               style={{
                 width: "40px",
                 height: "40px",
@@ -503,17 +509,17 @@ function Sidebar({ isMobileOpen, onClose }) {
                 height: "40px",
                 borderRadius: "12px",
                 background: "linear-gradient(135deg, #1E293B, #0F172A)",
-                border: "1.5px solid rgba(249, 115, 22, 0.3)",
+                border: "1.5px solid rgba(249, 115, 22, 0.4)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color: "#F97316",
                 fontWeight: "800",
-                fontSize: "15px",
-                boxShadow: "0 0 8px rgba(249, 115, 22, 0.15)",
+                fontSize: "16px",
+                boxShadow: "0 0 10px rgba(249, 115, 22, 0.2)",
               }}
             >
-              {userName.charAt(0)}
+              {(userName || "A").charAt(0).toUpperCase()}
             </div>
           )}
 
