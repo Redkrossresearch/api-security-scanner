@@ -9,13 +9,6 @@ export const SocketProvider = ({ children }) => {
   const [latency, setLatency] = useState(0);
 
   useEffect(() => {
-    const isVercel = typeof window !== "undefined" && window.location.hostname.includes("vercel.app");
-    if (isVercel) {
-      console.warn("[SocketProvider] Disabling WebSockets on serverless Vercel host.");
-      setIsConnected(false);
-      return;
-    }
-
     const token = localStorage.getItem("token");
     if (currentUser && token) {
       socket.auth = { token };
@@ -28,13 +21,11 @@ export const SocketProvider = ({ children }) => {
 
     const onConnect = () => {
       setIsConnected(true);
-      console.log("[SocketProvider] Connected to server successfully");
     };
 
-    const onDisconnect = (reason) => {
+    const onDisconnect = () => {
       setIsConnected(false);
       setLatency(0);
-      console.log(`[SocketProvider] Disconnected: ${reason}`);
     };
 
     const onConnectError = (err) => {
