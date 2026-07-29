@@ -1,0 +1,43 @@
+===============================================================================
+PROPRIETARY & INTELLECTUAL PROPERTY LICENSE AGREEMENT
+===============================================================================
+
+Copyright (c) 2024-2026 Atharv Gupta and Muskan. All Rights Reserved.
+Platform: ATHX Security Platform (API Security Assessment Engine)
+Organization: Redkross Research / ATHX Security
+
+NOTICE TO ALL USERS:
+
+1. OWNERSHIP & INTELLECTUAL PROPERTY
+   This repository, codebase, multi-agent AI orchestration algorithms, 52 
+   specialized security scanner modules, automated remediation engines, DAG 
+   knowledge graph structures, custom UI components, graphic assets, and 
+   associated documentation (collectively, the "Software") constitute the 
+   exclusive intellectual property and proprietary trade secrets of 
+   Atharv Gupta and Muskan ("Copyright Holders").
+
+2. PROHIBITED USES
+   Except as expressly authorized in writing by the Copyright Holders, any 
+   reproduction, redistribution, modification, public display, commercial 
+   exploitation, reverse engineering, decompilation, sublicensing, or creation 
+   of derivative works of this Software, in whole or in part, via any media 
+   or platform, is strictly prohibited.
+
+3. PERMITTED EVALUATION
+   Access to view this source code repository is provided solely for peer 
+   review, educational evaluation, and demonstration purposes. Accessing or 
+   cloning this repository does not grant any implied or explicit license to 
+   run, host, deploy, distribute, or operate the Software in production or for 
+   commercial purposes.
+
+4. ENTERPRISE LICENSING & INQUIRIES
+   For enterprise licensing, commercial usage agreements, custom integrations, 
+   or security inquiries, please contact:
+   
+   - Atharv Gupta (Lead Security Architect): atharvgupta720@gmail.com
+   - Muskan (Lead Frontend Engineer)
+   - Organization: Redkross Research / ATHX Security Platform
+
+===============================================================================
+ALL RIGHTS RESERVED. ATHARV GUPTA & MUSKAN (2024-2026)
+===============================================================================

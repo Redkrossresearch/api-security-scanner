@@ -193,7 +193,11 @@ api-security-scanner/
 
 ## 🎯 Verification & Sign-off
 
-- **Backend Architecture Lead**: Atharv Gupta (`atharvgupta720@gmail.com`)
-- **Frontend Architecture Lead**: Muskan
-- **Current Stable Commit Hash**: `4de1b66`
+- **Backend Architecture Lead & Author**: Atharv Gupta (`atharvgupta720@gmail.com`)
+- **Frontend Architecture Lead & Author**: Muskan
+- **Current Stable Commit Hash**: `2181d9a`
 - **Deployment Endpoint**: `https://api-security-scanner-mauve.vercel.app`
+
+### ⚖️ Intellectual Property & Copyright Notice
+Copyright (c) 2024-2026 **Atharv Gupta** and **Muskan** (Redkross Research / ATHX Security Platform). All Rights Reserved.  
+This software, source code, underlying algorithms, multi-agent AI architecture, and 52 security scanner modules constitute proprietary trade secrets and intellectual property. Unauthorized copying, distribution, or commercial deployment without prior written permission is strictly prohibited under applicable copyright laws.

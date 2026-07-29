@@ -216,7 +216,22 @@ Open your browser at `http://localhost:5173`.
 
 ---
 
-## 📄 License & Attribution
+## 📄 Intellectual Property, Copyright & Proprietary License
 
-Copyright © 2026 **ATHX Security Platform**. All Rights Reserved.  
-Engineered by **Atharv Gupta** & **Muskan**.
+```
+Copyright (c) 2024-2026 Atharv Gupta & Muskan. All Rights Reserved.
+Repository: Redkrossresearch/api-security-scanner
+Platform: ATHX Security Platform (Enterprise API Security Engine)
+```
+
+### ⚖️ Legal Terms & Ownership Statement
+This repository, source code, underlying algorithms, multi-agent RAG orchestration architecture, 52 specialized DAST security scanner modules, custom user interface design system, and associated documentation are the **exclusive proprietary intellectual property** of **Atharv Gupta** and **Muskan** (operating under Redkross Research / ATHX Security Platform).
+
+1. **Proprietary Notice**: Unauthorized copying, modification, redistribution, reverse engineering, sublicensing, or commercial deployment of this software, in whole or in part, via any medium, without the express written permission of the copyright holders is strictly prohibited.
+2. **Usage Restrictions**: Permission to view this repository is granted solely for code review, audit evaluation, and demonstration purposes. No license is granted for public hosting, commercial resale, or integration into third-party security platforms without an explicit Enterprise License Agreement.
+3. **Trademark & Brand Protection**: "ATHX Security", "ATHX API Scanner", and related logos, badges, and seals are proprietary marks of Atharv Gupta & Muskan.
+
+For enterprise licensing inquiries, commercial partnerships, or vulnerability disclosure:
+- **Lead Security Architect**: Atharv Gupta ([`atharvgupta720@gmail.com`](mailto:atharvgupta720@gmail.com))
+- **Co-Author & Lead UI Engineer**: Muskan
+- **Organization**: Redkross Research / ATHX Security Platform
