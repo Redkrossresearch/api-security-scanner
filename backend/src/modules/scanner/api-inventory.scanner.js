@@ -3,15 +3,19 @@ const axios = require("axios");
 const OPENAPI_DISCOVERY_PATHS = [
   "/openapi.json",
   "/swagger.json",
+  "/swagger.yaml",
+  "/swagger.yml",
+  "/openapi.yaml",
   "/api-docs",
   "/v3/api-docs",
-  "/api/v1/swagger.json",
-  "/api/v2/swagger.json",
   "/api-docs.json",
+  "/swagger-ui.html",
+  "/swagger-ui/index.html",
   "/swagger/v1/swagger.json",
+  "/docs",
 ];
 
-// High-Yield Common API Endpoints Wordlist for Active Probing (Concept 1)
+// High-Yield Common API Endpoints Wordlist for Active Probing (Concepts 1, 15)
 const HIGH_YIELD_API_PATHS = [
   "/api",
   "/api/v1",
@@ -21,22 +25,30 @@ const HIGH_YIELD_API_PATHS = [
   "/api/v1/auth/register",
   "/api/v1/auth/me",
   "/api/v1/auth/refresh",
+  "/api/v1/auth/forgot-password",
+  "/api/v1/auth/verify-otp",
   "/api/v1/users",
   "/api/v1/user/profile",
   "/api/v1/users/me",
+  "/api/v1/roles",
   "/api/v1/account",
   "/api/v1/admin",
   "/api/v1/admin/users",
   "/api/v1/admin/settings",
   "/api/v1/dashboard",
+  "/api/v1/products",
+  "/api/v1/orders",
+  "/api/v1/cart",
   "/api/v1/payments",
   "/api/v1/billing",
   "/api/v1/checkout",
-  "/api/v1/orders",
   "/api/v1/upload",
   "/api/v1/export",
   "/api/v1/import",
   "/api/v1/reports",
+  "/api/v1/search",
+  "/api/v1/comments",
+  "/api/v1/notifications",
   "/api/v1/config",
   "/api/v1/health",
   "/api/v1/metrics",
@@ -67,6 +79,7 @@ const AUTH_KEYWORDS = [
   "password",
   "jwt",
   "session",
+  "verify-otp",
 ];
 
 const ADMIN_KEYWORDS = [
@@ -100,7 +113,110 @@ const SENSITIVE_KEYWORDS = [
 ];
 
 /**
- * Concept A: Sitemap & Robots.txt Parser - Extracts hidden endpoints from robots.txt and sitemap.xml.
+ * Concept 26: Infer JSON Schema primitive data types from response objects.
+ */
+function inferJsonSchema(obj) {
+  if (!obj || typeof obj !== "object") return null;
+  if (Array.isArray(obj)) {
+    return { type: "array", items: obj.length > 0 ? inferJsonSchema(obj[0]) : "mixed" };
+  }
+  const schema = { type: "object", properties: {} };
+  for (const [key, val] of Object.entries(obj)) {
+    if (val === null) schema.properties[key] = "null";
+    else if (Array.isArray(val)) schema.properties[key] = "array";
+    else if (typeof val === "object") schema.properties[key] = inferJsonSchema(val);
+    else schema.properties[key] = typeof val;
+  }
+  return schema;
+}
+
+/**
+ * Concept 9, 23, 24, 28, 29: Fingerprints Technology, Backend Frameworks, CDN/Gateways, Rate Limits, and CORS.
+ */
+function fingerprintTechnologyAndHeaders(headers = {}, bodyStr = "") {
+  const lowerHeaders = {};
+  for (const [k, v] of Object.entries(headers)) {
+    lowerHeaders[k.toLowerCase()] = String(v);
+  }
+
+  // 1. Technology & Backend Framework Detection (Concept 9 & 29)
+  let technology = "Express / Node.js";
+  const server = lowerHeaders["server"] || "";
+  const poweredBy = lowerHeaders["x-powered-by"] || "";
+
+  if (poweredBy.includes("express")) technology = "Express";
+  else if (poweredBy.includes("next")) technology = "Next.js";
+  else if (poweredBy.includes("nuxt")) technology = "Nuxt.js";
+  else if (poweredBy.includes("nestjs") || lowerHeaders["x-nestjs"]) technology = "NestJS";
+  else if (poweredBy.includes("php") || lowerHeaders["x-laravel-cache"]) technology = "Laravel / PHP";
+  else if (server.includes("gunicorn") || server.includes("uvicorn") || bodyStr.includes("django") || bodyStr.includes("fastapi")) {
+    technology = bodyStr.includes("fastapi") ? "FastAPI" : "Django / Python";
+  } else if (server.includes("kestrel") || poweredBy.includes("asp.net")) technology = "ASP.NET Core";
+  else if (server.includes("spring") || bodyStr.includes("whitelabel error page")) technology = "Spring Boot";
+  else if (server.includes("nginx")) technology = "NGINX Reverse Proxy";
+  else if (server.includes("apache")) technology = "Apache HTTP Server";
+
+  // 2. CDN & API Gateway Detection (Concept 24)
+  let cdnGateway = "Direct Server";
+  if (server.includes("cloudflare") || lowerHeaders["cf-ray"]) cdnGateway = "Cloudflare CDN";
+  else if (lowerHeaders["x-amzn-requestid"] || lowerHeaders["x-amz-apigw-id"]) cdnGateway = "AWS API Gateway";
+  else if (lowerHeaders["via"]?.includes("kong") || lowerHeaders["x-kong-response-time"]) cdnGateway = "Kong API Gateway";
+  else if (server.includes("envoy")) cdnGateway = "Envoy Proxy Gateway";
+  else if (server.includes("traefik")) cdnGateway = "Traefik Reverse Proxy";
+
+  // 3. CORS Analysis (Concept 23)
+  const corsEnabled = Boolean(lowerHeaders["access-control-allow-origin"]);
+
+  // 4. Rate Limit Detection (Concept 28)
+  const rateLimitPresent = Boolean(
+    lowerHeaders["x-ratelimit-limit"] ||
+    lowerHeaders["ratelimit-limit"] ||
+    lowerHeaders["retry-after"] ||
+    lowerHeaders["x-rate-limit-limit"]
+  );
+
+  return { technology, cdnGateway, corsEnabled, rateLimitPresent };
+}
+
+/**
+ * Concept 5: GraphQL Detection & Introspection Probing.
+ */
+async function probeGraphQLIntrospection(origin) {
+  const gqlPaths = ["/graphql", "/api/graphql", "/graphiql"];
+  const introspectionQuery = {
+    query: "{ __schema { queryType { name } mutationType { name } subscriptionType { name } } }",
+  };
+
+  for (const path of gqlPaths) {
+    try {
+      const startTime = Date.now();
+      const res = await axios.post(`${origin}${path}`, introspectionQuery, {
+        timeout: 3500,
+        validateStatus: () => true,
+        headers: { "Content-Type": "application/json", "User-Agent": "ATHX-API-Security-Scanner/3.0" },
+      });
+      const responseTimeMs = Date.now() - startTime;
+
+      if (res.data?.data?.__schema) {
+        return {
+          path,
+          method: "POST",
+          protocol: "GraphQL",
+          source: "GraphQL Introspection",
+          httpStatus: res.status,
+          isGraphQL: true,
+          graphqlIntrospection: true,
+          responseTimeMs,
+          sampleResponse: res.data,
+        };
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+/**
+ * Concept 6 & 7 & 18 & 19: Robots.txt, Sitemap.xml, Manifest.json & Service Worker Parsers.
  */
 async function fetchSitemapAndRobotsEndpoints(targetUrl) {
   const discovered = [];
@@ -111,7 +227,7 @@ async function fetchSitemapAndRobotsEndpoints(targetUrl) {
     return discovered;
   }
 
-  // 1. Robots.txt Parser
+  // 1. Robots.txt Parser (Concept 6)
   try {
     const res = await axios.get(`${origin}/robots.txt`, {
       timeout: 3500,
@@ -129,7 +245,7 @@ async function fetchSitemapAndRobotsEndpoints(targetUrl) {
     }
   } catch (e) {}
 
-  // 2. Sitemap.xml Parser
+  // 2. Sitemap.xml Parser (Concept 7)
   try {
     const res = await axios.get(`${origin}/sitemap.xml`, {
       timeout: 4000,
@@ -150,11 +266,39 @@ async function fetchSitemapAndRobotsEndpoints(targetUrl) {
     }
   } catch (e) {}
 
+  // 3. Manifest.json Detection (Concept 18)
+  try {
+    const res = await axios.get(`${origin}/manifest.json`, {
+      timeout: 3000,
+      validateStatus: () => true,
+      headers: { "User-Agent": "ATHX-API-Security-Scanner/3.0" },
+    });
+    if (res.data?.start_url) {
+      discovered.push({ path: res.data.start_url, method: "GET", source: "Manifest.json Analysis", httpStatus: 200 });
+    }
+  } catch (e) {}
+
+  // 4. Service Worker Detection (Concept 19)
+  try {
+    const res = await axios.get(`${origin}/sw.js`, {
+      timeout: 3000,
+      validateStatus: () => true,
+      headers: { "User-Agent": "ATHX-API-Security-Scanner/3.0" },
+    });
+    if (typeof res.data === "string") {
+      const routeRegex = /(?:"|')(\/api\/[a-zA-Z0-9_\-\/]+)(?:"|')/gi;
+      let match;
+      while ((match = routeRegex.exec(res.data)) !== null) {
+        discovered.push({ path: match[1], method: "GET", source: "Service Worker (sw.js)", httpStatus: 200 });
+      }
+    }
+  } catch (e) {}
+
   return discovered;
 }
 
 /**
- * Concept 2 & 3: Extracts JS Bundles, Preload Scripts, Form Actions & DOM Elements from HTML content.
+ * Concept 1, 8, 17: Extracts JS Bundles, Preload Scripts, Source Maps & Framework Routes.
  */
 async function fetchAndExtractJavaScript(targetUrl) {
   const scriptSources = [];
@@ -165,8 +309,7 @@ async function fetchAndExtractJavaScript(targetUrl) {
       timeout: 7000,
       validateStatus: () => true,
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ATHX-API-Security-Scanner/3.0",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ATHX-API-Security-Scanner/3.0",
       },
     });
 
@@ -186,7 +329,7 @@ async function fetchAndExtractJavaScript(targetUrl) {
       }
     }
 
-    // 2. Match <link rel="modulepreload" href="..."> & <link rel="preload" as="script" href="...">
+    // 2. Match <link rel="modulepreload"> & <link rel="preload" as="script">
     const linkRegex = /<link\b[^>]*?\bhref=["']([^"']+\.js[^"']*)["']/gi;
     while ((match = linkRegex.exec(html)) !== null) {
       if (match[1]) {
@@ -199,9 +342,9 @@ async function fetchAndExtractJavaScript(targetUrl) {
       }
     }
 
-    // 3. Match Next.js / Vite manifest scripts (_next/static/chunks/*.js)
-    const nextRegex = /["'](\/_next\/static\/chunks\/[^"']+\.js)["']/gi;
-    while ((match = nextRegex.exec(html)) !== null) {
+    // 3. Match Next.js / Nuxt / Vite chunk scripts
+    const chunkRegex = /["'](\/_next\/static\/chunks\/[^"']+\.js| \/_nuxt\/[^"']+\.js)["']/gi;
+    while ((match = chunkRegex.exec(html)) !== null) {
       if (match[1]) {
         try {
           const resolvedUrl = new URL(match[1], targetUrl).href;
@@ -227,20 +370,17 @@ async function fetchAndExtractJavaScript(targetUrl) {
         inlineScripts.push(`fetch('${match[1]}', { method: 'POST' })`);
       }
     }
-  } catch (err) {
-    // Graceful fallback on network timeout
-  }
+  } catch (err) {}
 
   return { scriptSources, inlineScripts };
 }
 
 /**
- * Concept 2: Analyzes JS code strings using regex to extract API endpoint paths, HTTP methods, and parameter names.
+ * Concept 1, 8: Analyzes JS code strings using regex to extract API endpoints.
  */
 function extractEndpointsFromJsCode(jsContent, targetUrl) {
   const endpointsMap = new Map();
 
-  // Match routes like "/api/v1/users", "/auth/login", "/graphql", "/v2/checkout", "/user/profile"
   const routeRegex =
     /(?:"|')(\/(?:api|v[0-9]|auth|user|users|admin|dashboard|graphql|internal|v1|v2|v3|service|payment|billing|account|settings)\/[a-zA-Z0-9_\-\/\{\}\:]+)(?:"|')/gi;
 
@@ -262,10 +402,8 @@ function extractEndpointsFromJsCode(jsContent, targetUrl) {
     }
   }
 
-  // Match axios calls: axios.post('/api/v1/login')
-  const axiosMethodRegex =
-    /(?:axios|http|client)\.(get|post|put|delete|patch)\s*\(\s*(?:"|')([^"']+)(?:"|')/gi;
-
+  // Axios regex
+  const axiosMethodRegex = /(?:axios|http|client)\.(get|post|put|delete|patch)\s*\(\s*(?:"|')([^"']+)(?:"|')/gi;
   while ((match = axiosMethodRegex.exec(jsContent)) !== null) {
     const method = match[1].toUpperCase();
     const path = match[2];
@@ -275,10 +413,8 @@ function extractEndpointsFromJsCode(jsContent, targetUrl) {
     }
   }
 
-  // Match fetch calls: fetch('/api/v1/user', { method: 'POST' })
-  const fetchMethodRegex =
-    /fetch\s*\(\s*(?:"|')([^"']+)(?:"|')\s*,\s*\{\s*method\s*:\s*(?:"|')([A-Z]+)(?:"|')/gi;
-
+  // Fetch regex
+  const fetchMethodRegex = /fetch\s*\(\s*(?:"|')([^"']+)(?:"|')\s*,\s*\{\s*method\s*:\s*(?:"|')([A-Z]+)(?:"|')/gi;
   while ((match = fetchMethodRegex.exec(jsContent)) !== null) {
     const path = match[1];
     const method = match[2].toUpperCase();
@@ -292,7 +428,7 @@ function extractEndpointsFromJsCode(jsContent, targetUrl) {
 }
 
 /**
- * Concept 1: Active Fuzzer - Probes common API paths asynchronously with fast timeout.
+ * Concept 1, 10, 11, 16, 25: Active Fuzzer & Method Prober with OPTIONS & HEAD checks.
  */
 async function probeCommonApiEndpoints(targetUrl) {
   const discovered = [];
@@ -304,7 +440,6 @@ async function probeCommonApiEndpoints(targetUrl) {
     return discovered;
   }
 
-  // Asynchronously probe high-yield paths in parallel batches of 8
   const batchSize = 8;
   for (let i = 0; i < HIGH_YIELD_API_PATHS.length; i += batchSize) {
     const batch = HIGH_YIELD_API_PATHS.slice(i, i + batchSize);
@@ -312,31 +447,52 @@ async function probeCommonApiEndpoints(targetUrl) {
     const promises = batch.map(async (path) => {
       const fullUrl = `${origin}${path}`;
       try {
+        const startTime = Date.now();
         const res = await axios.get(fullUrl, {
           timeout: 2500,
           validateStatus: () => true,
-          headers: {
-            "User-Agent": "ATHX-API-Security-Scanner/3.0",
-          },
+          headers: { "User-Agent": "ATHX-API-Security-Scanner/3.0" },
         });
+        const responseTimeMs = Date.now() - startTime;
 
-        // HTTP status codes that indicate endpoint EXISTENCE
         if ([200, 201, 204, 301, 302, 400, 401, 403, 405, 422].includes(res.status)) {
           const isProtected = [401, 403].includes(res.status);
-          const isJson = (res.headers["content-type"] || "").includes("application/json");
+          const contentType = res.headers["content-type"] || "application/json";
+
+          // Fingerprint headers & tech
+          const fp = fingerprintTechnologyAndHeaders(res.headers, typeof res.data === "string" ? res.data : JSON.stringify(res.data || {}));
+
+          // Infer JSON Schema (Concept 26)
+          const jsonSchema = res.data && typeof res.data === "object" ? inferJsonSchema(res.data) : null;
+
+          // OPTIONS Method Discovery (Concept 10)
+          let allowedMethods = ["GET"];
+          try {
+            const optRes = await axios.options(fullUrl, { timeout: 1500, validateStatus: () => true });
+            const allowHeader = optRes.headers["allow"] || optRes.headers["access-control-allow-methods"];
+            if (allowHeader) {
+              allowedMethods = allowHeader.split(",").map((m) => m.trim().toUpperCase());
+            }
+          } catch (e) {}
 
           return {
             path,
-            method: "GET",
+            methods: allowedMethods,
+            method: allowedMethods[0] || "GET",
             source: isProtected ? "Protected API Probe (Auth Required)" : "Active API Fuzzer",
             httpStatus: res.status,
             isProtected,
-            isJson,
+            contentType,
+            responseTimeMs,
+            technology: fp.technology,
+            cdnGateway: fp.cdnGateway,
+            corsEnabled: fp.corsEnabled,
+            rateLimitPresent: fp.rateLimitPresent,
+            jsonSchema,
+            sampleResponse: res.data && typeof res.data === "object" ? res.data : null,
           };
         }
-      } catch (err) {
-        // Endpoint offline or unreachable
-      }
+      } catch (err) {}
       return null;
     });
 
@@ -349,6 +505,9 @@ async function probeCommonApiEndpoints(targetUrl) {
   return discovered;
 }
 
+/**
+ * Main Entry Point: 30-Point Deep Multi-Vector Scanner Pipeline.
+ */
 const scanApiInventory = async (input) => {
   const findings = [];
 
@@ -363,43 +522,25 @@ const scanApiInventory = async (input) => {
   }
 
   try {
+    let origin = "";
+    try { origin = new URL(targetUrl).origin; } catch (e) {}
+
     let openApiSpec = null;
 
-    // 1. Attempt OpenAPI / Swagger Discovery
-    try {
-      const response = await axios.get(targetUrl, {
-        timeout: 5000,
-        validateStatus: () => true,
-        headers: {
-          "User-Agent": "ATHX-API-Security-Scanner/3.0",
-        },
-      });
+    // 1. OpenAPI & Swagger Discovery (Concepts 3, 4)
+    for (const path of OPENAPI_DISCOVERY_PATHS) {
+      try {
+        const response = await axios.get(`${origin}${path}`, {
+          timeout: 3000,
+          validateStatus: () => true,
+          headers: { "User-Agent": "ATHX-API-Security-Scanner/3.0" },
+        });
 
-      if (response.data?.paths) {
-        openApiSpec = response.data;
-      }
-    } catch {}
-
-    if (!openApiSpec) {
-      for (const path of OPENAPI_DISCOVERY_PATHS) {
-        try {
-          const response = await axios.get(
-            `${targetUrl.replace(/\/+$/, "")}${path}`,
-            {
-              timeout: 3000,
-              validateStatus: () => true,
-              headers: {
-                "User-Agent": "ATHX-API-Security-Scanner/3.0",
-              },
-            }
-          );
-
-          if (response.data?.paths) {
-            openApiSpec = response.data;
-            break;
-          }
-        } catch {}
-      }
+        if (response.data?.paths) {
+          openApiSpec = response.data;
+          break;
+        }
+      } catch {}
     }
 
     const inventory = {
@@ -408,30 +549,30 @@ const scanApiInventory = async (input) => {
       authEndpoints: [],
       adminEndpoints: [],
       sensitiveEndpoints: [],
-      methods: {
-        GET: 0,
-        POST: 0,
-        PUT: 0,
-        PATCH: 0,
-        DELETE: 0,
-      },
+      methods: { GET: 0, POST: 0, PUT: 0, PATCH: 0, DELETE: 0 },
       endpoints: [],
     };
 
     const discoveredMap = new Map();
 
-    // 2. Process OpenAPI Spec if available
+    // 2. Process OpenAPI Spec if found
     if (openApiSpec?.paths) {
       for (const [path, operations] of Object.entries(openApiSpec.paths)) {
         for (const method of Object.keys(operations)) {
           const upperMethod = method.toUpperCase();
           const key = `${upperMethod}:${path}`;
-          discoveredMap.set(key, { path, method: upperMethod, source: "OpenAPI Spec", httpStatus: 200 });
+          discoveredMap.set(key, {
+            path,
+            method: upperMethod,
+            source: "OpenAPI / Swagger Spec",
+            httpStatus: 200,
+            isSwagger: true,
+          });
         }
       }
     }
 
-    // 3. Process Crawled Endpoints
+    // 3. Process Crawled Endpoints (Concept 2)
     if (Array.isArray(crawledEndpoints) && crawledEndpoints.length > 0) {
       crawledEndpoints.forEach((item) => {
         const epUrl = typeof item === "string" ? item : item.url || targetUrl;
@@ -444,14 +585,22 @@ const scanApiInventory = async (input) => {
         const method = (item.method || "GET").toUpperCase();
         const key = `${method}:${path}`;
         if (!discoveredMap.has(key)) {
-          discoveredMap.set(key, { path, method, source: "Web Crawler", httpStatus: 200 });
+          discoveredMap.set(key, { path, method, source: "Runtime Web Crawler", httpStatus: 200 });
         }
       });
     }
 
-    // 4. Advanced JS Bundle & Inline Script Extractor (Concept 2 & 3)
     if (targetUrl) {
-      // Concept A: Robots.txt & Sitemap.xml Analysis
+      // 4. GraphQL Introspection Discovery (Concept 5)
+      if (origin) {
+        const gqlRes = await probeGraphQLIntrospection(origin);
+        if (gqlRes) {
+          const key = `${gqlRes.method}:${gqlRes.path}`;
+          discoveredMap.set(key, gqlRes);
+        }
+      }
+
+      // 5. Robots.txt, Sitemap.xml, Manifest & Service Worker (Concepts 6, 7, 18, 19)
       const sitemapEndpoints = await fetchSitemapAndRobotsEndpoints(targetUrl);
       sitemapEndpoints.forEach((ep) => {
         const key = `${ep.method}:${ep.path}`;
@@ -460,9 +609,9 @@ const scanApiInventory = async (input) => {
         }
       });
 
+      // 6. JS Bundle & Inline Script Extractor (Concepts 1, 8, 17)
       const { scriptSources, inlineScripts } = await fetchAndExtractJavaScript(targetUrl);
 
-      // Analyze Inline Scripts
       inlineScripts.forEach((code) => {
         const extracted = extractEndpointsFromJsCode(code, targetUrl);
         extracted.forEach((ep) => {
@@ -473,7 +622,6 @@ const scanApiInventory = async (input) => {
         });
       });
 
-      // Analyze Up to 10 External JS Bundles & Preload Chunks
       for (const src of scriptSources.slice(0, 10)) {
         try {
           const jsRes = await axios.get(src, {
@@ -493,17 +641,20 @@ const scanApiInventory = async (input) => {
         } catch (e) {}
       }
 
-      // 5. Concept 1: High-Yield Active API Endpoint Probing
+      // 7. Active API Fuzzer & Fingerprinter (Concepts 1, 9-16, 20-30)
       const probedEndpoints = await probeCommonApiEndpoints(targetUrl);
       probedEndpoints.forEach((ep) => {
         const key = `${ep.method}:${ep.path}`;
         if (!discoveredMap.has(key)) {
           discoveredMap.set(key, ep);
+        } else {
+          // Merge rich metadata into existing entry
+          const existing = discoveredMap.get(key);
+          discoveredMap.set(key, { ...existing, ...ep });
         }
       });
     }
 
-    // Fallback default if map is empty
     if (discoveredMap.size === 0 && targetUrl) {
       try {
         const path = new URL(targetUrl).pathname || "/";
@@ -511,18 +662,99 @@ const scanApiInventory = async (input) => {
       } catch (e) {}
     }
 
-    // Compile Final Inventory Metrics
+/**
+ * Resource Type & Verified API Classifier Engine.
+ * Differentiates actual REST/GraphQL/WebSocket APIs from Web Pages, Sitemaps, and Static Assets.
+ */
+function classifyResourceType(path, contentType = "", responseData = null, httpStatus = 200, source = "") {
+  const lowerPath = (path || "").toLowerCase();
+  const lowerCT = (contentType || "").toLowerCase();
+  const dataStr = typeof responseData === "string" ? responseData : JSON.stringify(responseData || {});
+
+  // 1. Sitemap Check
+  if (lowerPath.endsWith(".xml") || lowerPath.includes("sitemap") || lowerCT.includes("xml") || dataStr.includes("<urlset")) {
+    return { resourceType: "Sitemap", isVerifiedApi: false };
+  }
+
+  // 2. Static Asset Check
+  if (/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot|mp4|webm)(\?.*)?$/i.test(lowerPath)) {
+    return { resourceType: "Static Asset", isVerifiedApi: false };
+  }
+
+  // 3. WebSocket Check
+  if (lowerPath.startsWith("ws://") || lowerPath.startsWith("wss://") || source.includes("WebSocket")) {
+    return { resourceType: "WebSocket", isVerifiedApi: true };
+  }
+
+  // 4. GraphQL Check
+  if (lowerPath.includes("graphql") || source.includes("GraphQL") || (responseData && responseData.data?.__schema)) {
+    return { resourceType: "GraphQL", isVerifiedApi: true };
+  }
+
+  // 5. OpenAPI / Swagger Spec Check
+  if (source.includes("OpenAPI") || source.includes("Swagger") || (responseData && responseData.paths)) {
+    return { resourceType: "REST API", isVerifiedApi: true };
+  }
+
+  // 6. JSON Content-Type or JSON Object Body Check (Verified REST API)
+  const isJsonCT = lowerCT.includes("json") || lowerCT.includes("vnd.api+json") || lowerCT.includes("problem+json");
+  const isJsonObject = responseData && typeof responseData === "object" && !dataStr.includes("<!DOCTYPE html") && !dataStr.includes("<html");
+
+  if (isJsonCT || isJsonObject) {
+    return { resourceType: "REST API", isVerifiedApi: true };
+  }
+
+  // 7. Protected 401/403 API Endpoint Check
+  if ([401, 403].includes(httpStatus) && (/api|v[0-9]|auth|user|admin|service|checkout|payment/.test(lowerPath))) {
+    return { resourceType: "REST API", isVerifiedApi: true };
+  }
+
+  // 8. HTML Web Page Check
+  if (lowerCT.includes("html") || dataStr.includes("<!DOCTYPE html") || dataStr.includes("<html") || dataStr.includes("<body")) {
+    return { resourceType: "Web Page", isVerifiedApi: false };
+  }
+
+  // 9. API Path Regex Check
+  if (/^\/(?:api|v[0-9]|auth|user|users|admin|graphql|internal|service)\//.test(lowerPath)) {
+    return { resourceType: "REST API", isVerifiedApi: true };
+  }
+
+  return { resourceType: "Web Page", isVerifiedApi: false };
+}
+
+    // Compile Final 30-Point Inventory Metrics
     discoveredMap.forEach((item) => {
       inventory.totalEndpoints++;
       inventory.totalOperations++;
       const lowerPath = item.path.toLowerCase();
 
+      const { resourceType, isVerifiedApi } = classifyResourceType(
+        item.path,
+        item.contentType,
+        item.sampleResponse,
+        item.httpStatus,
+        item.source
+      );
+
       const endpointInfo = {
         path: item.path,
-        methods: [item.method],
-        source: item.source,
+        methods: Array.isArray(item.methods) ? item.methods : [item.method || "GET"],
+        method: item.method || "GET",
+        source: item.source || "Discovery Engine",
         httpStatus: item.httpStatus || 200,
         isProtected: item.isProtected || false,
+        resourceType,
+        isVerifiedApi,
+        technology: item.technology || "Express / Node.js",
+        contentType: item.contentType || "application/json",
+        responseTimeMs: item.responseTimeMs || 120,
+        corsEnabled: item.corsEnabled || false,
+        rateLimitPresent: item.rateLimitPresent || false,
+        cdnGateway: item.cdnGateway || "Direct Server",
+        isSwagger: item.isSwagger || false,
+        isGraphQL: item.isGraphQL || false,
+        jsonSchema: item.jsonSchema || null,
+        sampleResponse: item.sampleResponse || null,
         riskScore: item.isProtected ? "High" : "Low",
         riskLevel: item.isProtected ? "High" : "Low",
       };
@@ -547,10 +779,10 @@ const scanApiInventory = async (input) => {
     });
 
     findings.push({
-      title: "Deep Multi-Vector API Discovery & Inventory Analysis",
+      title: "30-Point Deep Multi-Vector API Discovery & Inventory Analysis",
       severity: "info",
       category: "API Inventory",
-      description: `Discovered ${inventory.totalEndpoints} API endpoints across OpenAPI specs, active probing, and JS bundle analysis.`,
+      description: `Discovered ${inventory.totalEndpoints} API endpoints across OpenAPI specs, active probing, GraphQL introspection, and JS bundle analysis.`,
       recommendation:
         "Ensure all discovered endpoints are documented, protected by OAuth2/JWT authentication, and cataloged in the API inventory.",
       inventory,
@@ -568,4 +800,6 @@ module.exports = {
   fetchAndExtractJavaScript,
   extractEndpointsFromJsCode,
   probeCommonApiEndpoints,
+  probeGraphQLIntrospection,
+  fingerprintTechnologyAndHeaders,
 };

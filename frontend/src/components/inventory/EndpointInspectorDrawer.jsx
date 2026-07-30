@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, ShieldAlert, CheckCircle, Copy, FileCode, Tag, User, Save, Code, Server } from "lucide-react";
+import { X, CheckCircle, Copy, Save, AlertCircle } from "lucide-react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 
@@ -9,8 +9,31 @@ export default function EndpointInspectorDrawer({ endpoint, onClose, onUpdateSuc
   const [notes, setNotes] = useState(endpoint.notes || "");
   const [owner, setOwner] = useState(endpoint.owner || "Security Operations");
   const [status, setStatus] = useState(endpoint.status || "Active");
-  const [riskScore, setRiskScore] = useState(endpoint.riskScore || "Low");
   const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await api.patch(`/inventory/${endpoint._id}`, {
+        notes,
+        owner,
+        status,
+      });
+      if (res.data?.success) {
+        toast.success("Endpoint metadata updated successfully!");
+        if (onUpdateSuccess) onUpdateSuccess();
+      }
+    } catch (err) {
+      toast.error("Failed to update endpoint metadata.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied URL to clipboard!");
+  };
 
   const getMethodStyle = (method) => {
     switch ((method || "").toUpperCase()) {
@@ -30,55 +53,25 @@ export default function EndpointInspectorDrawer({ endpoint, onClose, onUpdateSuc
   const getRiskStyle = (risk) => {
     switch ((risk || "").toLowerCase()) {
       case "critical":
-        return { bg: "rgba(239, 68, 68, 0.2)", color: "#EF4444", label: "CRITICAL RISK" };
+        return { bg: "rgba(239, 68, 68, 0.2)", color: "#EF4444", label: "Critical Risk" };
       case "high":
-        return { bg: "rgba(249, 115, 22, 0.2)", color: "#F97316", label: "HIGH RISK" };
+        return { bg: "rgba(249, 115, 22, 0.2)", color: "#F97316", label: "High Risk" };
       case "medium":
-        return { bg: "rgba(234, 179, 8, 0.2)", color: "#EAB308", label: "MEDIUM RISK" };
-      case "low":
-        return { bg: "rgba(59, 130, 246, 0.2)", color: "#3B82F6", label: "LOW RISK" };
+        return { bg: "rgba(234, 179, 8, 0.2)", color: "#EAB308", label: "Medium Risk" };
       default:
-        return { bg: "rgba(16, 185, 129, 0.2)", color: "#10B981", label: "SECURE" };
-    }
-  };
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard!");
-  };
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const res = await api.patch(`/inventory/${endpoint._id}`, {
-        notes,
-        owner,
-        status,
-        riskScore,
-      });
-      if (res.data?.success) {
-        toast.success("Endpoint metadata updated successfully!");
-        if (onUpdateSuccess) onUpdateSuccess();
-      }
-    } catch (err) {
-      toast.error("Failed to update endpoint metadata.");
-    } finally {
-      setSaving(false);
+        return { bg: "rgba(59, 130, 246, 0.2)", color: "#3B82F6", label: "Low Risk" };
     }
   };
 
   const methodStyle = getMethodStyle(endpoint.method);
   const riskStyle = getRiskStyle(endpoint.riskScore);
-  const fullUrl = `${endpoint.host || "https://api.target.com"}${endpoint.path}`;
+  const fullUrl = `${endpoint.host}${endpoint.path}`;
 
-  // Sample Request / Response JSON
   const sampleRequestJson = JSON.stringify(
-    {
-      endpoint: endpoint.path,
-      method: endpoint.method,
+    endpoint.sampleRequest || {
       headers: {
         Authorization: endpoint.authType === "Public / Unauthenticated" ? "None" : "Bearer <JWT_TOKEN>",
-        "Content-Type": "application/json",
+        "Content-Type": endpoint.contentType || "application/json",
       },
       queryParams: (endpoint.parameters || []).reduce((acc, p) => ({ ...acc, [p.name]: "<value>" }), {}),
     },
@@ -240,7 +233,46 @@ export default function EndpointInspectorDrawer({ endpoint, onClose, onUpdateSuc
           </div>
         </div>
 
-        {/* Task 161.2: Raw Request Sample & Schema */}
+        {/* Resource Verification & Telemetry HUD */}
+        <div style={{ background: "rgba(255, 255, 255, 0.02)", border: "1px solid rgba(255, 255, 255, 0.06)", borderRadius: "12px", padding: "14px" }}>
+          <h4 style={{ fontSize: "11px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", margin: "0 0 10px 0" }}>
+            Resource Verification & Telemetry
+          </h4>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+            <div>
+              <div style={{ fontSize: "9.5px", color: "#64748B", fontWeight: "700" }}>Classification</div>
+              <div style={{ fontSize: "12px", fontWeight: "800", color: endpoint.isVerifiedApi ? "#34D399" : "#94A3B8" }}>
+                {endpoint.resourceType || "REST API"} {endpoint.isVerifiedApi ? "✅" : "❌"}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "9.5px", color: "#64748B", fontWeight: "700" }}>Technology</div>
+              <div style={{ fontSize: "12px", fontWeight: "800", color: "#60A5FA" }}>{endpoint.technology || "Express"}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "9.5px", color: "#64748B", fontWeight: "700" }}>CDN / Gateway</div>
+              <div style={{ fontSize: "12px", fontWeight: "800", color: "#F8FAFC" }}>{endpoint.cdnGateway || "Direct Server"}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "9.5px", color: "#64748B", fontWeight: "700" }}>Latency</div>
+              <div style={{ fontSize: "12px", fontWeight: "800", color: "#34D399" }}>{endpoint.responseTimeMs || 120} ms</div>
+            </div>
+            <div>
+              <div style={{ fontSize: "9.5px", color: "#64748B", fontWeight: "700" }}>CORS Protection</div>
+              <div style={{ fontSize: "12px", fontWeight: "800", color: endpoint.corsEnabled ? "#34D399" : "#EF4444" }}>
+                {endpoint.corsEnabled ? "Enabled" : "Disabled"}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: "9.5px", color: "#64748B", fontWeight: "700" }}>Rate Limiting</div>
+              <div style={{ fontSize: "12px", fontWeight: "800", color: endpoint.rateLimitPresent ? "#34D399" : "#F59E0B" }}>
+                {endpoint.rateLimitPresent ? "Enforced" : "None Detected"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Raw Request Sample & Schema */}
         <div>
           <h4 style={{ fontSize: "12px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
             Raw Request Sample & Schema

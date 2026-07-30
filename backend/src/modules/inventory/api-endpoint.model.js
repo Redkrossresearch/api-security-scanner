@@ -112,6 +112,59 @@ const apiEndpointSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // 30-Point Deep Pipeline Metadata Fields
+    technology: {
+      type: String,
+      default: "Unknown",
+    },
+    contentType: {
+      type: String,
+      default: "application/json",
+    },
+    apiVersion: {
+      type: String,
+      default: "v1",
+    },
+    responseTimeMs: {
+      type: Number,
+      default: 0,
+    },
+    corsEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    rateLimitPresent: {
+      type: Boolean,
+      default: false,
+    },
+    cdnGateway: {
+      type: String,
+      default: "Direct Server",
+    },
+    isSwagger: {
+      type: Boolean,
+      default: false,
+    },
+    isGraphQL: {
+      type: Boolean,
+      default: false,
+    },
+    jsonSchema: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    // Resource Classification & Verification Engine Fields
+    resourceType: {
+      type: String,
+      enum: ["REST API", "GraphQL", "WebSocket", "Web Page", "Sitemap", "Static Asset", "Unknown"],
+      default: "REST API",
+      index: true,
+    },
+    isVerifiedApi: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
   },
   {
     timestamps: true,

@@ -62,8 +62,10 @@ export default function ApiInventoryPage() {
       // Fetch endpoints if a target host is selected
       if (selectedTargetHost) {
         let filterParams = { search: searchTerm, host: selectedTargetHost, page: pagination.page, limit: pagination.limit };
-        if (activeFilter === "REST" || activeFilter === "GraphQL") {
-          filterParams.protocol = activeFilter;
+        if (activeFilter === "Verified APIs Only") {
+          filterParams.verifiedOnly = true;
+        } else if (activeFilter === "REST API" || activeFilter === "GraphQL" || activeFilter === "WebSocket" || activeFilter === "Web Page" || activeFilter === "Sitemap") {
+          filterParams.resourceType = activeFilter;
         } else if (activeFilter === "Shadow APIs") {
           filterParams.status = "Shadow API";
         } else if (activeFilter === "High Risk") {
@@ -169,6 +171,25 @@ export default function ApiInventoryPage() {
         return { bg: "rgba(59, 130, 246, 0.2)", color: "#3B82F6" };
       default:
         return { bg: "rgba(16, 185, 129, 0.2)", color: "#10B981" };
+    }
+  };
+
+  const getResourceTypeBadge = (type, isVerified) => {
+    switch (type) {
+      case "REST API":
+        return { bg: "rgba(34,197,94,0.15)", color: "#34D399", label: "🟢 REST API", border: "rgba(34,197,94,0.3)" };
+      case "GraphQL":
+        return { bg: "rgba(168,85,247,0.15)", color: "#C084FC", label: "🟣 GraphQL", border: "rgba(168,85,247,0.3)" };
+      case "WebSocket":
+        return { bg: "rgba(59,130,246,0.15)", color: "#60A5FA", label: "🔵 WebSocket", border: "rgba(59,130,246,0.3)" };
+      case "Web Page":
+        return { bg: "rgba(148,163,184,0.12)", color: "#94A3B8", label: "⚪ Web Page", border: "rgba(148,163,184,0.2)" };
+      case "Sitemap":
+        return { bg: "rgba(249,115,22,0.15)", color: "#F97316", label: "🟠 Sitemap", border: "rgba(249,115,22,0.3)" };
+      case "Static Asset":
+        return { bg: "rgba(51,65,85,0.3)", color: "#CBD5E1", label: "⚫ Static Asset", border: "rgba(51,65,85,0.4)" };
+      default:
+        return { bg: "rgba(234,179,8,0.15)", color: "#FBBF24", label: "🟡 Unknown", border: "rgba(234,179,8,0.3)" };
     }
   };
 
@@ -465,7 +486,7 @@ export default function ApiInventoryPage() {
             
             {/* Filter Pills */}
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {["ALL", "REST", "GraphQL", "Shadow APIs", "High Risk", "Public"].map((pill) => {
+              {["ALL", "Verified APIs Only", "REST API", "GraphQL", "WebSocket", "Web Page", "Sitemap", "Shadow APIs", "High Risk"].map((pill) => {
                 const active = activeFilter === pill;
                 return (
                   <button
@@ -535,7 +556,7 @@ export default function ApiInventoryPage() {
                     <tr style={{ background: "rgba(255,255,255,0.02)", color: "#64748B", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: "11px", fontWeight: "800", textTransform: "uppercase" }}>
                       <th style={{ padding: "14px 18px" }}>Method</th>
                       <th style={{ padding: "14px 18px" }}>Endpoint Path</th>
-                      <th style={{ padding: "14px 18px" }}>Protocol</th>
+                      <th style={{ padding: "14px 18px" }}>Resource Type</th>
                       <th style={{ padding: "14px 18px" }}>Auth Scheme</th>
                       <th style={{ padding: "14px 18px" }}>Sensitivity</th>
                       <th style={{ padding: "14px 18px" }}>Risk Tier</th>
@@ -546,6 +567,7 @@ export default function ApiInventoryPage() {
                     {endpoints.map((ep) => {
                       const mStyle = getMethodStyle(ep.method);
                       const rStyle = getRiskStyle(ep.riskScore);
+                      const resBadge = getResourceTypeBadge(ep.resourceType || "REST API", ep.isVerifiedApi);
 
                       return (
                         <tr
@@ -586,10 +608,21 @@ export default function ApiInventoryPage() {
                             </div>
                           </td>
 
-                          {/* Protocol */}
+                          {/* Resource Type */}
                           <td style={{ padding: "14px 18px" }}>
-                            <span style={{ fontSize: "11px", fontWeight: "700", color: "#94A3B8", background: "rgba(255,255,255,0.04)", padding: "3px 8px", borderRadius: "6px" }}>
-                              {ep.protocol || "REST"}
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                fontWeight: "800",
+                                color: resBadge.color,
+                                background: resBadge.bg,
+                                border: `1px solid ${resBadge.border}`,
+                                padding: "4px 9px",
+                                borderRadius: "6px",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {resBadge.label}
                             </span>
                           </td>
 

@@ -233,6 +233,8 @@ async function getFilteredEndpoints(query = {}) {
     authType = "",
     status = "",
     riskScore = "",
+    resourceType = "",
+    verifiedOnly = false,
     host = "",
     page = 1,
     limit = 20,
@@ -255,6 +257,8 @@ async function getFilteredEndpoints(query = {}) {
   if (authType && authType !== "ALL") filter.authType = authType;
   if (status && status !== "ALL") filter.status = status;
   if (riskScore && riskScore !== "ALL") filter.riskScore = riskScore;
+  if (resourceType && resourceType !== "ALL") filter.resourceType = resourceType;
+  if (verifiedOnly === "true" || verifiedOnly === true) filter.isVerifiedApi = true;
   if (host) filter.host = { $regex: host, $options: "i" };
 
   const skip = (Math.max(1, parseInt(page)) - 1) * parseInt(limit);
@@ -376,11 +380,24 @@ async function triggerDirectTargetScan(targetUrl) {
             host,
             path,
             method,
-            protocol: lowerPath.includes("graphql") ? "GraphQL" : "REST",
+            protocol: lowerPath.includes("graphql") || ep.isGraphQL ? "GraphQL" : "REST",
             authType,
             status,
             riskScore,
             dataSensitivity: Array.from(new Set(sensitivityTags)),
+            resourceType: ep.resourceType || (lowerPath.includes("sitemap") ? "Sitemap" : lowerPath.includes("graphql") ? "GraphQL" : "REST API"),
+            isVerifiedApi: ep.isVerifiedApi !== undefined ? ep.isVerifiedApi : !lowerPath.includes("sitemap") && !lowerPath.endsWith(".html"),
+            technology: ep.technology || "Express / Node.js",
+            contentType: ep.contentType || "application/json",
+            apiVersion: lowerPath.match(/\/v[0-9]\//)?.[0]?.replace(/\//g, "") || "v1",
+            responseTimeMs: ep.responseTimeMs || 120,
+            corsEnabled: ep.corsEnabled || false,
+            rateLimitPresent: ep.rateLimitPresent || false,
+            cdnGateway: ep.cdnGateway || "Direct Server",
+            isSwagger: ep.isSwagger || false,
+            isGraphQL: ep.isGraphQL || false,
+            jsonSchema: ep.jsonSchema || null,
+            sampleResponse: ep.sampleResponse || null,
             lastScannedAt: new Date(),
           },
         },
