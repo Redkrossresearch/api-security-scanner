@@ -1,4 +1,5 @@
 const {
+  triggerDirectTargetScan,
   getInventoryStats,
   getFilteredEndpoints,
   getEndpointDetails,
@@ -6,6 +7,28 @@ const {
   importOpenApiSpec,
   generateOpenApiSpec,
 } = require("./inventory.service");
+
+/**
+ * POST /api/inventory/scan-target (Task 160.1)
+ */
+async function triggerTargetScanHandler(req, res) {
+  try {
+    const { targetUrl } = req.body;
+    if (!targetUrl) {
+      return res.status(400).json({ success: false, error: "targetUrl is required." });
+    }
+
+    const result = await triggerDirectTargetScan(targetUrl);
+    return res.status(200).json({
+      success: true,
+      message: `Discovered and ingested ${result.count} endpoints from ${result.host}`,
+      ...result,
+    });
+  } catch (error) {
+    console.error("[inventory.controller] triggerTargetScan error:", error);
+    return res.status(500).json({ success: false, error: error.message || "Failed to scan target URL." });
+  }
+}
 
 /**
  * GET /api/inventory/stats
@@ -84,12 +107,12 @@ async function importSpecHandler(req, res) {
       try {
         specObj = JSON.parse(specData);
       } catch (e) {
-        return res.status(400).json({ success: false, error: "Invalid JSON format for OpenAPI specification." });
+        return res.status(400).json({ success: false, error: "Invalid JSON format for specification." });
       }
     }
 
     if (!specObj || typeof specObj !== "object") {
-      return res.status(400).json({ success: false, error: "OpenAPI spec data is required." });
+      return res.status(400).json({ success: false, error: "Spec data is required." });
     }
 
     const result = await importOpenApiSpec(specObj, targetHost);
@@ -118,6 +141,7 @@ async function exportSpecHandler(req, res) {
 }
 
 module.exports = {
+  triggerTargetScanHandler,
   getInventoryStatsHandler,
   getInventoryEndpointsHandler,
   getEndpointDetailsHandler,

@@ -48,38 +48,54 @@ async function ingestEndpointsFromScan(scan) {
         return f.endpoint.includes(path);
       });
 
-      // Calculate risk score based on matched findings
+      // Calculate risk score based on matched findings and CWE vulnerability density
       let riskScore = "Low";
       const severities = matchedFindings.map((f) => (f.severity || "").toLowerCase());
-      if (severities.includes("critical")) riskScore = "Critical";
-      else if (severities.includes("high")) riskScore = "High";
-      else if (severities.includes("medium")) riskScore = "Medium";
-      else if (matchedFindings.length === 0) riskScore = "Secure";
+      const cwes = matchedFindings.map((f) => (f.cwe || "").toLowerCase());
 
-      // Detect Data Sensitivity Tags
+      if (severities.includes("critical") || cwes.some((cwe) => cwe.includes("cwe-89") || cwe.includes("cwe-79") || cwe.includes("cwe-918"))) {
+        riskScore = "Critical";
+      } else if (severities.includes("high") || matchedFindings.length >= 3) {
+        riskScore = "High";
+      } else if (severities.includes("medium") || matchedFindings.length >= 1) {
+        riskScore = "Medium";
+      } else if (matchedFindings.length === 0) {
+        riskScore = "Secure";
+      }
+
+      // Hardened Data Sensitivity & PII Tagging Algorithm (Task 159.2)
       const sensitivityTags = ["Public"];
       const lowerPath = path.toLowerCase();
-      if (/user|profile|email|account|person|ssn|health|patient/.test(lowerPath)) {
+
+      if (/user|profile|email|account|person|ssn|health|patient|dob|phone|mobile|address|identity|customer|member/.test(lowerPath)) {
         sensitivityTags.push("PII");
       }
-      if (/card|pay|billing|checkout|bank|wallet|invoice/.test(lowerPath)) {
+      if (/card|pay|billing|checkout|bank|wallet|invoice|transaction|credit|debit|stripe|paypal/.test(lowerPath)) {
         sensitivityTags.push("Financial");
       }
-      if (/auth|token|login|password|secret|jwt|session|key/.test(lowerPath)) {
+      if (/auth|token|login|password|secret|jwt|session|key|credential|bearer|oauth|api-key|private-key/.test(lowerPath)) {
         sensitivityTags.push("AuthToken");
+      }
+      if (/internal|admin|system|config|metric|log|telemetry|debug/.test(lowerPath)) {
+        sensitivityTags.push("Internal");
       }
 
       // Detect Auth Type
       let authType = "Public / Unauthenticated";
-      if (/auth|login|token|admin|dashboard|user|api\/v/.test(lowerPath)) {
+      if (/auth|login|token|admin|dashboard|user|api\/v|checkout|billing|profile/.test(lowerPath)) {
         authType = "Bearer JWT";
       }
 
-      // Detect Status (Shadow vs Active)
+      // Hardened Shadow & Zombie API Classification Engine (Task 159.2)
       let status = "Active";
-      if (/internal|legacy|old|test|dev|staging|sandbox/.test(lowerPath)) {
+      if (
+        /internal|legacy|old|test|dev|staging|sandbox|beta|private|draft|temp|experimental|deprecated/.test(lowerPath)
+      ) {
         status = "Shadow API";
-      } else if (/v1\/.*(?:user|auth)/.test(lowerPath) && /v2/.test(lowerPath)) {
+      } else if (
+        (/v1\/.*(?:user|auth|payment|order)/.test(lowerPath) && !/v2/.test(lowerPath)) ||
+        /deprecated|legacy/.test(lowerPath)
+      ) {
         status = "Zombie Endpoint";
       }
 
@@ -239,17 +255,140 @@ async function updateEndpointMetadata(id, updates) {
 }
 
 /**
- * Import OpenAPI 3.0 / Swagger specification object into ApiEndpoint database.
+ * Trigger an instant target scan directly from /inventory dashboard and ingest findings.
+ */
+async function triggerDirectTargetScan(targetUrl) {
+  const { scanApiInventory } = require("../scanner/api-inventory.scanner");
+
+  if (!targetUrl) throw new Error("Target URL is required for inventory scan.");
+
+  let urlObj;
+  try {
+    urlObj = new URL(targetUrl);
+  } catch (e) {
+    throw new Error("Invalid Target URL format.");
+  }
+
+  const host = urlObj.origin;
+
+  // Run Scanner Engine (includes JS Bundle Extractor)
+  const findings = await scanApiInventory({ targetUrl, crawledEndpoints: [{ url: targetUrl, method: "GET" }] });
+
+  const inventoryData = findings.find((f) => f.category === "API Inventory")?.inventory;
+  const discoveredEndpoints = inventoryData?.endpoints || [{ path: urlObj.pathname || "/", methods: ["GET"], source: "Direct Scan" }];
+
+  const ingested = [];
+
+  for (const ep of discoveredEndpoints) {
+    const path = ep.path || "/";
+    const methods = Array.isArray(ep.methods) ? ep.methods : [ep.method || "GET"];
+
+    for (const rawMethod of methods) {
+      const method = rawMethod.toUpperCase();
+      const lowerPath = path.toLowerCase();
+
+      // Data Sensitivity
+      const sensitivityTags = ["Public"];
+      if (/user|profile|email|account|person|ssn|health|patient|dob|phone/.test(lowerPath)) sensitivityTags.push("PII");
+      if (/card|pay|billing|checkout|bank|wallet|invoice|stripe/.test(lowerPath)) sensitivityTags.push("Financial");
+      if (/auth|token|login|password|secret|jwt|session|key/.test(lowerPath)) sensitivityTags.push("AuthToken");
+
+      // Status
+      let status = "Active";
+      if (/internal|legacy|old|test|dev|staging|sandbox|beta|draft/.test(lowerPath)) status = "Shadow API";
+      else if (/v1\/.*(?:user|auth)/.test(lowerPath) && !/v2/.test(lowerPath)) status = "Zombie Endpoint";
+
+      const doc = await ApiEndpoint.findOneAndUpdate(
+        { host, path, method },
+        {
+          $set: {
+            host,
+            path,
+            method,
+            protocol: "REST",
+            authType: /auth|login|token|admin|user/.test(lowerPath) ? "Bearer JWT" : "Public / Unauthenticated",
+            status,
+            riskScore: "Low",
+            dataSensitivity: Array.from(new Set(sensitivityTags)),
+            lastScannedAt: new Date(),
+          },
+        },
+        { upsert: true, new: true }
+      );
+      ingested.push(doc);
+    }
+  }
+
+  return { success: true, count: ingested.length, host, endpoints: ingested };
+}
+
+/**
+ * Import OpenAPI 3.0 / Swagger / Postman v2.1 Collection specification into ApiEndpoint database.
  */
 async function importOpenApiSpec(specObj, targetHost = "https://api.example.com") {
   if (!specObj || typeof specObj !== "object") {
-    throw new Error("Invalid OpenAPI specification format.");
+    throw new Error("Invalid specification format.");
   }
 
-  const pathsObj = specObj.paths || {};
+  let count = 0;
   const importedHost = specObj.servers && specObj.servers[0]?.url ? specObj.servers[0].url : targetHost;
 
-  let count = 0;
+  // Handle Postman v2.1 Collection Format (Task 160.2)
+  if (Array.isArray(specObj.item) || specObj.info?.schema?.includes("collection")) {
+    const parsePostmanItems = async (items) => {
+      for (const item of items) {
+        if (item.request) {
+          const method = (item.request.method || "GET").toUpperCase();
+          let rawUrl = typeof item.request.url === "string" ? item.request.url : item.request.url?.raw || "/";
+          let path = "/";
+          let host = importedHost;
+          try {
+            const u = new URL(rawUrl, importedHost);
+            path = u.pathname || "/";
+            host = u.origin;
+          } catch (e) {
+            path = rawUrl.startsWith("/") ? rawUrl : `/${rawUrl}`;
+          }
+
+          const parameters = (item.request.url?.query || []).map((q) => ({
+            name: q.key,
+            location: "query",
+            paramType: "string",
+            required: false,
+            description: q.description || "",
+          }));
+
+          await ApiEndpoint.findOneAndUpdate(
+            { host, path, method },
+            {
+              $set: {
+                host,
+                path,
+                method,
+                protocol: "REST",
+                status: "Active",
+                notes: item.name || "",
+                parameters,
+                lastScannedAt: new Date(),
+              },
+            },
+            { upsert: true, new: true }
+          );
+          count++;
+        }
+        if (Array.isArray(item.item)) {
+          await parsePostmanItems(item.item);
+        }
+      }
+    };
+
+    await parsePostmanItems(specObj.item);
+    return { success: true, importedCount: count, host: importedHost, format: "Postman Collection v2.1" };
+  }
+
+  // Standard OpenAPI / Swagger Spec Format
+  const pathsObj = specObj.paths || {};
+
   for (const [pathKey, methods] of Object.entries(pathsObj)) {
     for (const [methodKey, details] of Object.entries(methods)) {
       const method = methodKey.toUpperCase();
@@ -284,7 +423,7 @@ async function importOpenApiSpec(specObj, targetHost = "https://api.example.com"
     }
   }
 
-  return { success: true, importedCount: count, host: importedHost };
+  return { success: true, importedCount: count, host: importedHost, format: "OpenAPI Spec 3.0" };
 }
 
 /**
@@ -346,6 +485,7 @@ async function generateOpenApiSpec(hostFilter) {
 
 module.exports = {
   ingestEndpointsFromScan,
+  triggerDirectTargetScan,
   getInventoryStats,
   getFilteredEndpoints,
   getEndpointDetails,

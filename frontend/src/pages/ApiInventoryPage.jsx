@@ -13,6 +13,9 @@ import {
   ChevronRight,
   RefreshCw,
   PlusCircle,
+  Zap,
+  Play,
+  CheckCircle2,
 } from "lucide-react";
 import api from "../services/api";
 import toast from "react-hot-toast";
@@ -25,6 +28,10 @@ export default function ApiInventoryPage() {
   const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, pages: 1 });
   const [loading, setLoading] = useState(true);
 
+  // Quick Action Target Scanner State (Task 161.1)
+  const [targetUrlInput, setTargetUrlInput] = useState("");
+  const [scanningTarget, setScanningTarget] = useState(false);
+
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState("ALL");
@@ -34,7 +41,6 @@ export default function ApiInventoryPage() {
   const fetchInventoryData = async () => {
     setLoading(true);
     try {
-      // Build query based on active filter pill
       let filterParams = { search: searchTerm, page: pagination.page, limit: pagination.limit };
       if (activeFilter === "REST" || activeFilter === "GraphQL") {
         filterParams.protocol = activeFilter;
@@ -71,6 +77,32 @@ export default function ApiInventoryPage() {
   useEffect(() => {
     fetchInventoryData();
   }, [searchTerm, activeFilter, pagination.page]);
+
+  // Task 161.1: Direct Scan Target URL Handler
+  const handleScanTargetSubmit = async (e) => {
+    e.preventDefault();
+    if (!targetUrlInput.trim()) {
+      toast.error("Please enter a valid target website URL (e.g. https://api.target.com)");
+      return;
+    }
+
+    setScanningTarget(true);
+    const toastId = toast.loading(`Scanning ${targetUrlInput} and extracting JS endpoints...`);
+    try {
+      const res = await api.post("/inventory/scan-target", { targetUrl: targetUrlInput });
+      if (res.data?.success) {
+        toast.dismiss(toastId);
+        toast.success(`Discovered & ingested ${res.data.count} endpoints from ${res.data.host}!`);
+        setTargetUrlInput("");
+        fetchInventoryData();
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(err.response?.data?.error || "Target URL scan failed.");
+    } finally {
+      setScanningTarget(false);
+    }
+  };
 
   const handleExportOpenApi = async () => {
     const toastId = toast.loading("Generating OpenAPI 3.0 specification...");
@@ -132,7 +164,7 @@ export default function ApiInventoryPage() {
             API Inventory & Asset Catalog
           </h2>
           <p style={{ color: "#64748B", fontSize: "13px", margin: "4px 0 0 0" }}>
-            Real-time discovered API endpoints, shadow API detection, and parameter schema inventory.
+            Real-time discovered API endpoints, JS bundle extractor, shadow API detection, and parameter schemas.
           </p>
         </div>
 
@@ -151,10 +183,9 @@ export default function ApiInventoryPage() {
               display: "flex",
               alignItems: "center",
               gap: "8px",
-              transition: "all 0.2s ease",
             }}
           >
-            <Upload size={15} color="#F97316" /> Import OpenAPI
+            <Upload size={15} color="#F97316" /> Import Spec
           </button>
 
           <button
@@ -178,6 +209,72 @@ export default function ApiInventoryPage() {
           </button>
         </div>
       </div>
+
+      {/* Task 161.1: Live Target Website Scanner Bar */}
+      <form
+        onSubmit={handleScanTargetSubmit}
+        style={{
+          background: "linear-gradient(90deg, rgba(249, 115, 22, 0.1) 0%, rgba(9, 15, 27, 0.9) 100%)",
+          border: "1px solid rgba(249, 115, 22, 0.3)",
+          borderRadius: "14px",
+          padding: "14px 18px",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+        }}
+      >
+        <Zap size={20} color="#F97316" />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "11px", fontWeight: "800", color: "#F97316", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+            Direct Target Endpoint Discovery Scanner
+          </div>
+          <input
+            type="url"
+            value={targetUrlInput}
+            onChange={(e) => setTargetUrlInput(e.target.value)}
+            placeholder="Enter website URL to scan (e.g. https://api.target.com)..."
+            style={{
+              width: "100%",
+              background: "transparent",
+              border: "none",
+              color: "#FFF",
+              fontSize: "13px",
+              fontWeight: "600",
+              outline: "none",
+              marginTop: "2px",
+            }}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={scanningTarget}
+          style={{
+            background: "linear-gradient(135deg, #F97316, #EA580C)",
+            border: "none",
+            color: "#FFF",
+            padding: "9px 20px",
+            borderRadius: "10px",
+            fontSize: "12.5px",
+            fontWeight: "800",
+            cursor: scanningTarget ? "wait" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {scanningTarget ? (
+            <>
+              <RefreshCw size={14} style={{ animation: "spin 1.5s linear infinite" }} /> Extacting JS Endpoints...
+            </>
+          ) : (
+            <>
+              <Play size={14} /> Scan & Ingest
+            </>
+          )}
+        </button>
+      </form>
 
       {/* KPI Stats HUD */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
@@ -302,7 +399,7 @@ export default function ApiInventoryPage() {
           <div style={{ padding: "50px 20px", textAlign: "center", color: "#64748B" }}>
             <Layers size={36} color="#334155" style={{ margin: "0 auto 12px auto" }} />
             <div style={{ fontSize: "15px", fontWeight: "700", color: "#94A3B8" }}>No API Endpoints Discovered</div>
-            <div style={{ fontSize: "12px", marginTop: "4px" }}>Run a scan or import an OpenAPI spec to populate the live API inventory.</div>
+            <div style={{ fontSize: "12px", marginTop: "4px" }}>Run a target website scan above or import an OpenAPI spec to populate inventory.</div>
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>

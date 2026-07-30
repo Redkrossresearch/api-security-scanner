@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { X, ShieldAlert, CheckCircle, Copy, FileCode, Tag, User, Save } from "lucide-react";
+import { X, ShieldAlert, CheckCircle, Copy, FileCode, Tag, User, Save, Code, Server } from "lucide-react";
 import api from "../../services/api";
 import toast from "react-hot-toast";
 
@@ -71,6 +71,21 @@ export default function EndpointInspectorDrawer({ endpoint, onClose, onUpdateSuc
   const riskStyle = getRiskStyle(endpoint.riskScore);
   const fullUrl = `${endpoint.host || "https://api.target.com"}${endpoint.path}`;
 
+  // Sample Request / Response JSON
+  const sampleRequestJson = JSON.stringify(
+    {
+      endpoint: endpoint.path,
+      method: endpoint.method,
+      headers: {
+        Authorization: endpoint.authType === "Public / Unauthenticated" ? "None" : "Bearer <JWT_TOKEN>",
+        "Content-Type": "application/json",
+      },
+      queryParams: (endpoint.parameters || []).reduce((acc, p) => ({ ...acc, [p.name]: "<value>" }), {}),
+    },
+    null,
+    2
+  );
+
   return (
     <div
       style={{
@@ -78,7 +93,7 @@ export default function EndpointInspectorDrawer({ endpoint, onClose, onUpdateSuc
         top: 0,
         right: 0,
         bottom: 0,
-        width: "520px",
+        width: "540px",
         maxWidth: "92vw",
         background: "#070D19",
         borderLeft: "1px solid rgba(255, 255, 255, 0.1)",
@@ -225,9 +240,31 @@ export default function EndpointInspectorDrawer({ endpoint, onClose, onUpdateSuc
           </div>
         </div>
 
+        {/* Task 161.2: Raw Request Sample & Schema */}
+        <div>
+          <h4 style={{ fontSize: "12px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
+            Raw Request Sample & Schema
+          </h4>
+          <pre
+            style={{
+              background: "#030712",
+              border: "1px solid rgba(255,255,255,0.08)",
+              borderRadius: "10px",
+              padding: "12px",
+              fontSize: "11px",
+              color: "#34D399",
+              fontFamily: "monospace",
+              margin: 0,
+              overflowX: "auto",
+            }}
+          >
+            {sampleRequestJson}
+          </pre>
+        </div>
+
         {/* Discovered Parameters List */}
         <div>
-          <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" }}>
+          <h4 style={{ fontSize: "12px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
             Discovered Parameters ({endpoint.parameters?.length || 0})
           </h4>
           {endpoint.parameters && endpoint.parameters.length > 0 ? (
@@ -260,7 +297,7 @@ export default function EndpointInspectorDrawer({ endpoint, onClose, onUpdateSuc
 
         {/* Connected Vulnerabilities */}
         <div>
-          <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "10px" }}>
+          <h4 style={{ fontSize: "12px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
             Linked Vulnerabilities ({endpoint.vulnerabilities?.length || endpoint.vulnerabilitiesCount || 0})
           </h4>
           {endpoint.vulnerabilities && endpoint.vulnerabilities.length > 0 ? (
@@ -286,7 +323,7 @@ export default function EndpointInspectorDrawer({ endpoint, onClose, onUpdateSuc
 
         {/* Editable Metadata Form */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-          <h4 style={{ fontSize: "13px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", margin: 0 }}>
+          <h4 style={{ fontSize: "12px", fontWeight: "800", color: "#94A3B8", textTransform: "uppercase", margin: 0 }}>
             Annotate Asset Metadata
           </h4>
 
