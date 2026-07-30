@@ -23,6 +23,7 @@ import api from "../services/api";
 import toast from "react-hot-toast";
 import EndpointInspectorDrawer from "../components/inventory/EndpointInspectorDrawer";
 import SpecImportModal from "../components/inventory/SpecImportModal";
+import WebsiteFavicon from "../components/inventory/WebsiteFavicon";
 
 export default function ApiInventoryPage() {
   const [stats, setStats] = useState(null);
@@ -58,7 +59,7 @@ export default function ApiInventoryPage() {
         setTargets(targetsRes.data.targets || []);
       }
 
-      // Fetch endpoints if a target host is selected or in All Endpoints mode
+      // Fetch endpoints if a target host is selected
       if (selectedTargetHost) {
         let filterParams = { search: searchTerm, host: selectedTargetHost, page: pagination.page, limit: pagination.limit };
         if (activeFilter === "REST" || activeFilter === "GraphQL") {
@@ -419,10 +420,8 @@ export default function ApiInventoryPage() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <div style={{ background: "rgba(249,115,22,0.15)", padding: "8px", borderRadius: "10px" }}>
-                        <Globe size={18} color="#F97316" />
-                      </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <WebsiteFavicon host={target.host} />
                       <div>
                         <div style={{ fontSize: "14px", fontWeight: "800", color: "#F8FAFC", fontFamily: "monospace" }}>
                           {target.host}
