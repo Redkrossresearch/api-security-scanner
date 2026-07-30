@@ -1,6 +1,7 @@
 const {
   triggerDirectTargetScan,
   getInventoryStats,
+  getTargetWebsites,
   getFilteredEndpoints,
   getEndpointDetails,
   updateEndpointMetadata,
@@ -9,7 +10,7 @@ const {
 } = require("./inventory.service");
 
 /**
- * POST /api/inventory/scan-target (Task 160.1)
+ * POST /api/inventory/scan-target
  */
 async function triggerTargetScanHandler(req, res) {
   try {
@@ -41,6 +42,19 @@ async function getInventoryStatsHandler(req, res) {
   } catch (error) {
     console.error("[inventory.controller] getInventoryStats error:", error);
     return res.status(500).json({ success: false, error: "Failed to fetch inventory statistics." });
+  }
+}
+
+/**
+ * GET /api/inventory/targets (Grouped Website Targets)
+ */
+async function getTargetWebsitesHandler(req, res) {
+  try {
+    const targets = await getTargetWebsites();
+    return res.status(200).json({ success: true, targets });
+  } catch (error) {
+    console.error("[inventory.controller] getTargetWebsites error:", error);
+    return res.status(500).json({ success: false, error: "Failed to fetch target website list." });
   }
 }
 
@@ -143,6 +157,7 @@ async function exportSpecHandler(req, res) {
 module.exports = {
   triggerTargetScanHandler,
   getInventoryStatsHandler,
+  getTargetWebsitesHandler,
   getInventoryEndpointsHandler,
   getEndpointDetailsHandler,
   updateEndpointMetadataHandler,

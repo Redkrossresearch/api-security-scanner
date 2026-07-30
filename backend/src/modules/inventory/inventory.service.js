@@ -184,6 +184,45 @@ async function getInventoryStats(hostFilter) {
 }
 
 /**
+ * Returns grouped website target cards (Domain-First Hierarchy).
+ */
+async function getTargetWebsites() {
+  const targets = await ApiEndpoint.aggregate([
+    {
+      $group: {
+        _id: "$host",
+        host: { $first: "$host" },
+        totalEndpoints: { $sum: 1 },
+        shadowApisCount: {
+          $sum: { $cond: [{ $eq: ["$status", "Shadow API"] }, 1, 0] },
+        },
+        zombieEndpointsCount: {
+          $sum: { $cond: [{ $eq: ["$status", "Zombie Endpoint"] }, 1, 0] },
+        },
+        publicCount: {
+          $sum: { $cond: [{ $eq: ["$authType", "Public / Unauthenticated"] }, 1, 0] },
+        },
+        criticalCount: {
+          $sum: { $cond: [{ $eq: ["$riskScore", "Critical"] }, 1, 0] },
+        },
+        highCount: {
+          $sum: { $cond: [{ $eq: ["$riskScore", "High"] }, 1, 0] },
+        },
+        piiCount: {
+          $sum: {
+            $cond: [{ $gt: [{ $size: { $setIntersection: ["$dataSensitivity", ["PII", "Financial", "AuthToken"]] } }, 0] }, 1, 0],
+          },
+        },
+        lastScannedAt: { $max: "$lastScannedAt" },
+      },
+    },
+    { $sort: { lastScannedAt: -1 } },
+  ]);
+
+  return targets;
+}
+
+/**
  * Search and filter inventory endpoints with pagination.
  */
 async function getFilteredEndpoints(query = {}) {
@@ -519,6 +558,7 @@ module.exports = {
   ingestEndpointsFromScan,
   triggerDirectTargetScan,
   getInventoryStats,
+  getTargetWebsites,
   getFilteredEndpoints,
   getEndpointDetails,
   updateEndpointMetadata,

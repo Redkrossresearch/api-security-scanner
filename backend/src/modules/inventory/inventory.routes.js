@@ -3,6 +3,7 @@ const authenticate = require("../../middleware/auth.middleware");
 const {
   triggerTargetScanHandler,
   getInventoryStatsHandler,
+  getTargetWebsitesHandler,
   getInventoryEndpointsHandler,
   getEndpointDetailsHandler,
   updateEndpointMetadataHandler,
@@ -14,6 +15,7 @@ const router = express.Router();
 
 // Public / Authenticated Endpoints
 router.get("/stats", authenticate, getInventoryStatsHandler);
+router.get("/targets", authenticate, getTargetWebsitesHandler);
 router.get("/export", authenticate, exportSpecHandler);
 router.get("/", authenticate, getInventoryEndpointsHandler);
 router.get("/:id", authenticate, getEndpointDetailsHandler);

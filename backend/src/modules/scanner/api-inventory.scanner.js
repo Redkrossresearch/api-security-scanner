@@ -100,6 +100,60 @@ const SENSITIVE_KEYWORDS = [
 ];
 
 /**
+ * Concept A: Sitemap & Robots.txt Parser - Extracts hidden endpoints from robots.txt and sitemap.xml.
+ */
+async function fetchSitemapAndRobotsEndpoints(targetUrl) {
+  const discovered = [];
+  let origin = "";
+  try {
+    origin = new URL(targetUrl).origin;
+  } catch (e) {
+    return discovered;
+  }
+
+  // 1. Robots.txt Parser
+  try {
+    const res = await axios.get(`${origin}/robots.txt`, {
+      timeout: 3500,
+      validateStatus: () => true,
+      headers: { "User-Agent": "ATHX-API-Security-Scanner/3.0" },
+    });
+    if (typeof res.data === "string") {
+      const lines = res.data.split("\n");
+      lines.forEach((line) => {
+        const match = line.match(/(?:Disallow|Allow):\s*(\/[a-zA-Z0-9_\-\/\{\}\:]+)/i);
+        if (match && match[1] && match[1].length > 1) {
+          discovered.push({ path: match[1], method: "GET", source: "Robots.txt Analysis", httpStatus: 200 });
+        }
+      });
+    }
+  } catch (e) {}
+
+  // 2. Sitemap.xml Parser
+  try {
+    const res = await axios.get(`${origin}/sitemap.xml`, {
+      timeout: 4000,
+      validateStatus: () => true,
+      headers: { "User-Agent": "ATHX-API-Security-Scanner/3.0" },
+    });
+    if (typeof res.data === "string") {
+      const locRegex = /<loc>(https?:\/\/[^<]+)<\/loc>/gi;
+      let match;
+      while ((match = locRegex.exec(res.data)) !== null) {
+        try {
+          const u = new URL(match[1]);
+          if (u.origin === origin && u.pathname.length > 1) {
+            discovered.push({ path: u.pathname, method: "GET", source: "Sitemap.xml Analysis", httpStatus: 200 });
+          }
+        } catch (err) {}
+      }
+    }
+  } catch (e) {}
+
+  return discovered;
+}
+
+/**
  * Concept 2 & 3: Extracts JS Bundles, Preload Scripts, Form Actions & DOM Elements from HTML content.
  */
 async function fetchAndExtractJavaScript(targetUrl) {
@@ -397,6 +451,15 @@ const scanApiInventory = async (input) => {
 
     // 4. Advanced JS Bundle & Inline Script Extractor (Concept 2 & 3)
     if (targetUrl) {
+      // Concept A: Robots.txt & Sitemap.xml Analysis
+      const sitemapEndpoints = await fetchSitemapAndRobotsEndpoints(targetUrl);
+      sitemapEndpoints.forEach((ep) => {
+        const key = `${ep.method}:${ep.path}`;
+        if (!discoveredMap.has(key)) {
+          discoveredMap.set(key, ep);
+        }
+      });
+
       const { scriptSources, inlineScripts } = await fetchAndExtractJavaScript(targetUrl);
 
       // Analyze Inline Scripts
