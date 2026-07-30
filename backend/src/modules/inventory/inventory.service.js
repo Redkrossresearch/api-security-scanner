@@ -271,11 +271,11 @@ async function triggerDirectTargetScan(targetUrl) {
 
   const host = urlObj.origin;
 
-  // Run Scanner Engine (includes JS Bundle Extractor)
+  // Run Multi-Vector Scanner Engine (Fuzzer, Prober, JS Bundle Extractor)
   const findings = await scanApiInventory({ targetUrl, crawledEndpoints: [{ url: targetUrl, method: "GET" }] });
 
   const inventoryData = findings.find((f) => f.category === "API Inventory")?.inventory;
-  const discoveredEndpoints = inventoryData?.endpoints || [{ path: urlObj.pathname || "/", methods: ["GET"], source: "Direct Scan" }];
+  const discoveredEndpoints = inventoryData?.endpoints || [{ path: urlObj.pathname || "/", methods: ["GET"], source: "Direct Scan", httpStatus: 200 }];
 
   const ingested = [];
 
@@ -287,16 +287,48 @@ async function triggerDirectTargetScan(targetUrl) {
       const method = rawMethod.toUpperCase();
       const lowerPath = path.toLowerCase();
 
-      // Data Sensitivity
-      const sensitivityTags = ["Public"];
-      if (/user|profile|email|account|person|ssn|health|patient|dob|phone/.test(lowerPath)) sensitivityTags.push("PII");
-      if (/card|pay|billing|checkout|bank|wallet|invoice|stripe/.test(lowerPath)) sensitivityTags.push("Financial");
-      if (/auth|token|login|password|secret|jwt|session|key/.test(lowerPath)) sensitivityTags.push("AuthToken");
+      // Intelligent Auth Scheme Categorization
+      let authType = "Public / Unauthenticated";
+      if (ep.isProtected || [401, 403].includes(ep.httpStatus)) {
+        authType = "Bearer JWT";
+      } else if (/auth|login|token|me|user|profile|account|admin|dashboard|billing|payment|checkout|settings|keys/.test(lowerPath)) {
+        authType = "Bearer JWT";
+      } else if (/api-key|key|token|private/.test(lowerPath)) {
+        authType = "API Key";
+      }
 
-      // Status
+      // Hardened Data Sensitivity Tags
+      const sensitivityTags = ["Public"];
+      if (/user|profile|email|account|person|ssn|health|patient|dob|phone|mobile|address|customer|member/.test(lowerPath)) {
+        sensitivityTags.push("PII");
+      }
+      if (/card|pay|billing|checkout|bank|wallet|invoice|stripe|paypal|transaction|credit/.test(lowerPath)) {
+        sensitivityTags.push("Financial");
+      }
+      if (/auth|token|login|password|secret|jwt|session|key|credential|bearer|oauth/.test(lowerPath)) {
+        sensitivityTags.push("AuthToken");
+      }
+      if (/internal|admin|system|config|metric|log|telemetry|debug/.test(lowerPath)) {
+        sensitivityTags.push("Internal");
+      }
+
+      // Hardened Status Classification
       let status = "Active";
-      if (/internal|legacy|old|test|dev|staging|sandbox|beta|draft/.test(lowerPath)) status = "Shadow API";
-      else if (/v1\/.*(?:user|auth)/.test(lowerPath) && !/v2/.test(lowerPath)) status = "Zombie Endpoint";
+      if (/internal|legacy|old|test|dev|staging|sandbox|beta|draft|temp|experimental|private/.test(lowerPath)) {
+        status = "Shadow API";
+      } else if (/v1\/.*(?:user|auth|payment|order)/.test(lowerPath) && !/v2/.test(lowerPath)) {
+        status = "Zombie Endpoint";
+      }
+
+      // Risk Score Determination
+      let riskScore = "Low";
+      if (status === "Shadow API" || (sensitivityTags.includes("PII") && authType === "Public / Unauthenticated")) {
+        riskScore = "Critical";
+      } else if (authType !== "Public / Unauthenticated" || sensitivityTags.includes("Financial")) {
+        riskScore = "High";
+      } else if (sensitivityTags.includes("AuthToken")) {
+        riskScore = "Medium";
+      }
 
       const doc = await ApiEndpoint.findOneAndUpdate(
         { host, path, method },
@@ -305,10 +337,10 @@ async function triggerDirectTargetScan(targetUrl) {
             host,
             path,
             method,
-            protocol: "REST",
-            authType: /auth|login|token|admin|user/.test(lowerPath) ? "Bearer JWT" : "Public / Unauthenticated",
+            protocol: lowerPath.includes("graphql") ? "GraphQL" : "REST",
+            authType,
             status,
-            riskScore: "Low",
+            riskScore,
             dataSensitivity: Array.from(new Set(sensitivityTags)),
             lastScannedAt: new Date(),
           },
