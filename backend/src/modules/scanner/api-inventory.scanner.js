@@ -424,6 +424,46 @@ function extractEndpointsFromJsCode(jsContent, targetUrl) {
     }
   }
 
+  // WebSocket regex (Concept: Real-time API Detection)
+  const wsRegex = /(?:new\s+WebSocket|io|connect)\s*\(\s*(?:"|')((?:wss?:\/\/|\/ws\/|\/socket\.io\/)[^"']+)(?:"|')/gi;
+  while ((match = wsRegex.exec(jsContent)) !== null) {
+    const path = match[1];
+    const key = `WS:${path}`;
+    endpointsMap.set(key, { path, method: "WS", source: "WebSocket JS Extractor", resourceType: "WebSocket", isVerifiedApi: true, httpStatus: 101 });
+  }
+
+  // SSE (Server-Sent Events) regex
+  const sseRegex = /new\s+EventSource\s*\(\s*(?:"|')([^"']+)(?:"|')/gi;
+  while ((match = sseRegex.exec(jsContent)) !== null) {
+    const path = match[1];
+    const key = `GET:${path}`;
+    endpointsMap.set(key, { path, method: "GET", source: "SSE EventSource Extractor", resourceType: "SSE Stream", isVerifiedApi: true, httpStatus: 200 });
+  }
+
+  // WebHook & Callback regex
+  const webhookRegex = /(?:"|')(\/(?:webhook|webhooks|hooks|callback)\/[a-zA-Z0-9_\-\/]+)(?:"|')/gi;
+  while ((match = webhookRegex.exec(jsContent)) !== null) {
+    const path = match[1];
+    const key = `POST:${path}`;
+    endpointsMap.set(key, { path, method: "POST", source: "WebHook JS Extractor", resourceType: "WebHook", isVerifiedApi: true, httpStatus: 200 });
+  }
+
+  // gRPC-Web & Protobuf regex
+  const grpcRegex = /(?:"|')(\/(?:grpc|proto)\.[a-zA-Z0-9_\.\/]+)(?:"|')/gi;
+  while ((match = grpcRegex.exec(jsContent)) !== null) {
+    const path = match[1];
+    const key = `POST:${path}`;
+    endpointsMap.set(key, { path, method: "POST", source: "gRPC-Web JS Extractor", resourceType: "gRPC-Web", isVerifiedApi: true, httpStatus: 200 });
+  }
+
+  // SOAP / WSDL regex
+  const soapRegex = /(?:"|')(\/(?:soap|wsdl|services\/SOAP)\/[a-zA-Z0-9_\-\/]+)(?:"|')/gi;
+  while ((match = soapRegex.exec(jsContent)) !== null) {
+    const path = match[1];
+    const key = `POST:${path}`;
+    endpointsMap.set(key, { path, method: "POST", source: "SOAP Service Extractor", resourceType: "SOAP API", isVerifiedApi: true, httpStatus: 200 });
+  }
+
   return Array.from(endpointsMap.values());
 }
 
@@ -664,39 +704,64 @@ const scanApiInventory = async (input) => {
 
 /**
  * Resource Type & Verified API Classifier Engine.
- * Differentiates actual REST/GraphQL/WebSocket APIs from Web Pages, Sitemaps, and Static Assets.
+ * Differentiates actual REST, GraphQL, WebSocket, SSE, gRPC, WebHook, SOAP APIs from Web Pages, Sitemaps, and Static Assets.
  */
 function classifyResourceType(path, contentType = "", responseData = null, httpStatus = 200, source = "") {
   const lowerPath = (path || "").toLowerCase();
   const lowerCT = (contentType || "").toLowerCase();
   const dataStr = typeof responseData === "string" ? responseData : JSON.stringify(responseData || {});
 
-  // 1. Sitemap Check
-  if (lowerPath.endsWith(".xml") || lowerPath.includes("sitemap") || lowerCT.includes("xml") || dataStr.includes("<urlset")) {
+  // 1. Sitemap Check (XML files, sitemap.xml) -> NOT an API
+  if (lowerPath.endsWith(".xml") || lowerPath.includes("sitemap") || lowerCT.includes("xml") && dataStr.includes("<urlset")) {
     return { resourceType: "Sitemap", isVerifiedApi: false };
   }
 
-  // 2. Static Asset Check
-  if (/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot|mp4|webm)(\?.*)?$/i.test(lowerPath)) {
+  // 2. Static Asset Check -> NOT an API
+  if (/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot|mp4|webm|pdf|zip|gz)(\?.*)?$/i.test(lowerPath)) {
     return { resourceType: "Static Asset", isVerifiedApi: false };
   }
 
-  // 3. WebSocket Check
+  // 3. HTML Web Page Check (Webpages like /phone/compare/, /trends/beta/, /compressiontest/) -> NOT an API
+  if (lowerCT.includes("text/html") || dataStr.includes("<!DOCTYPE html") || dataStr.includes("<html") || dataStr.includes("<body")) {
+    return { resourceType: "Web Page", isVerifiedApi: false };
+  }
+
+  // 4. Server-Sent Events (SSE Stream)
+  if (lowerCT.includes("text/event-stream") || lowerPath.includes("/events") || lowerPath.includes("/stream") || source.includes("SSE")) {
+    return { resourceType: "SSE Stream", isVerifiedApi: true };
+  }
+
+  // 5. gRPC-Web Check
+  if (lowerCT.includes("application/grpc") || lowerCT.includes("proto") || source.includes("gRPC")) {
+    return { resourceType: "gRPC-Web", isVerifiedApi: true };
+  }
+
+  // 6. WebHook Endpoint Check
+  if (lowerPath.includes("webhook") || lowerPath.includes("callback") || lowerPath.includes("/hooks/") || source.includes("WebHook")) {
+    return { resourceType: "WebHook", isVerifiedApi: true };
+  }
+
+  // 7. SOAP / XML API Check
+  if (lowerCT.includes("text/xml") || lowerCT.includes("soap") || dataStr.includes("<soap:Envelope") || dataStr.includes("<Envelope")) {
+    return { resourceType: "SOAP API", isVerifiedApi: true };
+  }
+
+  // 8. WebSocket Check
   if (lowerPath.startsWith("ws://") || lowerPath.startsWith("wss://") || source.includes("WebSocket")) {
     return { resourceType: "WebSocket", isVerifiedApi: true };
   }
 
-  // 4. GraphQL Check
+  // 9. GraphQL Check
   if (lowerPath.includes("graphql") || source.includes("GraphQL") || (responseData && responseData.data?.__schema)) {
     return { resourceType: "GraphQL", isVerifiedApi: true };
   }
 
-  // 5. OpenAPI / Swagger Spec Check
+  // 10. OpenAPI / Swagger Spec Check
   if (source.includes("OpenAPI") || source.includes("Swagger") || (responseData && responseData.paths)) {
     return { resourceType: "REST API", isVerifiedApi: true };
   }
 
-  // 6. JSON Content-Type or JSON Object Body Check (Verified REST API)
+  // 11. JSON Content-Type or Verified JSON Object Body Check (Verified REST API)
   const isJsonCT = lowerCT.includes("json") || lowerCT.includes("vnd.api+json") || lowerCT.includes("problem+json");
   const isJsonObject = responseData && typeof responseData === "object" && !dataStr.includes("<!DOCTYPE html") && !dataStr.includes("<html");
 
@@ -704,21 +769,17 @@ function classifyResourceType(path, contentType = "", responseData = null, httpS
     return { resourceType: "REST API", isVerifiedApi: true };
   }
 
-  // 7. Protected 401/403 API Endpoint Check
-  if ([401, 403].includes(httpStatus) && (/api|v[0-9]|auth|user|admin|service|checkout|payment/.test(lowerPath))) {
+  // 12. Protected 401/403 API Endpoint Check
+  if ([401, 403].includes(httpStatus) && (/^\/(?:api|v[0-9]|auth|user|admin|service|checkout|payment)\//.test(lowerPath))) {
     return { resourceType: "REST API", isVerifiedApi: true };
   }
 
-  // 8. HTML Web Page Check
-  if (lowerCT.includes("html") || dataStr.includes("<!DOCTYPE html") || dataStr.includes("<html") || dataStr.includes("<body")) {
-    return { resourceType: "Web Page", isVerifiedApi: false };
-  }
-
-  // 9. API Path Regex Check
+  // 13. API Path Regex Check
   if (/^\/(?:api|v[0-9]|auth|user|users|admin|graphql|internal|service)\//.test(lowerPath)) {
     return { resourceType: "REST API", isVerifiedApi: true };
   }
 
+  // Fallback for paths without /api/ prefix and without JSON response
   return { resourceType: "Web Page", isVerifiedApi: false };
 }
 

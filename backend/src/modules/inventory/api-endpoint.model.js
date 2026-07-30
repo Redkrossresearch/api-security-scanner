@@ -156,7 +156,7 @@ const apiEndpointSchema = new mongoose.Schema(
     // Resource Classification & Verification Engine Fields
     resourceType: {
       type: String,
-      enum: ["REST API", "GraphQL", "WebSocket", "Web Page", "Sitemap", "Static Asset", "Unknown"],
+      enum: ["REST API", "GraphQL", "WebSocket", "SSE Stream", "gRPC-Web", "WebHook", "SOAP API", "Web Page", "Sitemap", "Static Asset", "Unknown"],
       default: "REST API",
       index: true,
     },

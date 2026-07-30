@@ -64,7 +64,7 @@ export default function ApiInventoryPage() {
         let filterParams = { search: searchTerm, host: selectedTargetHost, page: pagination.page, limit: pagination.limit };
         if (activeFilter === "Verified APIs Only") {
           filterParams.verifiedOnly = true;
-        } else if (activeFilter === "REST API" || activeFilter === "GraphQL" || activeFilter === "WebSocket" || activeFilter === "Web Page" || activeFilter === "Sitemap") {
+        } else if (["REST API", "GraphQL", "WebSocket", "SSE Stream", "gRPC-Web", "WebHook", "SOAP API", "Web Page", "Sitemap", "Static Asset"].includes(activeFilter)) {
           filterParams.resourceType = activeFilter;
         } else if (activeFilter === "Shadow APIs") {
           filterParams.status = "Shadow API";
@@ -182,6 +182,14 @@ export default function ApiInventoryPage() {
         return { bg: "rgba(168,85,247,0.15)", color: "#C084FC", label: "🟣 GraphQL", border: "rgba(168,85,247,0.3)" };
       case "WebSocket":
         return { bg: "rgba(59,130,246,0.15)", color: "#60A5FA", label: "🔵 WebSocket", border: "rgba(59,130,246,0.3)" };
+      case "SSE Stream":
+        return { bg: "rgba(236,72,153,0.15)", color: "#F472B6", label: "⚡ SSE Stream", border: "rgba(236,72,153,0.3)" };
+      case "gRPC-Web":
+        return { bg: "rgba(14,165,233,0.15)", color: "#38BDF8", label: "⚡ gRPC-Web", border: "rgba(14,165,233,0.3)" };
+      case "WebHook":
+        return { bg: "rgba(245,158,11,0.15)", color: "#FBBF24", label: "🪝 WebHook", border: "rgba(245,158,11,0.3)" };
+      case "SOAP API":
+        return { bg: "rgba(139,92,246,0.15)", color: "#A78BFA", label: "📜 SOAP API", border: "rgba(139,92,246,0.3)" };
       case "Web Page":
         return { bg: "rgba(148,163,184,0.12)", color: "#94A3B8", label: "⚪ Web Page", border: "rgba(148,163,184,0.2)" };
       case "Sitemap":
@@ -486,7 +494,7 @@ export default function ApiInventoryPage() {
             
             {/* Filter Pills */}
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {["ALL", "Verified APIs Only", "REST API", "GraphQL", "WebSocket", "Web Page", "Sitemap", "Shadow APIs", "High Risk"].map((pill) => {
+              {["ALL", "Verified APIs Only", "REST API", "GraphQL", "WebSocket", "SSE Stream", "gRPC-Web", "WebHook", "SOAP API", "Web Page", "Sitemap", "Shadow APIs", "High Risk"].map((pill) => {
                 const active = activeFilter === pill;
                 return (
                   <button
