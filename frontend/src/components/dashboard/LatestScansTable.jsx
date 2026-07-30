@@ -1,6 +1,7 @@
 import { Globe } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
+import WebsiteFavicon from "../inventory/WebsiteFavicon";
 
 import "./latestScans.css";
 
@@ -213,20 +214,7 @@ export default function LatestScansTable({
                   minWidth: 0,
                 }}
               >
-                <div
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    background: "rgba(255,255,255,.05)",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Globe size={18} />
-                </div>
+                <WebsiteFavicon host={scan.targetUrl} />
 
                 <div
                   style={{

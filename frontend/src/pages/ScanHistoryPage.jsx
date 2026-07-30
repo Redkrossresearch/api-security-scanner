@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import ScanHistoryDrawer from "../components/scans/ScanHistoryDrawer";
 import ScanComparisonModal from "../components/scans/ScanComparisonModal";
+import WebsiteFavicon from "../components/inventory/WebsiteFavicon";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 /* ─── Exact Dashboard Theme Tokens ──────────────────────────────────────── */
@@ -916,8 +917,8 @@ export default function ScanHistoryPage() {
 
                     {/* Target */}
                     <td style={{padding:"14px 20px",maxWidth:"190px"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:"7px",overflow:"hidden"}}>
-                        <Globe size={11} color="#334155" style={{flexShrink:0}}/>
+                      <div style={{display:"flex",alignItems:"center",gap:"10px",overflow:"hidden"}}>
+                        <WebsiteFavicon host={target} />
                         <span style={{color:"#CBD5E1",fontWeight:"500",overflow:"hidden",
                           textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:"12px"}}>
                           {target.replace(/^https?:\/\//,"")}
