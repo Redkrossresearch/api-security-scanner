@@ -25,45 +25,16 @@ const HIGH_YIELD_API_PATHS = [
   "/api/v1/auth/register",
   "/api/v1/auth/me",
   "/api/v1/auth/refresh",
-  "/api/v1/auth/forgot-password",
-  "/api/v1/auth/verify-otp",
   "/api/v1/users",
   "/api/v1/user/profile",
-  "/api/v1/users/me",
-  "/api/v1/roles",
-  "/api/v1/account",
   "/api/v1/admin",
-  "/api/v1/admin/users",
-  "/api/v1/admin/settings",
   "/api/v1/dashboard",
   "/api/v1/products",
   "/api/v1/orders",
-  "/api/v1/cart",
   "/api/v1/payments",
-  "/api/v1/billing",
-  "/api/v1/checkout",
-  "/api/v1/upload",
-  "/api/v1/export",
-  "/api/v1/import",
-  "/api/v1/reports",
-  "/api/v1/search",
-  "/api/v1/comments",
-  "/api/v1/notifications",
-  "/api/v1/config",
   "/api/v1/health",
-  "/api/v1/metrics",
-  "/api/v1/status",
   "/graphql",
-  "/graphiql",
   "/api/graphql",
-  "/internal/api",
-  "/internal/v1",
-  "/dev/api",
-  "/test/api",
-  "/staging/api",
-  "/v1/legacy",
-  "/api/v1/keys",
-  "/api/v1/tokens",
 ];
 
 const AUTH_KEYWORDS = [
@@ -534,9 +505,15 @@ async function probeCommonApiEndpoints(targetUrl) {
         });
         const responseTimeMs = Date.now() - startTime;
 
-        if ([200, 201, 204, 301, 302, 400, 401, 403, 405, 422].includes(res.status)) {
+        if ([200, 201, 204, 400, 401, 403, 405, 422].includes(res.status)) {
           const isProtected = [401, 403].includes(res.status);
-          const contentType = res.headers["content-type"] || "application/json";
+          const contentType = (res.headers["content-type"] || "").toLowerCase();
+
+          // Reject standard HTML web page responses from active fuzzer
+          const dataStr = typeof res.data === "string" ? res.data : JSON.stringify(res.data || {});
+          if (contentType.includes("html") || dataStr.includes("<!DOCTYPE html") || dataStr.includes("<html")) {
+            return null;
+          }
 
           // Fingerprint headers & tech
           const fp = fingerprintTechnologyAndHeaders(res.headers, typeof res.data === "string" ? res.data : JSON.stringify(res.data || {}));

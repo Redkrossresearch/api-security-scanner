@@ -40,7 +40,7 @@ export default function ApiInventoryPage() {
 
   // Filter States
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeFilter, setActiveFilter] = useState("ALL");
+  const [activeFilter, setActiveFilter] = useState("Verified APIs Only");
   const [selectedEndpoint, setSelectedEndpoint] = useState(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
