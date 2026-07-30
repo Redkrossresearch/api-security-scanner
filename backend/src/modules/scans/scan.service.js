@@ -7,6 +7,7 @@ const { isRedisAvailable } = require("../../queue/redis.client");
 const Vulnerability = require("../vulnerabilities/vulnerability.model");
 const { createReport } = require("../reports/report.service");
 const scanEmitter = require("../../sockets/emitters/scan.emitter");
+const { ingestEndpointsFromScan } = require("../inventory/inventory.service");
 const { scanSecurityHeaders } = require("../scanner/security-header.scanner");
 const { scanSSL } = require("../scanner/ssl.scanner");
 const { scanCORS } = require("../scanner/cors.scanner");
@@ -624,6 +625,11 @@ const runInProcess = (scan, targetUrl, scanIdString) => {
         });
       }
       await dbScan.save();
+
+      // Auto-ingest discovered endpoints into API Inventory database
+      ingestEndpointsFromScan(dbScan).catch((err) =>
+        console.error("[scan.service] API Inventory auto-ingestion failed:", err.message)
+      );
 
       // Trigger workspace integrations (Slack, Jira, Discord)
       dispatchScanNotification(dbScan).catch((err) =>

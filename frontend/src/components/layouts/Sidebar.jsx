@@ -43,7 +43,6 @@ const menuItems = [
     name: "API Inventory",
     path: "/inventory",
     icon: <Globe size={17} />,
-    comingSoon: true,
   },
   {
     name: "Reports",

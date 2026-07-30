@@ -17,6 +17,7 @@ import QueueMonitorPage from "./pages/QueueMonitorPage";
 import WorkflowBuilderPage from "./pages/WorkflowBuilderPage";
 import WorkspacePage from "./pages/WorkspacePage";
 import DownloadsPage from "./pages/DownloadsPage";
+import ApiInventoryPage from "./pages/ApiInventoryPage";
 
 function App() {
   return (
@@ -60,6 +61,7 @@ function App() {
           <Route path="/scans" element={<ScanExecutionPage />} />
           <Route path="/history" element={<ScanHistoryPage />} />
           <Route path="/vulnerabilities" element={<VulnerabilitiesPage />} />
+          <Route path="/inventory" element={<ApiInventoryPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/copilot" element={<CopilotPage />} />

@@ -22,6 +22,7 @@ const autonomousRoutes = require("./modules/llm/autonomous/autonomous.routes");
 const workflowRoutes = require("./modules/workflows/workflow.routes");
 const mcpRoutes = require("./modules/mcp/mcp.routes");
 const ragRoutes = require("./modules/llm/rag/rag.routes");
+const inventoryRoutes = require("./modules/inventory/inventory.routes");
 const requestLogger = require("./middleware/requestLogger");
 
 const app = express();
@@ -109,6 +110,7 @@ app.use("/api/autonomous", autonomousRoutes);
 app.use("/api/workflows", workflowRoutes);
 app.use("/api/mcp", mcpRoutes);
 app.use("/api/rag", ragRoutes);
+app.use("/api/inventory", inventoryRoutes);
 
 // 🟡 Recommended 2 — 404 Handler (Express 5 compatible - no "*" wildcard)
 app.use((req, res) => {
