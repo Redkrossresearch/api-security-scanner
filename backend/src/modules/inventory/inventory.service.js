@@ -2,6 +2,22 @@ const ApiEndpoint = require("./api-endpoint.model");
 const Vulnerability = require("../vulnerabilities/vulnerability.model");
 
 /**
+ * Smart HTTP Method Inferrer Engine.
+ * Infers accurate REST methods (POST, PUT, DELETE, PATCH, GET) based on API endpoint semantics and code context.
+ */
+function inferHttpMethod(path = "", source = "", initialMethod = "GET") {
+  if (initialMethod && initialMethod !== "GET" && initialMethod !== "ALL") {
+    return initialMethod.toUpperCase();
+  }
+  const lower = (path || "").toLowerCase();
+  if (/(?:delete|remove|destroy|purge|cancel|clear)/i.test(lower)) return "DELETE";
+  if (/(?:update|edit|modify|patch|change|reset|sync|set_)/i.test(lower)) return lower.includes("patch") ? "PATCH" : "PUT";
+  if (/(?:login|signup|register|auth|token|logout|submit|upload|create|post|add|perform_|pay|checkout|charge|connect|process|send|trigger|verify|refresh)/i.test(lower)) return "POST";
+  if (lower.startsWith("ws://") || lower.startsWith("wss://")) return "WS";
+  return initialMethod || "GET";
+}
+
+/**
  * Automatically ingests and upserts endpoints from a completed Scan object into ApiEndpoint inventory.
  */
 async function ingestEndpointsFromScan(scan) {
@@ -40,7 +56,7 @@ async function ingestEndpointsFromScan(scan) {
       }
 
       const path = epObj.pathname || "/";
-      const method = (ep.method || "GET").toUpperCase();
+      const method = inferHttpMethod(path, ep.source || "", (ep.method || "GET").toUpperCase());
 
       // Find findings matching this endpoint path
       const matchedFindings = findings.filter((f) => {
@@ -373,13 +389,16 @@ async function triggerDirectTargetScan(targetUrl) {
         riskScore = "Medium";
       }
 
+      // HTTP Method Inference
+      const effectiveMethod = inferHttpMethod(path, ep.source, ep.method || "GET");
+
       const doc = await ApiEndpoint.findOneAndUpdate(
-        { host, path, method },
+        { host, path, method: effectiveMethod },
         {
           $set: {
             host,
             path,
-            method,
+            method: effectiveMethod,
             protocol: lowerPath.includes("graphql") || ep.isGraphQL ? "GraphQL" : "REST",
             authType,
             status,

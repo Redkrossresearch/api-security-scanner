@@ -376,6 +376,44 @@ async function fetchAndExtractJavaScript(targetUrl) {
 }
 
 /**
+ * Smart HTTP Method Inferrer Engine.
+ * Infers accurate REST methods (POST, PUT, DELETE, PATCH, GET) based on API endpoint semantics and code context.
+ */
+function inferHttpMethod(path = "", source = "", methodOverride = "") {
+  if (methodOverride && methodOverride !== "GET" && methodOverride !== "ALL") {
+    return methodOverride.toUpperCase();
+  }
+
+  const lowerPath = (path || "").toLowerCase();
+
+  // 1. DELETE operations
+  if (/(?:delete|remove|destroy|purge|cancel|clear)/i.test(lowerPath)) {
+    return "DELETE";
+  }
+
+  // 2. PUT / PATCH operations
+  if (/(?:update|edit|modify|patch|change|reset|sync|set_)/i.test(lowerPath)) {
+    return lowerPath.includes("patch") ? "PATCH" : "PUT";
+  }
+
+  // 3. POST operations (Authentication, Mutations, Actions, Submissions)
+  if (
+    /(?:login|signup|register|auth|token|logout|submit|upload|create|post|add|perform_|pay|checkout|charge|connect|process|send|trigger|verify|refresh)/i.test(
+      lowerPath
+    )
+  ) {
+    return "POST";
+  }
+
+  // 4. WebSocket
+  if (lowerPath.startsWith("ws://") || lowerPath.startsWith("wss://") || source.includes("WebSocket")) {
+    return "WS";
+  }
+
+  return "GET";
+}
+
+/**
  * Concept 1, 8: Analyzes JS code strings using regex to extract API endpoints.
  */
 function extractEndpointsFromJsCode(jsContent, targetUrl) {
@@ -395,9 +433,10 @@ function extractEndpointsFromJsCode(jsContent, targetUrl) {
       !path.endsWith(".svg") &&
       !path.endsWith(".jpg")
     ) {
-      const key = `GET:${path}`;
+      const inferredMethod = inferHttpMethod(path, "JS Bundle Extractor");
+      const key = `${inferredMethod}:${path}`;
       if (!endpointsMap.has(key)) {
-        endpointsMap.set(key, { path, method: "GET", source: "JS Bundle Extractor", httpStatus: 200 });
+        endpointsMap.set(key, { path, method: inferredMethod, source: "JS Bundle Extractor", httpStatus: 200 });
       }
     }
   }
@@ -515,10 +554,12 @@ async function probeCommonApiEndpoints(targetUrl) {
             }
           } catch (e) {}
 
+          const primaryMethod = (allowedMethods.find((m) => m !== "OPTIONS" && m !== "HEAD") || inferHttpMethod(path));
+
           return {
             path,
             methods: allowedMethods,
-            method: allowedMethods[0] || "GET",
+            method: primaryMethod,
             source: isProtected ? "Protected API Probe (Auth Required)" : "Active API Fuzzer",
             httpStatus: res.status,
             isProtected,
