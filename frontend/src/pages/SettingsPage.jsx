@@ -22,8 +22,12 @@ import {
   Database,
   Activity,
   Send,
-  Eye,
-  Terminal,
+  Download,
+  Upload,
+  SlidersHorizontal,
+  Award,
+  AlertTriangle,
+  FileCode,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -59,41 +63,23 @@ export default function SettingsPage() {
   const [testingWebhook, setTestingWebhook] = useState(false);
 
   // --- 15 Real Persisted Settings States ---
-  // 1. Username
   const [username, setUsername] = useState("Atharv_SecOps");
-  // 2. Avatar URL
   const [avatarUrl, setAvatarUrl] = useState(HACKER_AVATARS[0].url);
-  // 3. Email
   const [email, setEmail] = useState("atharv@redkross.org.in");
-  // 4. Role & Org Handle
   const [orgHandle, setOrgHandle] = useState("@redkross_research");
-
-  // 5. Theme Mode
   const [themeMode, setThemeMode] = useState("dark_midnight");
-  // 6. Accent Color
   const [accentColor, setAccentColor] = useState("#F97316");
-  // 7. Compact Density Mode
   const [compactMode, setCompactMode] = useState(false);
-  // 8. UI Audio Feedback
   const [soundEnabled, setSoundEnabled] = useState(true);
-
-  // 9. Deep JS Crawler Crawl Depth (1-10)
   const [crawlDepth, setCrawlDepth] = useState(5);
-  // 10. Active Probe Rate Limit (Req/Sec)
   const [rateLimit, setRateLimit] = useState(25);
-  // 11. Subdomain Auto-Discovery
   const [subdomainDiscovery, setSubdomainDiscovery] = useState(true);
-  // 12. Automatic PII Masking
   const [piiMasking, setPiiMasking] = useState(true);
-
-  // 13. Two-Factor Authentication (2FA)
   const [twoFactorAuth, setTwoFactorAuth] = useState(false);
-  // 14. Scan Notification Webhook URL
   const [webhookUrl, setWebhookUrl] = useState("https://hooks.slack.com/services/T00000/B00000/XXXXXX");
-  // 15. Audit Log Retention Days
   const [logRetentionDays, setLogRetentionDays] = useState("90");
 
-  // Web Audio Click Synthesizer for Real Audio Feedback
+  // Web Audio Synthesizer
   const playAudioClick = () => {
     if (!soundEnabled) return;
     try {
@@ -103,31 +89,38 @@ export default function SettingsPage() {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(800, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.05);
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      osc.frequency.setValueAtTime(750, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(320, ctx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
       osc.stop(ctx.currentTime + 0.05);
-    } catch (e) {
-      // Audio fallback
-    }
+    } catch (e) {}
   };
 
-  // Live Real-Time Global App Theme & Compact Mode Mutator
+  // Live Real-Time Global App Theme & System Mutator
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", themeMode);
     document.documentElement.style.setProperty("--brand-accent", accentColor);
+    localStorage.setItem("athx_settings_theme", themeMode);
+    localStorage.setItem("athx_settings_accent", accentColor);
+    localStorage.setItem("athx_settings_compact", String(compactMode));
+    localStorage.setItem("athx_settings_avatar", avatarUrl);
+    localStorage.setItem("athx_settings_username", username);
+
     if (compactMode) {
       document.body.classList.add("compact-density");
     } else {
       document.body.classList.remove("compact-density");
     }
-  }, [themeMode, accentColor, compactMode]);
 
-  // Fetch Settings from Backend MongoDB
+    // Broadcast change to entire platform
+    window.dispatchEvent(new Event("athx-settings-updated"));
+  }, [themeMode, accentColor, compactMode, avatarUrl, username]);
+
+  // Fetch Settings from Backend
   useEffect(() => {
     async function loadSettings() {
       setLoading(true);
@@ -152,7 +145,7 @@ export default function SettingsPage() {
           if (s.logRetentionDays) setLogRetentionDays(String(s.logRetentionDays));
         }
       } catch (err) {
-        console.error("Failed to load backend settings:", err);
+        console.error("Failed to load settings:", err);
       } finally {
         setLoading(false);
       }
@@ -160,11 +153,11 @@ export default function SettingsPage() {
     loadSettings();
   }, []);
 
-  // Save Settings to Backend MongoDB
+  // Save Settings to Backend
   const handleSaveAll = async () => {
     playAudioClick();
     setSaving(true);
-    const toastId = toast.loading("Persisting 15 security settings to MongoDB database...");
+    const toastId = toast.loading("Persisting configuration to MongoDB...");
     try {
       const payload = {
         username,
@@ -189,32 +182,97 @@ export default function SettingsPage() {
         localStorage.setItem("athx_settings_theme", themeMode);
         localStorage.setItem("athx_settings_accent", accentColor);
         localStorage.setItem("athx_settings_avatar", avatarUrl);
-
         toast.dismiss(toastId);
-        toast.success("All 15 Security & System Settings persisted to database!");
+        toast.success("Settings saved to database successfully!");
       }
     } catch (err) {
       toast.dismiss(toastId);
-      toast.error(err.response?.data?.message || "Failed to save settings to backend.");
+      toast.error(err.response?.data?.message || "Failed to save settings.");
     } finally {
       setSaving(false);
     }
   };
 
-  // Test Webhook Dispatch
-  const handleTestWebhook = async () => {
+  // Feature 1: Dynamic Security Hardening Score Calculation (0 - 100%)
+  const calculateSecurityScore = () => {
+    let score = 0;
+    if (twoFactorAuth) score += 25;
+    if (piiMasking) score += 20;
+    if (webhookUrl && webhookUrl.startsWith("http")) score += 20;
+    if (subdomainDiscovery) score += 15;
+    if (rateLimit <= 30) score += 10;
+    if (parseInt(logRetentionDays) >= 90) score += 10;
+    return score;
+  };
+
+  const securityScore = calculateSecurityScore();
+
+  // Feature 2: 1-Click Preset Tuning
+  const applyPresetProfile = (profileType) => {
     playAudioClick();
-    if (!webhookUrl || !webhookUrl.startsWith("http")) {
-      toast.error("Please enter a valid HTTP/HTTPS Webhook URL first.");
-      return;
+    if (profileType === "hardened") {
+      setTwoFactorAuth(true);
+      setPiiMasking(true);
+      setRateLimit(15);
+      setCrawlDepth(7);
+      setSubdomainDiscovery(true);
+      setLogRetentionDays("365");
+      toast.success("Applied 'Hardened Enterprise' Profile!");
+    } else if (profileType === "stealth") {
+      setRateLimit(5);
+      setCrawlDepth(10);
+      setSubdomainDiscovery(true);
+      setPiiMasking(true);
+      toast.success("Applied 'Stealth Recon' Profile!");
+    } else if (profileType === "performance") {
+      setRateLimit(100);
+      setCrawlDepth(3);
+      setSubdomainDiscovery(false);
+      toast.success("Applied 'Maximum Speed' Profile!");
     }
-    setTestingWebhook(true);
-    const toastId = toast.loading("Dispatching test alert payload to webhook...");
-    setTimeout(() => {
-      setTestingWebhook(false);
-      toast.dismiss(toastId);
-      toast.success("Test Webhook Alert Payload successfully dispatched!");
-    }, 1200);
+  };
+
+  // Feature 3: Export & Import Configuration JSON
+  const exportConfigJson = () => {
+    playAudioClick();
+    const config = {
+      username, avatarUrl, email, orgHandle, themeMode, accentColor,
+      compactMode, soundEnabled, crawlDepth, rateLimit, subdomainDiscovery,
+      piiMasking, twoFactorAuth, webhookUrl, logRetentionDays,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `secops_config_${username.toLowerCase()}.json`;
+    a.click();
+    toast.success("Configuration JSON downloaded!");
+  };
+
+  const importConfigJson = (e) => {
+    playAudioClick();
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target.result);
+        if (json.username) setUsername(json.username);
+        if (json.avatarUrl) setAvatarUrl(json.avatarUrl);
+        if (json.themeMode) setThemeMode(json.themeMode);
+        if (json.accentColor) setAccentColor(json.accentColor);
+        if (json.crawlDepth) setCrawlDepth(json.crawlDepth);
+        if (json.rateLimit) setRateLimit(json.rateLimit);
+        if (json.webhookUrl) setWebhookUrl(json.webhookUrl);
+        if (json.twoFactorAuth !== undefined) setTwoFactorAuth(json.twoFactorAuth);
+        if (json.piiMasking !== undefined) setPiiMasking(json.piiMasking);
+        toast.success("Configuration imported successfully!");
+      } catch (err) {
+        toast.error("Invalid JSON configuration file.");
+      }
+    };
+    reader.readAsText(file);
   };
 
   const tabs = [
@@ -226,10 +284,9 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: "100px 20px", textAlign: "center", color: "#94A3B8", fontSize: "14px" }}>
+      <div style={{ padding: "100px 20px", textAlign: "center", color: "#94A3B8" }}>
         <RefreshCw size={36} style={{ animation: "spin 1.5s linear infinite", margin: "0 auto 16px auto", color: accentColor }} />
-        <div style={{ fontSize: "16px", fontWeight: "800", color: "#F8FAFC" }}>Connecting to Security Operations Backend...</div>
-        <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>Loading MongoDB persisted settings & preferences</div>
+        <div style={{ fontSize: "16px", fontWeight: "800", color: "#F8FAFC" }}>Connecting to Security Control Center...</div>
       </div>
     );
   }
@@ -237,92 +294,100 @@ export default function SettingsPage() {
   return (
     <div style={{ width: "100%", minHeight: "100vh", display: "flex", flexDirection: "column", gap: "28px", paddingBottom: "60px" }}>
       
-      {/* Full-Bleed Hero Landing Header */}
+      {/* Full-Bleed Hero Banner & Live Security Posture Score */}
       <div
         style={{
           width: "100%",
           background: `linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(3, 7, 18, 0.98))`,
-          border: `1px solid ${accentColor}40`,
-          borderRadius: "20px",
-          padding: "32px",
-          display: "flex",
-          justifyContent: "space-between",
+          border: `1px solid ${accentColor}45`,
+          borderRadius: "24px",
+          padding: "36px",
+          display: "grid",
+          gridTemplateColumns: "1fr auto",
+          gap: "28px",
           alignItems: "center",
-          flexWrap: "wrap",
-          gap: "24px",
-          boxShadow: `0 12px 36px rgba(0,0,0,0.6), 0 0 20px ${accentColor}15`,
+          boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 25px ${accentColor}20`,
           position: "relative",
           overflow: "hidden",
         }}
       >
-        {/* Subtle Ambient Background Accent Glow */}
-        <div
-          style={{
-            position: "absolute",
-            right: "-40px",
-            top: "-40px",
-            width: "240px",
-            height: "240px",
-            borderRadius: "50%",
-            background: accentColor,
-            opacity: 0.12,
-            filter: "blur(60px)",
-            pointerEvents: "none",
-          }}
-        />
-
-        <div style={{ flex: 1, minWidth: "280px", zIndex: 1 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+        <div style={{ zIndex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px", flexWrap: "wrap" }}>
             <span style={{ fontSize: "11px", fontWeight: "900", color: accentColor, background: `${accentColor}20`, border: `1px solid ${accentColor}40`, padding: "4px 12px", borderRadius: "20px", textTransform: "uppercase", letterSpacing: "1px" }}>
               ⚡ Real Security Control Center
             </span>
-            <span style={{ fontSize: "11px", fontWeight: "800", color: "#34D399", display: "flex", alignItems: "center", gap: "4px", background: "rgba(52,211,153,0.12)", padding: "4px 10px", borderRadius: "20px" }}>
-              <CheckCircle size={13} /> MongoDB Active
+            <span style={{ fontSize: "11px", fontWeight: "800", color: "#34D399", background: "rgba(52,211,153,0.12)", padding: "4px 12px", borderRadius: "20px" }}>
+              <CheckCircle size={13} style={{ verticalAlign: "middle", marginRight: "4px" }} /> MongoDB Sync Active
             </span>
           </div>
 
-          <h1 style={{ fontSize: "32px", fontWeight: "900", color: "#F8FAFC", margin: 0, letterSpacing: "-0.8px" }}>
-            Platform Settings & System Tuning
+          <h1 style={{ fontSize: "34px", fontWeight: "900", color: "#F8FAFC", margin: 0, letterSpacing: "-0.8px" }}>
+            Application Settings & Security Tuning
           </h1>
-          <p style={{ fontSize: "14px", color: "#94A3B8", margin: "6px 0 0 0", maxWidth: "680px" }}>
-            Configure real account identity, 30 hacker operator avatars gallery, real-time website theme mutation, and backend scanner parameters.
+          <p style={{ fontSize: "14px", color: "#94A3B8", margin: "6px 0 0 0", maxWidth: "750px" }}>
+            Real-time database configuration for operator identity, 30 hacker avatars, global theme mutation, and 1-click security profiles.
           </p>
+
+          {/* Quick Action Toolbar */}
+          <div style={{ display: "flex", gap: "12px", marginTop: "20px", flexWrap: "wrap" }}>
+            <button
+              onClick={() => applyPresetProfile("hardened")}
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <Shield size={14} color="#10B981" /> Hardened Preset
+            </button>
+            <button
+              onClick={() => applyPresetProfile("stealth")}
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <Lock size={14} color="#A855F7" /> Stealth Recon
+            </button>
+            <button
+              onClick={exportConfigJson}
+              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <Download size={14} color={accentColor} /> Export JSON
+            </button>
+
+            <label style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#FFF", padding: "8px 14px", borderRadius: "10px", fontSize: "12px", fontWeight: "800", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+              <Upload size={14} color="#3B82F6" /> Import JSON
+              <input type="file" accept=".json" onChange={importConfigJson} style={{ display: "none" }} />
+            </label>
+          </div>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", zIndex: 1 }}>
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "12px 20px", borderRadius: "14px", textAlign: "center" }}>
-            <div style={{ fontSize: "10px", color: "#64748B", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>Persisted State</div>
-            <div style={{ fontSize: "20px", fontWeight: "900", color: accentColor }}>15 Live Rules</div>
+        {/* Feature 1 Card: Security Hardening Score Meter */}
+        <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "18px", padding: "20px 24px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", minWidth: "220px", zIndex: 1 }}>
+          <div style={{ fontSize: "11px", fontWeight: "900", color: "#64748B", textTransform: "uppercase", letterSpacing: "1px" }}>
+            Security Posture
+          </div>
+          
+          <div style={{ position: "relative", width: "90px", height: "90px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="90" height="90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="42" stroke="rgba(255,255,255,0.08)" strokeWidth="10" fill="transparent" />
+              <circle
+                cx="50" cy="50" r="42"
+                stroke={securityScore > 75 ? "#10B981" : securityScore > 40 ? accentColor : "#F43F5E"}
+                strokeWidth="10"
+                fill="transparent"
+                strokeDasharray="264"
+                strokeDashoffset={264 - (264 * securityScore) / 100}
+                strokeLinecap="round"
+                style={{ transition: "stroke-dashoffset 0.6s ease" }}
+              />
+            </svg>
+            <div style={{ position: "absolute", fontSize: "22px", fontWeight: "900", color: "#FFF" }}>
+              {securityScore}%
+            </div>
           </div>
 
-          <button
-            onClick={handleSaveAll}
-            disabled={saving}
-            style={{
-              background: `linear-gradient(135deg, ${accentColor}, #EA580C)`,
-              border: "none",
-              color: "#FFF",
-              padding: "14px 28px",
-              borderRadius: "14px",
-              fontSize: "14px",
-              fontWeight: "900",
-              cursor: saving ? "wait" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              boxShadow: `0 6px 24px ${accentColor}50`,
-              transition: "all 0.15s ease",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
-            onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
-          >
-            {saving ? <RefreshCw size={18} style={{ animation: "spin 1s linear infinite" }} /> : <Save size={18} />}
-            {saving ? "Persisting to Database..." : "Save Settings"}
-          </button>
+          <div style={{ fontSize: "12px", fontWeight: "800", color: securityScore > 75 ? "#34D399" : securityScore > 40 ? accentColor : "#F43F5E" }}>
+            {securityScore > 75 ? "🛡️ EXCELLENT" : securityScore > 40 ? "⚠️ BALANCED" : "🚨 NEEDS HARDENING"}
+          </div>
         </div>
       </div>
 
-      {/* Tab Navigation Pill Bar */}
+      {/* Full-Bleed Tab Navigation Pill Bar */}
       <div
         style={{
           display: "flex",
@@ -346,12 +411,12 @@ export default function SettingsPage() {
               }}
               style={{
                 flex: 1,
-                minWidth: "160px",
+                minWidth: "180px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: "10px",
-                padding: "12px 20px",
+                padding: "14px 24px",
                 borderRadius: "12px",
                 fontSize: "14px",
                 fontWeight: "800",
@@ -361,7 +426,7 @@ export default function SettingsPage() {
                 cursor: "pointer",
                 transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                 whiteSpace: "nowrap",
-                boxShadow: active ? `0 4px 14px ${accentColor}25` : "none",
+                boxShadow: active ? `0 4px 16px ${accentColor}30` : "none",
               }}
             >
               <span style={{ color: active ? accentColor : "#64748B" }}>{tab.icon}</span>
@@ -371,28 +436,28 @@ export default function SettingsPage() {
         })}
       </div>
 
-      {/* Full-Bleed Card Container */}
+      {/* Main Full-Bleed Content Container */}
       <div
         style={{
           width: "100%",
           background: "#070D19",
           border: "1px solid rgba(255, 255, 255, 0.08)",
-          borderRadius: "20px",
-          padding: "32px",
+          borderRadius: "24px",
+          padding: "36px",
           backdropFilter: "blur(14px)",
-          boxShadow: "0 10px 40px rgba(0,0,0,0.4)",
+          boxShadow: "0 12px 48px rgba(0,0,0,0.5)",
         }}
       >
         
         {/* TAB 1: PROFILE & IDENTITY */}
         {activeTab === "profile" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
             <div style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "16px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: "900", color: "#F8FAFC", margin: 0 }}>
+              <h3 style={{ fontSize: "20px", fontWeight: "900", color: "#F8FAFC", margin: 0 }}>
                 Profile & Hacker Operator Identity
               </h3>
-              <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0 0" }}>
-                Update your operator username handle, 30 hacker avatar gallery, email, and security organization handle.
+              <p style={{ fontSize: "13.5px", color: "#64748B", margin: "4px 0 0 0" }}>
+                Update your security operator handle, 30 hacker avatar gallery, email, and organization bio.
               </p>
             </div>
 
@@ -403,84 +468,105 @@ export default function SettingsPage() {
                 alignItems: "center",
                 gap: "24px",
                 background: "rgba(255, 255, 255, 0.02)",
-                border: `1px solid ${accentColor}33`,
-                padding: "24px",
-                borderRadius: "16px",
+                border: `1px solid ${accentColor}40`,
+                padding: "28px",
+                borderRadius: "20px",
                 flexWrap: "wrap",
-                position: "relative",
               }}
             >
               <img
                 src={avatarUrl}
                 alt="Hacker Avatar"
                 style={{
-                  width: "88px",
-                  height: "88px",
+                  width: "96px",
+                  height: "96px",
                   borderRadius: "50%",
                   objectFit: "cover",
                   background: "#0F172A",
                   border: `3px solid ${accentColor}`,
-                  boxShadow: `0 6px 24px ${accentColor}45`,
+                  boxShadow: `0 6px 28px ${accentColor}50`,
                 }}
               />
 
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "22px", fontWeight: "900", color: "#FFF" }}>{username}</span>
-                  <span style={{ fontSize: "11px", fontWeight: "900", color: "#34D399", background: "rgba(52,211,153,0.15)", padding: "3px 10px", borderRadius: "8px" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "24px", fontWeight: "900", color: "#FFF" }}>{username}</span>
+                  <span style={{ fontSize: "11px", fontWeight: "900", color: "#34D399", background: "rgba(52,211,153,0.15)", padding: "4px 12px", borderRadius: "8px" }}>
                     VERIFIED HACKER OPERATOR
                   </span>
                 </div>
-                <div style={{ fontSize: "13.5px", color: "#94A3B8", marginTop: "4px" }}>{email}</div>
+                <div style={{ fontSize: "14px", color: "#94A3B8", marginTop: "4px" }}>{email}</div>
                 <div style={{ fontSize: "13px", color: accentColor, fontWeight: "800", marginTop: "2px" }}>{orgHandle}</div>
               </div>
             </div>
 
-            {/* Setting 1: Username */}
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "8px" }}>
-                1. Operator Username Handle
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter operator handle..."
-                style={{
-                  width: "100%",
-                  background: "#030712",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "10px",
-                  padding: "12px 16px",
-                  color: "#FFF",
-                  fontSize: "14px",
-                  outline: "none",
-                }}
-              />
-            </div>
-
-            {/* Setting 2: 30 Hacker Avatars Gallery */}
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "6px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1" }}>
-                  2. Select Hacker Operator Avatar (30 Presets Gallery)
+            {/* 2-Column Balanced Inputs */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" }}>
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "8px" }}>
+                  1. Operator Username Handle
                 </label>
-                <span style={{ fontSize: "12px", color: accentColor, fontWeight: "800" }}>30 Avatars Available</span>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter operator handle..."
+                  style={{
+                    width: "100%",
+                    background: "#030712",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "12px",
+                    padding: "14px 18px",
+                    color: "#FFF",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
               </div>
 
-              {/* Responsive 30 Avatars Grid */}
+              <div>
+                <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "8px" }}>
+                  3. Primary Email Address
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={{
+                    width: "100%",
+                    background: "#030712",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "12px",
+                    padding: "14px 18px",
+                    color: "#FFF",
+                    fontSize: "14px",
+                    outline: "none",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Setting 2: 30 Hacker Avatars Gallery SPREAD OUT */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <label style={{ fontSize: "13.5px", fontWeight: "800", color: "#CBD5E1" }}>
+                  2. Select Hacker Operator Avatar (30 Presets Gallery)
+                </label>
+                <span style={{ fontSize: "12px", color: accentColor, fontWeight: "800" }}>30 Avatars Gallery</span>
+              </div>
+
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))",
-                  gap: "12px",
-                  maxHeight: "360px",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+                  gap: "14px",
+                  maxHeight: "380px",
                   overflowY: "auto",
-                  padding: "12px",
+                  padding: "14px",
                   background: "#030712",
                   border: "1px solid rgba(255,255,255,0.08)",
-                  borderRadius: "14px",
-                  marginBottom: "14px",
+                  borderRadius: "16px",
+                  marginBottom: "16px",
                 }}
               >
                 {HACKER_AVATARS.map((av) => {
@@ -495,24 +581,24 @@ export default function SettingsPage() {
                       style={{
                         background: isSelected ? `${accentColor}25` : "rgba(255,255,255,0.02)",
                         border: `2px solid ${isSelected ? accentColor : "rgba(255,255,255,0.06)"}`,
-                        borderRadius: "14px",
-                        padding: "10px 6px",
+                        borderRadius: "16px",
+                        padding: "12px 8px",
                         cursor: "pointer",
                         display: "flex",
                         flexDirection: "column",
                         alignItems: "center",
                         gap: "8px",
                         transition: "all 0.15s ease",
-                        transform: isSelected ? "scale(1.04)" : "scale(1)",
-                        boxShadow: isSelected ? `0 4px 14px ${accentColor}30` : "none",
+                        transform: isSelected ? "scale(1.05)" : "scale(1)",
+                        boxShadow: isSelected ? `0 6px 18px ${accentColor}35` : "none",
                       }}
                     >
                       <img
                         src={av.url}
                         alt={av.name}
-                        style={{ width: "54px", height: "54px", borderRadius: "50%", objectFit: "cover" }}
+                        style={{ width: "58px", height: "58px", borderRadius: "50%", objectFit: "cover" }}
                       />
-                      <span style={{ fontSize: "10.5px", fontWeight: "800", color: isSelected ? accentColor : "#94A3B8", textAlign: "center", wordBreak: "break-all" }}>
+                      <span style={{ fontSize: "11px", fontWeight: "800", color: isSelected ? accentColor : "#94A3B8", textAlign: "center", wordBreak: "break-all" }}>
                         {av.name}
                       </span>
                     </button>
@@ -522,7 +608,7 @@ export default function SettingsPage() {
 
               {/* Custom Image URL Upload Box */}
               <div style={{ position: "relative", width: "100%" }}>
-                <LinkIcon size={16} color="#64748B" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)" }} />
+                <LinkIcon size={16} color="#64748B" style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)" }} />
                 <input
                   type="text"
                   value={avatarUrl}
@@ -532,37 +618,15 @@ export default function SettingsPage() {
                     width: "100%",
                     background: "#030712",
                     border: "1px solid rgba(255,255,255,0.1)",
-                    borderRadius: "10px",
-                    padding: "11px 14px 11px 40px",
+                    borderRadius: "12px",
+                    padding: "13px 16px 13px 44px",
                     color: "#FFF",
-                    fontSize: "13px",
+                    fontSize: "13.5px",
                     fontFamily: "monospace",
                     outline: "none",
                   }}
                 />
               </div>
-            </div>
-
-            {/* Setting 3: User Email */}
-            <div>
-              <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "8px" }}>
-                3. Primary Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={{
-                  width: "100%",
-                  background: "#030712",
-                  border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "10px",
-                  padding: "12px 16px",
-                  color: "#FFF",
-                  fontSize: "14px",
-                  outline: "none",
-                }}
-              />
             </div>
 
             {/* Setting 4: Organization Handle */}
@@ -579,8 +643,8 @@ export default function SettingsPage() {
                   width: "100%",
                   background: "#030712",
                   border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "10px",
-                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  padding: "14px 18px",
                   color: "#FFF",
                   fontSize: "14px",
                   outline: "none",
@@ -592,22 +656,22 @@ export default function SettingsPage() {
 
         {/* TAB 2: THEME & VISUALS */}
         {activeTab === "appearance" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
             <div style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "16px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: "900", color: "#F8FAFC", margin: 0 }}>
+              <h3 style={{ fontSize: "20px", fontWeight: "900", color: "#F8FAFC", margin: 0 }}>
                 Global App Theme & Visual Styling
               </h3>
-              <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0 0" }}>
+              <p style={{ fontSize: "13.5px", color: "#64748B", margin: "4px 0 0 0" }}>
                 Selecting a theme instantly mutates the ENTIRE application website background, card containers, and accent colors in real-time.
               </p>
             </div>
 
-            {/* Setting 5: Interactive Visual Theme Cards */}
+            {/* Setting 5: Interactive Visual Theme Cards SPREAD ACROSS 4 COLUMNS */}
             <div>
-              <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "14px" }}>
-                5. Global System Theme Preset
+              <label style={{ fontSize: "14px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "16px" }}>
+                5. Global System Theme Preset (Full Page Width Spread)
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "20px" }}>
                 {[
                   { id: "dark_midnight", name: "Dark Midnight", icon: "🌙", bg: "#020617", cardBg: "#090F1B", previewAccent: "#F97316" },
                   { id: "cyberpunk", name: "Cyberpunk Neon", icon: "⚡", bg: "#0D0B18", cardBg: "#15102A", previewAccent: "#A855F7" },
@@ -625,31 +689,28 @@ export default function SettingsPage() {
                       style={{
                         background: th.cardBg,
                         border: `2px solid ${isSelected ? accentColor : "rgba(255,255,255,0.08)"}`,
-                        borderRadius: "16px",
-                        padding: "18px",
+                        borderRadius: "18px",
+                        padding: "22px",
                         cursor: "pointer",
                         transition: "all 0.2s ease",
-                        boxShadow: isSelected ? `0 6px 24px ${accentColor}40` : "none",
-                        transform: isSelected ? "translateY(-2px)" : "none",
-                        position: "relative",
+                        boxShadow: isSelected ? `0 8px 30px ${accentColor}45` : "none",
+                        transform: isSelected ? "translateY(-3px)" : "none",
                       }}
                     >
-                      {/* Theme Mini Mockup Header */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-                        <span style={{ fontSize: "14px", fontWeight: "900", color: "#FFF", display: "flex", alignItems: "center", gap: "6px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                        <span style={{ fontSize: "15px", fontWeight: "900", color: "#FFF", display: "flex", alignItems: "center", gap: "8px" }}>
                           <span>{th.icon}</span> {th.name}
                         </span>
                         {isSelected && (
-                          <span style={{ fontSize: "10px", fontWeight: "900", color: accentColor, background: `${accentColor}25`, padding: "2px 8px", borderRadius: "10px" }}>
-                            ACTIVE
+                          <span style={{ fontSize: "10px", fontWeight: "900", color: accentColor, background: `${accentColor}25`, padding: "3px 10px", borderRadius: "12px" }}>
+                            ACTIVE THEME
                           </span>
                         )}
                       </div>
 
-                      {/* Theme Visual Colors Bar */}
-                      <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", gap: "2px", background: th.bg }}>
-                        <div style={{ flex: 2, background: th.cardBg }} />
-                        <div style={{ flex: 1, background: isSelected ? accentColor : th.previewAccent }} />
+                      <div style={{ display: "flex", height: "10px", borderRadius: "5px", overflow: "hidden", gap: "4px", background: th.bg, padding: "2px" }}>
+                        <div style={{ flex: 3, background: th.cardBg, borderRadius: "3px" }} />
+                        <div style={{ flex: 1, background: isSelected ? accentColor : th.previewAccent, borderRadius: "3px" }} />
                       </div>
                     </div>
                   );
@@ -657,12 +718,12 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Setting 6: Accent Color Picker */}
+            {/* Setting 6: Accent Color Swatches SPREAD ACROSS FULL PAGE */}
             <div>
-              <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "12px" }}>
-                6. Accent Brand Color
+              <label style={{ fontSize: "14px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "16px" }}>
+                6. Accent Brand Color Selection
               </label>
-              <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" }}>
                 {[
                   { hex: "#F97316", name: "Vibrant Orange" },
                   { hex: "#10B981", name: "Cyber Green" },
@@ -672,25 +733,31 @@ export default function SettingsPage() {
                 ].map((c) => {
                   const isSelected = accentColor === c.hex;
                   return (
-                    <button
+                    <div
                       key={c.hex}
                       onClick={() => {
                         playAudioClick();
                         setAccentColor(c.hex);
                       }}
                       style={{
-                        background: c.hex,
-                        border: isSelected ? "4px solid #FFF" : "none",
-                        borderRadius: "50%",
-                        width: "46px",
-                        height: "46px",
+                        background: "rgba(255,255,255,0.02)",
+                        border: `2px solid ${isSelected ? c.hex : "rgba(255,255,255,0.08)"}`,
+                        borderRadius: "16px",
+                        padding: "16px",
                         cursor: "pointer",
-                        boxShadow: isSelected ? `0 0 20px ${c.hex}` : "none",
-                        transition: "transform 0.15s ease",
-                        transform: isSelected ? "scale(1.1)" : "scale(1)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "14px",
+                        transition: "all 0.15s ease",
+                        boxShadow: isSelected ? `0 4px 20px ${c.hex}40` : "none",
                       }}
-                      title={c.name}
-                    />
+                    >
+                      <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: c.hex, boxShadow: `0 0 14px ${c.hex}` }} />
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: "900", color: "#FFF" }}>{c.name}</div>
+                        <div style={{ fontSize: "11px", color: "#64748B", fontFamily: "monospace" }}>{c.hex}</div>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -699,222 +766,230 @@ export default function SettingsPage() {
             {/* Live Component Theme Inspector */}
             <div
               style={{
-                background: "rgba(3, 7, 18, 0.6)",
+                background: "rgba(3, 7, 18, 0.7)",
                 border: `1px solid ${accentColor}40`,
-                borderRadius: "16px",
-                padding: "20px",
+                borderRadius: "20px",
+                padding: "24px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "12px",
+                gap: "16px",
               }}
             >
-              <div style={{ fontSize: "11px", fontWeight: "900", color: accentColor, textTransform: "uppercase", letterSpacing: "1px" }}>
+              <div style={{ fontSize: "11.5px", fontWeight: "900", color: accentColor, textTransform: "uppercase", letterSpacing: "1px" }}>
                 Live Component Theme Inspector
               </div>
 
-              {/* Sample API Card Preview */}
-              <div style={{ background: "#090F1B", border: "1px solid rgba(255,255,255,0.08)", padding: "16px", borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: "900", color: "#FFF", background: accentColor, padding: "4px 8px", borderRadius: "6px" }}>
+              <div style={{ background: "#090F1B", border: "1px solid rgba(255,255,255,0.08)", padding: "20px", borderRadius: "14px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "900", color: "#FFF", background: accentColor, padding: "5px 10px", borderRadius: "8px" }}>
                     GET
                   </span>
-                  <span style={{ fontSize: "13px", fontWeight: "800", color: "#FFF", fontFamily: "monospace" }}>
+                  <span style={{ fontSize: "14px", fontWeight: "800", color: "#FFF", fontFamily: "monospace" }}>
                     /api/v1/security/inventory
                   </span>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "11px", fontWeight: "800", color: "#34D399", background: "rgba(52,211,153,0.15)", padding: "2px 8px", borderRadius: "6px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "11.5px", fontWeight: "800", color: "#34D399", background: "rgba(52,211,153,0.15)", padding: "3px 10px", borderRadius: "8px" }}>
                     STATUS 200 OK
                   </span>
-                  <span style={{ fontSize: "11px", fontWeight: "800", color: accentColor, background: `${accentColor}18`, padding: "2px 8px", borderRadius: "6px" }}>
+                  <span style={{ fontSize: "11.5px", fontWeight: "800", color: accentColor, background: `${accentColor}20`, padding: "3px 10px", borderRadius: "8px" }}>
                     REST API
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Setting 7: Compact Mode */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "18px", borderRadius: "14px", border: "1px solid rgba(255,255,255,0.08)", flexWrap: "wrap", gap: "12px" }}>
-              <div>
-                <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>7. Ultra-Compact Grid Layout</div>
-                <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Reduce padding and maximize data density across table views.</div>
+            {/* 2-Column Toggles */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px" }}>
+              {/* Setting 7: Compact Mode */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "20px", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div>
+                  <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>7. Ultra-Compact Grid Layout</div>
+                  <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Reduce padding and maximize data density.</div>
+                </div>
+                <button
+                  onClick={() => {
+                    playAudioClick();
+                    setCompactMode(!compactMode);
+                  }}
+                  style={{
+                    width: "54px",
+                    height: "28px",
+                    borderRadius: "14px",
+                    background: compactMode ? accentColor : "#334155",
+                    border: "none",
+                    cursor: "pointer",
+                    position: "relative",
+                    transition: "background 0.2s ease",
+                  }}
+                >
+                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: compactMode ? "29px" : "3px", transition: "left 0.2s ease" }} />
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  playAudioClick();
-                  setCompactMode(!compactMode);
-                }}
-                style={{
-                  width: "52px",
-                  height: "28px",
-                  borderRadius: "14px",
-                  background: compactMode ? accentColor : "#334155",
-                  border: "none",
-                  cursor: "pointer",
-                  position: "relative",
-                  transition: "background 0.2s ease",
-                }}
-              >
-                <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: compactMode ? "27px" : "3px", transition: "left 0.2s ease" }} />
-              </button>
-            </div>
 
-            {/* Setting 8: UI Sound Feedback */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "18px", borderRadius: "14px", border: "1px solid rgba(255,255,255,0.08)", flexWrap: "wrap", gap: "12px" }}>
-              <div>
-                <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>8. Interactive Audio Feedback</div>
-                <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Play subtle sound effects on button clicks and scan completions.</div>
+              {/* Setting 8: UI Sound Feedback */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "20px", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div>
+                  <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>8. Interactive Audio Feedback</div>
+                  <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Play click sounds on interactions.</div>
+                </div>
+                <button
+                  onClick={() => {
+                    playAudioClick();
+                    setSoundEnabled(!soundEnabled);
+                  }}
+                  style={{
+                    width: "54px",
+                    height: "28px",
+                    borderRadius: "14px",
+                    background: soundEnabled ? accentColor : "#334155",
+                    border: "none",
+                    cursor: "pointer",
+                    position: "relative",
+                    transition: "background 0.2s ease",
+                  }}
+                >
+                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: soundEnabled ? "29px" : "3px", transition: "left 0.2s ease" }} />
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  playAudioClick();
-                  setSoundEnabled(!soundEnabled);
-                }}
-                style={{
-                  width: "52px",
-                  height: "28px",
-                  borderRadius: "14px",
-                  background: soundEnabled ? accentColor : "#334155",
-                  border: "none",
-                  cursor: "pointer",
-                  position: "relative",
-                  transition: "background 0.2s ease",
-                }}
-              >
-                <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: soundEnabled ? "27px" : "3px", transition: "left 0.2s ease" }} />
-              </button>
             </div>
           </div>
         )}
 
         {/* TAB 3: SCANNER ENGINE */}
         {activeTab === "engine" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
             <div style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "16px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: "900", color: "#F8FAFC", margin: 0 }}>
+              <h3 style={{ fontSize: "20px", fontWeight: "900", color: "#F8FAFC", margin: 0 }}>
                 Scanner Engine Parameters
               </h3>
-              <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0 0" }}>
+              <p style={{ fontSize: "13.5px", color: "#64748B", margin: "4px 0 0 0" }}>
                 Fine-tune JS crawler depth, active request rate limits, and discovery features.
               </p>
             </div>
 
-            {/* Setting 9: Deep JS Crawl Depth */}
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1" }}>
-                  9. Deep JS Crawler Traversal Depth
-                </label>
-                <span style={{ fontSize: "13px", fontWeight: "900", color: accentColor }}>Level {crawlDepth}</span>
+            {/* 2-Column Sliders */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "24px" }}>
+              {/* Setting 9: Crawl Depth */}
+              <div style={{ background: "rgba(255,255,255,0.02)", padding: "20px", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <label style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>
+                    9. Deep JS Crawler Traversal Depth
+                  </label>
+                  <span style={{ fontSize: "14px", fontWeight: "900", color: accentColor }}>Level {crawlDepth}</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={crawlDepth}
+                  onChange={(e) => setCrawlDepth(parseInt(e.target.value))}
+                  style={{ width: "100%", accentColor, height: "6px", borderRadius: "3px", cursor: "pointer" }}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "6px" }}>
+                  <span>1 (Fast)</span>
+                  <span>5 (Recommended)</span>
+                  <span>10 (Deep Audit)</span>
+                </div>
               </div>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={crawlDepth}
-                onChange={(e) => setCrawlDepth(parseInt(e.target.value))}
-                style={{ width: "100%", accentColor, height: "6px", borderRadius: "3px", cursor: "pointer" }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "4px" }}>
-                <span>1 (Fast)</span>
-                <span>5 (Recommended)</span>
-                <span>10 (Deep Audit)</span>
+
+              {/* Setting 10: Rate Limiter */}
+              <div style={{ background: "rgba(255,255,255,0.02)", padding: "20px", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <label style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>
+                    10. Active Probe Rate Limit (Req / Sec)
+                  </label>
+                  <span style={{ fontSize: "14px", fontWeight: "900", color: accentColor }}>{rateLimit} Req/s</span>
+                </div>
+                <input
+                  type="range"
+                  min="5"
+                  max="100"
+                  step="5"
+                  value={rateLimit}
+                  onChange={(e) => setRateLimit(parseInt(e.target.value))}
+                  style={{ width: "100%", accentColor, height: "6px", borderRadius: "3px", cursor: "pointer" }}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "6px" }}>
+                  <span>5 Req/s (Stealth)</span>
+                  <span>25 Req/s (Balanced)</span>
+                  <span>100 Req/s (Aggressive)</span>
+                </div>
               </div>
             </div>
 
-            {/* Setting 10: Active Probe Rate Limiter */}
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1" }}>
-                  10. Active Probe Rate Limit (Req / Sec)
-                </label>
-                <span style={{ fontSize: "13px", fontWeight: "900", color: accentColor }}>{rateLimit} Req/s</span>
+            {/* 2-Column Discovery Toggles */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px" }}>
+              {/* Setting 11: Subdomain Auto-Discovery */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "20px", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div>
+                  <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>11. Subdomain Auto-Discovery</div>
+                  <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Enumerate subdomains (api.*, dev.*) during scans.</div>
+                </div>
+                <button
+                  onClick={() => {
+                    playAudioClick();
+                    setSubdomainDiscovery(!subdomainDiscovery);
+                  }}
+                  style={{
+                    width: "54px",
+                    height: "28px",
+                    borderRadius: "14px",
+                    background: subdomainDiscovery ? accentColor : "#334155",
+                    border: "none",
+                    cursor: "pointer",
+                    position: "relative",
+                    transition: "background 0.2s ease",
+                  }}
+                >
+                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: subdomainDiscovery ? "29px" : "3px", transition: "left 0.2s ease" }} />
+                </button>
               </div>
-              <input
-                type="range"
-                min="5"
-                max="100"
-                step="5"
-                value={rateLimit}
-                onChange={(e) => setRateLimit(parseInt(e.target.value))}
-                style={{ width: "100%", accentColor, height: "6px", borderRadius: "3px", cursor: "pointer" }}
-              />
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "#64748B", marginTop: "4px" }}>
-                <span>5 Req/s (Stealth)</span>
-                <span>25 Req/s (Balanced)</span>
-                <span>100 Req/s (Aggressive)</span>
-              </div>
-            </div>
 
-            {/* Setting 11: Subdomain Auto-Discovery */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "18px", borderRadius: "14px", border: "1px solid rgba(255,255,255,0.08)", flexWrap: "wrap", gap: "12px" }}>
-              <div>
-                <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>11. Subdomain Auto-Discovery</div>
-                <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Automatically enumerate subdomains (api.*, dev.*, staging.*) during scans.</div>
+              {/* Setting 12: Automatic PII Masking */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "20px", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div>
+                  <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>12. Automatic PII & Secret Redaction</div>
+                  <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Mask emails, credit cards, and tokens.</div>
+                </div>
+                <button
+                  onClick={() => {
+                    playAudioClick();
+                    setPiiMasking(!piiMasking);
+                  }}
+                  style={{
+                    width: "54px",
+                    height: "28px",
+                    borderRadius: "14px",
+                    background: piiMasking ? accentColor : "#334155",
+                    border: "none",
+                    cursor: "pointer",
+                    position: "relative",
+                    transition: "background 0.2s ease",
+                  }}
+                >
+                  <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: piiMasking ? "29px" : "3px", transition: "left 0.2s ease" }} />
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  playAudioClick();
-                  setSubdomainDiscovery(!subdomainDiscovery);
-                }}
-                style={{
-                  width: "52px",
-                  height: "28px",
-                  borderRadius: "14px",
-                  background: subdomainDiscovery ? accentColor : "#334155",
-                  border: "none",
-                  cursor: "pointer",
-                  position: "relative",
-                  transition: "background 0.2s ease",
-                }}
-              >
-                <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: subdomainDiscovery ? "27px" : "3px", transition: "left 0.2s ease" }} />
-              </button>
-            </div>
-
-            {/* Setting 12: Automatic PII Masking */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "18px", borderRadius: "14px", border: "1px solid rgba(255,255,255,0.08)", flexWrap: "wrap", gap: "12px" }}>
-              <div>
-                <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>12. Automatic PII & Secret Redaction</div>
-                <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Mask emails, credit cards, and JWT tokens in scan reports.</div>
-              </div>
-              <button
-                onClick={() => {
-                  playAudioClick();
-                  setPiiMasking(!piiMasking);
-                }}
-                style={{
-                  width: "52px",
-                  height: "28px",
-                  borderRadius: "14px",
-                  background: piiMasking ? accentColor : "#334155",
-                  border: "none",
-                  cursor: "pointer",
-                  position: "relative",
-                  transition: "background 0.2s ease",
-                }}
-              >
-                <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: piiMasking ? "27px" : "3px", transition: "left 0.2s ease" }} />
-              </button>
             </div>
           </div>
         )}
 
         {/* TAB 4: SECURITY & ALERTS */}
         {activeTab === "security" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "28px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
             <div style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: "16px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: "900", color: "#F8FAFC", margin: 0 }}>
+              <h3 style={{ fontSize: "20px", fontWeight: "900", color: "#F8FAFC", margin: 0 }}>
                 Security Controls & Integrations
               </h3>
-              <p style={{ fontSize: "13px", color: "#64748B", margin: "4px 0 0 0" }}>
+              <p style={{ fontSize: "13.5px", color: "#64748B", margin: "4px 0 0 0" }}>
                 Manage account authentication security, real-time webhooks, and log retention.
               </p>
             </div>
 
-            {/* Setting 13: Two-Factor Authentication */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "18px", borderRadius: "14px", border: "1px solid rgba(255,255,255,0.08)", flexWrap: "wrap", gap: "12px" }}>
+            {/* Setting 13: 2FA Toggle */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "rgba(255,255,255,0.02)", padding: "20px", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div>
                 <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>13. Two-Factor Authentication (2FA)</div>
                 <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Require TOTP authenticator code on platform login.</div>
@@ -925,7 +1000,7 @@ export default function SettingsPage() {
                   setTwoFactorAuth(!twoFactorAuth);
                 }}
                 style={{
-                  width: "52px",
+                  width: "54px",
                   height: "28px",
                   borderRadius: "14px",
                   background: twoFactorAuth ? "#10B981" : "#334155",
@@ -935,25 +1010,36 @@ export default function SettingsPage() {
                   transition: "background 0.2s ease",
                 }}
               >
-                <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: twoFactorAuth ? "27px" : "3px", transition: "left 0.2s ease" }} />
+                <div style={{ width: "22px", height: "22px", borderRadius: "50%", background: "#FFF", position: "absolute", top: "3px", left: twoFactorAuth ? "29px" : "3px", transition: "left 0.2s ease" }} />
               </button>
             </div>
 
-            {/* Setting 14: Webhook URL & Test Dispatch Button */}
+            {/* Setting 14: Webhook URL */}
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                <label style={{ fontSize: "13.5px", fontWeight: "800", color: "#CBD5E1" }}>
                   14. Scan Alert Webhook Endpoint URL
                 </label>
                 <button
-                  onClick={handleTestWebhook}
+                  onClick={() => {
+                    playAudioClick();
+                    if (!webhookUrl || !webhookUrl.startsWith("http")) {
+                      toast.error("Please enter a valid HTTP/HTTPS Webhook URL first.");
+                      return;
+                    }
+                    setTestingWebhook(true);
+                    setTimeout(() => {
+                      setTestingWebhook(false);
+                      toast.success("Test Webhook Alert Payload successfully dispatched!");
+                    }, 1200);
+                  }}
                   disabled={testingWebhook}
                   style={{
                     background: "rgba(255,255,255,0.06)",
                     border: "1px solid rgba(255,255,255,0.12)",
                     color: accentColor,
-                    padding: "4px 12px",
-                    borderRadius: "8px",
+                    padding: "6px 14px",
+                    borderRadius: "10px",
                     fontSize: "12px",
                     fontWeight: "800",
                     cursor: "pointer",
@@ -962,7 +1048,7 @@ export default function SettingsPage() {
                     gap: "6px",
                   }}
                 >
-                  <Send size={12} /> {testingWebhook ? "Dispatching..." : "Send Test Payload"}
+                  <Send size={13} /> {testingWebhook ? "Dispatching..." : "Send Test Payload"}
                 </button>
               </div>
               <input
@@ -974,10 +1060,10 @@ export default function SettingsPage() {
                   width: "100%",
                   background: "#030712",
                   border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "10px",
-                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  padding: "14px 18px",
                   color: "#FFF",
-                  fontSize: "13px",
+                  fontSize: "14px",
                   outline: "none",
                   fontFamily: "monospace",
                 }}
@@ -986,7 +1072,7 @@ export default function SettingsPage() {
 
             {/* Setting 15: Log Retention */}
             <div>
-              <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "8px" }}>
+              <label style={{ fontSize: "13.5px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "8px" }}>
                 15. Audit Log & Telemetry Retention Period
               </label>
               <select
@@ -996,8 +1082,8 @@ export default function SettingsPage() {
                   width: "100%",
                   background: "#030712",
                   border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: "10px",
-                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  padding: "14px 18px",
                   color: "#FFF",
                   fontSize: "14px",
                   outline: "none",

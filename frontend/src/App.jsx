@@ -18,7 +18,28 @@ import WorkspacePage from "./pages/WorkspacePage";
 import DownloadsPage from "./pages/DownloadsPage";
 import ApiInventoryPage from "./pages/ApiInventoryPage";
 
+import { useEffect } from "react";
+
 function App() {
+  useEffect(() => {
+    function applyGlobalSettings() {
+      const theme = localStorage.getItem("athx_settings_theme") || "dark_midnight";
+      const accent = localStorage.getItem("athx_settings_accent") || "#F97316";
+      const compact = localStorage.getItem("athx_settings_compact") === "true";
+
+      document.documentElement.setAttribute("data-theme", theme);
+      document.documentElement.style.setProperty("--brand-accent", accent);
+      if (compact) {
+        document.body.classList.add("compact-density");
+      } else {
+        document.body.classList.remove("compact-density");
+      }
+    }
+    applyGlobalSettings();
+    window.addEventListener("athx-settings-updated", applyGlobalSettings);
+    return () => window.removeEventListener("athx-settings-updated", applyGlobalSettings);
+  }, []);
+
   return (
     <BrowserRouter>
       <Toaster 
