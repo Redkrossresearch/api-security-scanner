@@ -5,18 +5,19 @@ import {
   Upload,
   FileJson,
   Terminal,
-  Settings,
   Play,
-  Sliders,
 } from "lucide-react";
 
 export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScanning }) {
   const swaggerRef = useRef(null);
   const postmanRef = useRef(null);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [maxDepth, setMaxDepth] = useState(15);
-  const [timeoutSecs, setTimeoutSecs] = useState(5);
-  const [intensity, setIntensity] = useState("Moderate");
+  const [scanProfile, setScanProfile] = useState("Full Security Scan");
+
+  const handleTriggerStart = () => {
+    if (typeof onStartScan === "function") {
+      onStartScan({ scanProfile });
+    }
+  };
 
   const handleSwaggerImport = (event) => {
     const file = event.target.files[0];
@@ -118,13 +119,13 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
 
   return (
     <div className="sci-fi-config-card">
-      {/* Moving background glow effect */}
+      {/* Background ambient glow */}
       <div className="sci-fi-glow-overlay" />
 
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "minmax(200px, 2.2fr) minmax(120px, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) auto auto",
+          gridTemplateColumns: "3fr 1.5fr auto",
           gap: "18px",
           alignItems: "end",
           position: "relative",
@@ -166,6 +167,8 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
         <div>
           <div className="sci-fi-label">Scan Profile</div>
           <select
+            value={scanProfile}
+            onChange={(e) => setScanProfile(e.target.value)}
             disabled={isScanning}
             className="sci-fi-select"
           >
@@ -175,45 +178,9 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
           </select>
         </div>
 
-        {/* Auth */}
-        <div>
-          <div className="sci-fi-label">Authentication</div>
-          <select
-            disabled={isScanning}
-            className="sci-fi-select"
-          >
-            <option>Bearer Token</option>
-            <option>API Key</option>
-            <option>Basic Auth</option>
-            <option>OAuth2</option>
-          </select>
-        </div>
-
-        {/* Token */}
-        <div>
-          <div className="sci-fi-label">Token</div>
-          <input
-            type="password"
-            defaultValue="eyJhbGciOiJIUzI1Ni..."
-            disabled={isScanning}
-            className="sci-fi-select"
-            style={{ boxSizing: "border-box", fontFamily: "monospace" }}
-          />
-        </div>
-
-        {/* Settings */}
-        <button
-          disabled={isScanning}
-          onClick={() => setShowSettingsModal(true)}
-          className="sci-fi-settings-btn"
-          title="Advanced Scanner Configuration"
-        >
-          <Settings size={15} />
-        </button>
-
         {/* Start Scan Button */}
         <button
-          onClick={onStartScan}
+          onClick={handleTriggerStart}
           disabled={isScanning || !url}
           className={`sci-fi-scan-btn ${isScanning || !url ? "disabled" : ""}`}
         >
@@ -236,7 +203,7 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
         style={{
           display: "flex",
           gap: "12px",
-          marginTop: "24px",
+          marginTop: "20px",
           flexWrap: "wrap",
           position: "relative",
           zIndex: 2,
@@ -281,59 +248,7 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
         </button>
       </div>
 
-      {/* ─── Advanced Settings Modal ─── */}
-      {showSettingsModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: "#071126", border: "1px solid rgba(249,115,22,0.25)", borderRadius: "24px", padding: "28px", width: "90%", maxWidth: "520px", boxShadow: "0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(249,115,22,0.1)" }}>
-            <h3 style={{ margin: 0, color: "#FFFFFF", fontSize: "19px", fontWeight: "800", display: "flex", alignItems: "center", gap: "10px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              <Sliders size={18} color="#F97316" /> Advanced Scanner Config
-            </h3>
-            <p style={{ color: "#94A3B8", fontSize: "13px", marginTop: "8px", marginBottom: "20px" }}>Tune crawling parameters and active penetration testing payloads intensity.</p>
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {/* Max Crawl Depth */}
-              <div>
-                <label style={{ display: "block", color: "#64748B", fontSize: "10px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>Max Crawl Depth</label>
-                <select value={maxDepth} onChange={(e) => setMaxDepth(Number(e.target.value))} className="sci-fi-select">
-                  <option value={5}>5 Links (Fast Demonstration)</option>
-                  <option value={15}>15 Links (Moderate Audit)</option>
-                  <option value={30}>30 Links (Deep Scan)</option>
-                </select>
-              </div>
-
-              {/* Request Timeout */}
-              <div>
-                <label style={{ display: "block", color: "#64748B", fontSize: "10px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>Request Timeout (Seconds)</label>
-                <select value={timeoutSecs} onChange={(e) => setTimeoutSecs(Number(e.target.value))} className="sci-fi-select">
-                  <option value={2}>2 Seconds (Aggressive)</option>
-                  <option value={5}>5 Seconds (Recommended)</option>
-                  <option value={10}>10 Seconds (Safe/Slow Target)</option>
-                </select>
-              </div>
-
-              {/* Intensity */}
-              <div>
-                <label style={{ display: "block", color: "#64748B", fontSize: "10px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>Exploitation Intensity</label>
-                <select value={intensity} onChange={(e) => setIntensity(e.target.value)} className="sci-fi-select">
-                  <option value="Low">Low (Passive Checks Only)</option>
-                  <option value="Moderate">Moderate (Standard Payloads)</option>
-                  <option value="High">High (Deep Penetration Payloads)</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "28px" }}>
-              <button onClick={() => setShowSettingsModal(false)} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "#94A3B8", padding: "10px 20px", borderRadius: "10px", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}>Cancel</button>
-              <button onClick={() => {
-                setShowSettingsModal(false);
-                toast.success("Scanner parameters successfully updated!");
-              }} style={{ background: "linear-gradient(135deg, #FF7A1A, #EA580C)", border: "none", color: "#FFFFFF", padding: "10px 24px", borderRadius: "10px", fontWeight: "700", cursor: "pointer", fontSize: "13px", boxShadow: "0 4px 15px rgba(249,115,22,0.25)" }}>Save Config</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Inject custom sci-fi styling */}
+      {/* Inject custom styling */}
       <style>{`
         .sci-fi-config-card {
           background: linear-gradient(180deg, #050B16 0%, #02050A 100%);
@@ -443,30 +358,9 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
           box-shadow: 0 0 15px rgba(249, 115, 22, 0.12), inset 0 0 10px rgba(0,0,0,0.5);
         }
 
-        .sci-fi-settings-btn {
-          height: 46px;
-          padding: 0 14px;
-          border-radius: 10px;
-          background: rgba(1, 2, 5, 0.85);
-          border: 1px solid rgba(255, 255, 255, 0.04);
-          color: #64748B;
-          cursor: pointer;
-          transition: all 0.22s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-        }
-
-        .sci-fi-settings-btn:hover {
-          color: #F8FAFC;
-          background: rgba(255, 255, 255, 0.015);
-          border-color: rgba(255, 255, 255, 0.08);
-        }
-
         .sci-fi-scan-btn {
           height: 46px;
-          padding: 0 20px;
+          padding: 0 24px;
           border-radius: 10px;
           background: linear-gradient(135deg, #FF7A1A 0%, #EA580C 100%);
           border: none;
@@ -478,6 +372,7 @@ export default function ScanConfigurationCard({ url, setUrl, onStartScan, isScan
           box-shadow: 0 0 20px rgba(249, 115, 22, 0.35);
           text-transform: uppercase;
           letter-spacing: 0.5px;
+          white-space: nowrap;
         }
 
         .sci-fi-scan-btn:hover:not(.disabled) {

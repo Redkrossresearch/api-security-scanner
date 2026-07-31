@@ -281,67 +281,90 @@ export default function ApiInventoryPage() {
         </div>
       </div>
 
-      {/* Direct Target Scanner Input Bar */}
+      {/* Target Discovery Scanner Bar */}
       <form
         onSubmit={handleScanTargetSubmit}
         style={{
-          background: "linear-gradient(90deg, rgba(249, 115, 22, 0.1) 0%, rgba(9, 15, 27, 0.9) 100%)",
-          border: "1px solid rgba(249, 115, 22, 0.3)",
-          borderRadius: "14px",
-          padding: "14px 18px",
+          background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(3,7,18,0.98))",
+          border: "1px solid rgba(249,115,22,0.25)",
+          borderRadius: "18px",
+          padding: "20px 24px",
           display: "flex",
           alignItems: "center",
-          gap: "12px",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+          gap: "18px",
+          boxShadow: "0 8px 30px rgba(0,0,0,0.4), inset 0 0 20px rgba(249,115,22,0.04)",
         }}
       >
-        <Zap size={20} color="#F97316" />
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "11px", fontWeight: "800", color: "#F97316", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+        <div style={{ width: "42px", height: "42px", borderRadius: "12px", background: "rgba(249,115,22,0.12)", border: "1px solid rgba(249,115,22,0.25)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Zap size={22} color="#F97316" />
+        </div>
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "6px" }}>
+          <div style={{ fontSize: "11px", fontWeight: "900", color: "#F97316", textTransform: "uppercase", letterSpacing: "0.8px" }}>
             Direct Target Endpoint Discovery Scanner
           </div>
-          <input
-            type="url"
-            value={targetUrlInput}
-            onChange={(e) => setTargetUrlInput(e.target.value)}
-            placeholder="Enter website URL to scan (e.g. https://api.target.com)..."
+
+          <div
             style={{
-              width: "100%",
-              background: "transparent",
-              border: "none",
-              color: "#FFF",
-              fontSize: "13px",
-              fontWeight: "600",
-              outline: "none",
-              marginTop: "2px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              background: "#030712",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: "10px",
+              padding: "10px 14px",
+              transition: "border-color 0.2s ease, box-shadow 0.2s ease",
             }}
-          />
+          >
+            <Globe size={16} color="#94A3B8" />
+            <input
+              type="url"
+              value={targetUrlInput}
+              onChange={(e) => setTargetUrlInput(e.target.value)}
+              placeholder="Enter website URL to scan (e.g. https://api.target.com)..."
+              disabled={scanningTarget}
+              style={{
+                width: "100%",
+                background: "transparent",
+                border: "none",
+                color: "#FFFFFF",
+                fontSize: "13.5px",
+                fontWeight: "600",
+                fontFamily: "monospace",
+                outline: "none",
+              }}
+            />
+          </div>
         </div>
+
         <button
           type="submit"
           disabled={scanningTarget}
+          className="queue-card-hover"
           style={{
             background: "linear-gradient(135deg, #F97316, #EA580C)",
             border: "none",
             color: "#FFF",
-            padding: "9px 20px",
-            borderRadius: "10px",
-            fontSize: "12.5px",
-            fontWeight: "800",
+            padding: "12px 24px",
+            borderRadius: "12px",
+            fontSize: "13px",
+            fontWeight: "900",
             cursor: scanningTarget ? "wait" : "pointer",
             display: "flex",
             alignItems: "center",
-            gap: "6px",
+            gap: "8px",
             whiteSpace: "nowrap",
+            alignSelf: "flex-end",
+            boxShadow: "0 4px 16px rgba(249,115,22,0.35)",
           }}
         >
           {scanningTarget ? (
             <>
-              <RefreshCw size={14} style={{ animation: "spin 1.5s linear infinite" }} /> Scanning JS & APIs...
+              <RefreshCw size={15} style={{ animation: "spin 1.5s linear infinite" }} /> Scanning JS & APIs...
             </>
           ) : (
             <>
-              <Play size={14} /> Scan & Ingest
+              <Play size={15} fill="currentColor" /> Scan & Ingest
             </>
           )}
         </button>

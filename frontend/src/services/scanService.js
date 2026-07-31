@@ -6,8 +6,8 @@ export const scanService = {
     return response.data.scan;
   },
 
-  async createScan(targetUrl) {
-    const response = await api.post("/scans", { targetUrl });
+  async createScan(targetUrl, config = {}) {
+    const response = await api.post("/scans", { targetUrl, ...config });
     return response.data.scan;
   },
 

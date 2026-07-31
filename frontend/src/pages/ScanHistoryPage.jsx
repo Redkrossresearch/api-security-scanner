@@ -169,14 +169,15 @@ function StatCard({ icon, title, value, trend, trendColor = "#8B5CF6", id = "sc"
       onMouseLeave={() => setHovered(false)}
       style={{
         position: "relative",
-        borderRadius: "12px",
-        background: "#080c14",
-        border: `1px solid ${hovered ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)"}`,
-        padding: "20px 22px",
+        borderRadius: "16px",
+        background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(3,7,18,0.98))",
+        border: `1px solid ${hovered ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.08)"}`,
+        padding: "22px 24px",
         cursor: "default",
         opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(10px)",
-        transition: "opacity 0.4s ease, transform 0.4s ease, border-color 0.15s ease",
+        transform: visible ? (hovered ? "translateY(-4px)" : "translateY(0)") : "translateY(10px)",
+        transition: "opacity 0.4s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s ease, box-shadow 0.2s ease",
+        boxShadow: hovered ? "0 12px 32px rgba(0,0,0,0.5), 0 0 20px rgba(255,255,255,0.03)" : "0 4px 20px rgba(0,0,0,0.3)",
       }}
     >
       <div style={{ position: "relative", zIndex: 1 }}>
@@ -568,60 +569,79 @@ export default function ScanHistoryPage() {
       <div style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:"20px", alignItems:"stretch" }}>
         {/* Grade badge */}
         <div style={{
-          ...card({ padding:"22px 30px", textAlign:"center", display:"flex", flexDirection:"column",
-            alignItems:"center", justifyContent:"center", minWidth:"140px" }),
-          borderColor: "rgba(255,255,255,0.06)",
-          background: "#080c14",
+          ...card({ padding:"24px 34px", textAlign:"center", display:"flex", flexDirection:"column",
+            alignItems:"center", justifyContent:"center", minWidth:"160px" }),
+          borderColor: `${gradeC}35`,
+          background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(3,7,18,0.98))",
+          boxShadow: `0 10px 30px rgba(0,0,0,0.4), inset 0 0 20px ${gradeC}10`,
+          borderRadius: "20px",
+          position: "relative",
+          overflow: "hidden",
         }}>
-          <div style={{ color:gradeC, fontSize:"48px", fontWeight:"900", lineHeight:1 }}>
-            {loading ? "—" : grade}
+          <div style={{
+            position: "relative",
+            width: "84px",
+            height: "84px",
+            borderRadius: "50%",
+            background: `rgba(${gradeC === T.critical ? "239,68,68" : "34,197,94"}, 0.1)`,
+            border: `3px solid ${gradeC}`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: `0 0 25px ${gradeC}30`,
+            marginBottom: "12px",
+          }}>
+            <div style={{ color: gradeC, fontSize: "44px", fontWeight: "900", lineHeight: 1 }}>
+              {loading ? "—" : grade}
+            </div>
           </div>
-          <div style={{ color:T.dimmed, fontSize:"9px", fontWeight:"700", letterSpacing:"1.2px", marginTop:"8px" }}>
+          <div style={{ color: T.dimmed, fontSize: "10px", fontWeight: "800", letterSpacing: "1.2px", textTransform: "uppercase" }}>
             SECURITY GRADE
           </div>
-          <div style={{ color:T.muted, fontSize:"13px", fontWeight:"700", marginTop:"6px", fontFamily:"monospace" }}>
+          <div style={{ color: T.white, fontSize: "14px", fontWeight: "900", marginTop: "4px", fontFamily: "monospace" }}>
             {loading ? "—" : `${Math.round(score)} / 100`}
           </div>
         </div>
 
         {/* RAG AI insight panel */}
         <div style={{
-          ...card({ padding:"22px" }),
-          background: "#080c14",
-          borderColor: "rgba(255,255,255,0.06)",
+          ...card({ padding:"24px" }),
+          background: "linear-gradient(135deg, rgba(139,92,246,0.1), rgba(15,23,42,0.95))",
+          borderColor: "rgba(139,92,246,0.22)",
+          borderRadius: "20px",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
         }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"14px" }}>
             <div style={{ display:"flex", alignItems:"center", gap:"12px" }}>
               <div style={{
-                width:"36px", height:"36px", borderRadius:"8px",
-                background:"rgba(139,92,246,.08)", display:"flex", alignItems:"center", justifyContent:"center",
-                border:"1px solid rgba(139,92,246,.2)",
+                width:"40px", height:"40px", borderRadius:"12px",
+                background:"rgba(139,92,246,0.15)", display:"flex", alignItems:"center", justifyContent:"center",
+                border:"1px solid rgba(139,92,246,0.3)",
               }}>
-                <Brain size={16} color={T.purple} />
+                <Brain size={18} color={T.purple} />
               </div>
               <div>
-                <div style={{ color:T.purple, fontSize:"10px", fontWeight:"800", letterSpacing:"1.2px" }}>
+                <div style={{ color:T.purple, fontSize:"11px", fontWeight:"900", letterSpacing:"1.2px" }}>
                   AI SECURITY COPILOT
                 </div>
-                <div style={{ color:T.dimmed, fontSize:"11.5px", marginTop:"3px" }}>
+                <div style={{ color:T.dimmed, fontSize:"12px", marginTop:"2px" }}>
                   RAG-powered insights from live threat intelligence
                 </div>
               </div>
             </div>
             <div style={{
               display:"flex", alignItems:"center", gap:"6px",
-              padding:"4px 10px", borderRadius:"999px", fontSize:"10px", fontWeight:"700",
-              background:"rgba(139,92,246,.08)", color:T.purple,
-              border:"1px solid rgba(139,92,246,.15)",
+              padding:"5px 12px", borderRadius:"999px", fontSize:"10px", fontWeight:"800",
+              background:"rgba(139,92,246,0.12)", color:T.purple,
+              border:"1px solid rgba(139,92,246,0.25)",
             }}>
-              <span style={{ width:"5px", height:"5px", borderRadius:"50%",
-                background:T.purple }} />
+              <span className="queue-pulse-active" style={{ width:"6px", height:"6px", borderRadius:"50%", background:T.purple }} />
               LIVE
             </div>
           </div>
 
           {ragInsight ? (
-            <p style={{ color:"#E2E8F0", fontSize:"13px", lineHeight:"1.6", margin:0, letterSpacing:"0.1px" }}>
+            <p style={{ color:"#F1F5F9", fontSize:"13.5px", lineHeight:"1.6", margin:0, fontWeight: "500" }}>
               {ragInsight}
             </p>
           ) : (
@@ -633,23 +653,24 @@ export default function ScanHistoryPage() {
             </div>
           )}
 
-          <div style={{ display:"flex", gap:"12px", marginTop:"18px" }}>
-            <button onClick={() => navigate("/copilot")} className="sh-btn" style={{
+          <div style={{ display:"flex", gap:"12px", marginTop:"20px" }}>
+            <button onClick={() => navigate("/copilot")} className="sh-btn queue-card-hover" style={{
               background: T.purple,
-              border:"none", borderRadius:"8px", padding:"8px 16px",
-              color:T.white, fontWeight:"700", fontSize:"12.5px", cursor:"pointer",
+              border:"none", borderRadius:"10px", padding:"10px 18px",
+              color:T.white, fontWeight:"800", fontSize:"12.5px", cursor:"pointer",
+              boxShadow: `0 4px 14px ${T.purple}35`,
             }}>
               Analyze Now
             </button>
-            <button onClick={() => navigate("/vulnerabilities")} className="sh-btn" style={{
-              background:"rgba(255,255,255,0.03)",
+            <button onClick={() => navigate("/vulnerabilities")} className="sh-btn queue-card-hover" style={{
+              background:"rgba(255,255,255,0.05)",
               color:T.white,
-              border:"1px solid rgba(255,255,255,0.08)",
-              padding:"8px 16px",
-              borderRadius:"8px",
+              border:"1px solid rgba(255,255,255,0.12)",
+              padding:"10px 18px",
+              borderRadius:"10px",
               cursor:"pointer",
               fontSize:"12.5px",
-              fontWeight:"600",
+              fontWeight: "700",
               display:"flex",
               alignItems:"center",
               gap:"6px",
@@ -662,40 +683,46 @@ export default function ScanHistoryPage() {
 
       {/* ══════════ TREND CHART ═══════════════════════════════════════════ */}
       {trendData.length > 0 && (
-        <div style={card()}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"16px" }}>
+        <div style={{
+          ...card({ padding: "24px" }),
+          background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(3,7,18,0.98))",
+          borderColor: "rgba(255,255,255,0.08)",
+          borderRadius: "20px",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+        }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"20px" }}>
             <div>
-              <h3 style={{ margin:0, fontSize:"20px" }}>Scan Activity Trend</h3>
-              <p style={{ color:T.muted, margin:"6px 0 0", fontSize:"13px" }}>
+              <h3 style={{ margin:0, fontSize:"20px", fontWeight:"900", color: "#FFF" }}>Scan Activity Trend</h3>
+              <p style={{ color:T.muted, margin:"4px 0 0", fontSize:"13px" }}>
                 Daily scan volume and vulnerability discovery rate
               </p>
             </div>
-            <div style={{ display:"flex", gap:"16px" }}>
+            <div style={{ display:"flex", gap:"18px" }}>
               {[{label:"Scans",color:T.purple},{label:"Vulns",color:T.critical}].map(l=>(
-                <div key={l.label} style={{ display:"flex",alignItems:"center",gap:"7px" }}>
-                  <div style={{ width:"10px",height:"2px",background:l.color,borderRadius:"2px" }} />
-                  <span style={{ color:T.muted, fontSize:"12px" }}>{l.label}</span>
+                <div key={l.label} style={{ display:"flex",alignItems:"center",gap:"8px" }}>
+                  <div style={{ width:"12px",height:"3px",background:l.color,borderRadius:"2px" }} />
+                  <span style={{ color:T.muted, fontSize:"12.5px", fontWeight: "700" }}>{l.label}</span>
                 </div>
               ))}
             </div>
           </div>
-          <ResponsiveContainer width="100%" height={130}>
-            <AreaChart data={trendData} margin={{top:4,right:4,left:-20,bottom:0}}>
+          <ResponsiveContainer width="100%" height={180}>
+            <AreaChart data={trendData} margin={{top:10,right:10,left:-20,bottom:0}}>
               <defs>
                 <linearGradient id="gs" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={T.purple}   stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor={T.purple}   stopOpacity={0}/>
+                  <stop offset="5%"  stopColor={T.purple}   stopOpacity={0.4}/>
+                  <stop offset="95%" stopColor={T.purple}   stopOpacity={0.02}/>
                 </linearGradient>
                 <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={T.critical} stopOpacity={0.2}/>
-                  <stop offset="95%" stopColor={T.critical} stopOpacity={0}/>
+                  <stop offset="5%"  stopColor={T.critical} stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor={T.critical} stopOpacity={0.02}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" tick={{fill:T.dimmed,fontSize:9}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fill:T.dimmed,fontSize:9}} axisLine={false} tickLine={false}/>
-              <Tooltip contentStyle={{background:"#0F172A",border:`1px solid ${T.border}`,borderRadius:"10px",fontSize:"11px"}}/>
-              <Area type="monotone" dataKey="scans" stroke={T.purple}   strokeWidth={2.5} fill="url(#gs)" dot={false}/>
-              <Area type="monotone" dataKey="vulns"  stroke={T.critical} strokeWidth={1.5} fill="url(#gv)" dot={false}/>
+              <XAxis dataKey="date" tick={{fill:T.dimmed,fontSize:10}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:T.dimmed,fontSize:10}} axisLine={false} tickLine={false}/>
+              <Tooltip contentStyle={{background:"#0F172A",border:`1px solid ${T.border}`,borderRadius:"12px",fontSize:"12px",boxShadow:"0 8px 24px rgba(0,0,0,0.5)"}}/>
+              <Area type="monotone" dataKey="scans" stroke={T.purple}   strokeWidth={3} fill="url(#gs)" dot={{ r: 3, fill: T.purple }}/>
+              <Area type="monotone" dataKey="vulns"  stroke={T.critical} strokeWidth={2} fill="url(#gv)" dot={{ r: 3, fill: T.critical }}/>
             </AreaChart>
           </ResponsiveContainer>
         </div>

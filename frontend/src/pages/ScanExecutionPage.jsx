@@ -348,7 +348,7 @@ export default function ScanExecutionPage() {
     }
   });
 
-  const handleStartScan = async () => {
+  const handleStartScan = async (configOptions = {}) => {
     if (!url) return;
     setIsScanning(true);
     setScan(null);
@@ -359,7 +359,7 @@ export default function ScanExecutionPage() {
     ]);
 
     try {
-      const initialScan = await scanService.createScan(url);
+      const initialScan = await scanService.createScan(url, configOptions);
       setScan(initialScan);
       setScanStatus({
         status: "running",
