@@ -60,12 +60,6 @@ const menuItems = [
     icon: <Server size={17} />,
   },
   {
-    name: "Workflow Builder",
-    path: "/workflows",
-    icon: <ClipboardList size={17} />,
-  },
-
-  {
     name: "Settings",
     path: "/settings",
     icon: <Settings size={17} />,

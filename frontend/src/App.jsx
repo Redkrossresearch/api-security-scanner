@@ -14,7 +14,6 @@ import ReportsPage from "./pages/ReportsPage";
 import SettingsPage from "./pages/SettingsPage";
 import CopilotPage from "./pages/CopilotPage";
 import QueueMonitorPage from "./pages/QueueMonitorPage";
-import WorkflowBuilderPage from "./pages/WorkflowBuilderPage";
 import WorkspacePage from "./pages/WorkspacePage";
 import DownloadsPage from "./pages/DownloadsPage";
 import ApiInventoryPage from "./pages/ApiInventoryPage";
@@ -68,7 +67,6 @@ function App() {
           <Route path="/workspace" element={<WorkspacePage />} />
           <Route path="/downloads" element={<DownloadsPage />} />
           <Route path="/queue" element={<QueueMonitorPage />} />
-          <Route path="/workflows" element={<WorkflowBuilderPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
