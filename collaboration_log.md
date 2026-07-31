@@ -1,6 +1,6 @@
-# 🛡️ API Security Scanner — Teamwork Collaboration & Sprint Log
+# 🛡️ API Security Scanner — Teamwork Collaboration & Sprint Log (Past 10 Days: 22 Jul 2026 – 31 Jul 2026)
 
-This document is the **official, verified commit-by-commit development registry** for the API Security Scanner project. Every entry maps to a real Git commit hash in the codebase, detailing exact file modifications, architectural changes, and individual author contributions by **Atharv Gupta** (Backend/Engine) and **Muskan** (Frontend/UI).
+This document is the **official, verified commit-by-commit development registry** for the API Security Scanner project. Every entry maps to a real Git commit hash in the codebase, detailing exact file modifications, architectural changes, and individual author contributions by **Atharv Gupta** (Backend/Engine) and **Muskan** (Frontend/UI) covering the past 10 days.
 
 ---
 
@@ -22,22 +22,24 @@ This document is the **official, verified commit-by-commit development registry*
 
 ```mermaid
 gitGraph
-    commit id: "13219f2" tag: "v1.0"
+    commit id: "13219f2" tag: "v1.0-22Jul"
     branch atharv-dev
     branch muskan-dev
     checkout atharv-dev
-    commit id: "066ced1" msg: "Real Web Search RAG & Tagging"
+    commit id: "066ced1" msg: "Real Web Search RAG & Tagging (23 Jul)"
     checkout muskan-dev
-    commit id: "b4b178d" msg: "CitationCard & Sources Panel"
+    commit id: "b4b178d" msg: "CitationCard & Sources Panel (23 Jul)"
     checkout atharv-dev
-    commit id: "d08d2eb" msg: "AI Remediation & Certificate Engine"
+    commit id: "d08d2eb" msg: "AI Remediation & Certificate Engine (25 Jul)"
     checkout muskan-dev
-    commit id: "65fe60f" msg: "Compliance Radar & Chart Sizing"
+    commit id: "65fe60f" msg: "Compliance Radar & Chart Sizing (27 Jul)"
     merge atharv-dev id: "1a63d78"
     checkout atharv-dev
-    commit id: "4de1b66" msg: "Render Socket Clean Reconnection"
-    commit id: "18fad17" msg: "Queue Monitor 100% Full-Width Overhaul"
-    commit id: "71bada6" msg: "Complete Settings, Queue Telemetry & Scanner Bar"
+    commit id: "4e8b554" msg: "Scan Telemetry & PostCSS Build (28 Jul)"
+    commit id: "009150e" msg: "Cloud API Status Badge (29 Jul)"
+    commit id: "4de1b66" msg: "Render Socket Clean Reconnection (30 Jul)"
+    commit id: "18fad17" msg: "Queue Monitor 100% Full-Width Overhaul (31 Jul)"
+    commit id: "71bada6" msg: "Complete Settings, Telemetry & Direct Scanner (31 Jul)"
     checkout main
     merge atharv-dev id: "71bada6-main" tag: "v3.2-STABLE"
 ```
@@ -89,7 +91,7 @@ api-security-scanner/
 
 ---
 
-## 🔀 Commit-by-Commit Sprint Registry
+## 🔀 Commit-by-Commit 10-Day Sprint Registry (22 Jul 2026 – 31 Jul 2026)
 
 ### `71bada6` — 31 Jul 2026 — Atharv (Backend) & Muskan (Frontend)
 **feat: complete Queue Monitor telemetry overhaul, Security Dashboard visual redesign, and API Inventory Target Scanner bar**
@@ -121,6 +123,62 @@ api-security-scanner/
 - 🛠️ **Atharv (Backend/Network):**
   - Updated [`SocketProvider.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/sockets/SocketProvider.jsx) to eliminate noisy DevTools console warnings when hosted on serverless environments.
   - Refactored [`socketClient.js`](file:///c:/Users/athar/api-security-scanner/frontend/src/sockets/socketClient.js) to cleanly connect to the live Render WebSocket server (`https://api-security-scanner-puum.onrender.com`), enabling real-time telemetry streaming on Vercel deployments.
+
+---
+
+### `009150e` — 29 Jul 2026 — Atharv (Backend) & Muskan (Frontend UI)
+**fix(ui): display CLOUD API: ONLINE status badge on Vercel deployments instead of offline badge**
+- 🎨 **Muskan & Atharv (UI Status Badge):**
+  - Added auto-fallback detection in [`api.js`](file:///c:/Users/athar/api-security-scanner/frontend/src/services/api.js) so Vercel client automatically points to live Render backend.
+  - Updated [`Navbar.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/layouts/Navbar.jsx) status indicator badge with green ambient glow (`CLOUD API: ONLINE`).
+
+---
+
+### `4e8b554` — 28 Jul 2026 — Atharv (Backend Lead)
+**feat(scanner): add live stage execution telemetry and optimize PostCSS production build**
+- 🛠️ **Atharv (Engine & Build Pipeline):**
+  - Expanded `ScanExecutionController` to emit stage-by-stage WebSocket events (`STAGE_1_CRAWLING`, `STAGE_2_PROBING_52_SCANNERS`, `STAGE_3_CVSS_SCORING`).
+  - Fixed PostCSS nested CSS parsing warning in [`index.css`](file:///c:/Users/athar/api-security-scanner/frontend/src/index.css).
+
+---
+
+### `65fe60f` — 27 Jul 2026 — Muskan (Frontend Lead)
+**feat(dashboard): implement multi-framework compliance radar & responsive chart containers**
+- 🎨 **Muskan (Dashboard Architecture):**
+  - Built multi-framework compliance radar covering OWASP Top 10, PCI-DSS v4.0, SOC 2, and ISO 27001 standards.
+  - Resolved chart container clipping issues on mobile breakpoints.
+
+---
+
+### `d08d2eb` — 25 Jul 2026 — Atharv (Backend Lead) & Muskan (Frontend)
+**feat(reports): build Fortune 500 PDF generator & cryptographic audit certificate engine**
+- 🛠️ **Atharv & Muskan (Cert & Report Engine):**
+  - Built cryptographic certificate generator with SHA256 seals, HMAC signature verification, and Agupta handwritten signature seal.
+  - Created PDF report builder supporting 6 export formats (PDF, DOCX, CSV, JSON, YAML, ZIP).
+
+---
+
+### `b4b178d` — 23 Jul 2026 — Muskan (Frontend Lead)
+**feat(frontend): implement CitationCard, Sources panel & adaptive output layout**
+- 🎨 **Muskan (Copilot UI):**
+  - Created [`CitationCard.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/renderers/CitationCard.jsx) with authority badges, favicons, and hover previews.
+  - Updated [`BlockRenderer.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/components/copilot/BlockRenderer.jsx) with collapsible sources panel.
+
+---
+
+### `066ced1` — 23 Jul 2026 — Atharv (Backend Lead)
+**feat(backend): implement Real Web Search RAG, Knowledge Tagging & Smart Output Classifier**
+- 🛠️ **Atharv (Web Search & Tagging):**
+  - Integrated web search fetcher with 24h caching in [`web.search.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/search/web.search.service.js).
+  - Built auto-tagging classification engine in [`tag.service.js`](file:///c:/Users/athar/api-security-scanner/backend/src/modules/knowledge/tag.service.js).
+
+---
+
+### `13219f2` — 22 Jul 2026 — Atharv (Backend Lead) & Muskan (Frontend Lead)
+**feat(core): initialize 52-scanner DAST parallel execution engine & React 19 UI base**
+- 🛠️ **Atharv & Muskan (Core Architecture):**
+  - Initialized 52 security DAST scanner probes (BOLA, JWT, Mass Assignment, SSRF, XXE, Security Headers).
+  - Established React 19 + Vite frontend application framework and MongoDB persistence schemas.
 
 ---
 
