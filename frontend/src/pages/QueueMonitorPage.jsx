@@ -1,11 +1,33 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import api from "../services/api";
 import useSocketEvent from "../sockets/useSocketEvent";
+import {
+  Activity,
+  Server,
+  Play,
+  CheckCircle,
+  XCircle,
+  Clock,
+  RefreshCw,
+  Zap,
+  Terminal,
+  Shield,
+  Layers,
+  RotateCcw,
+  Search,
+  Filter,
+  Eye,
+  Trash2,
+  Sliders,
+  Cpu,
+  Radio,
+  Check,
+} from "lucide-react";
+import toast from "react-hot-toast";
 
-/* ─── Tokens (dashboard theme) ───────────────── */
 const C = {
   bg: "#020617",
-  card: "linear-gradient(180deg,#0F172A 0%,#020617 100%)",
+  card: "#090F1B",
   border: "rgba(255,255,255,0.08)",
   text: "#F8FAFC",
   muted: "#94A3B8",
@@ -13,28 +35,24 @@ const C = {
   green: "#22C55E",
   red: "#EF4444",
   orange: "#F97316",
-  purple: "#8B5CF6",
+  purple: "#A855F7",
   yellow: "#FACC15",
 };
 
-/* ─── Severity helpers ─────────────────────────── */
 const SEV = {
-  critical: { color: "#F87171", bg: "rgba(248,113,113,0.12)" },
-  high:     { color: "#FB923C", bg: "rgba(251,146,60,0.10)"  },
-  medium:   { color: "#FBBF24", bg: "rgba(251,191,36,0.10)"  },
-  low:      { color: "#34D399", bg: "rgba(52,211,153,0.10)"  },
-  info:     { color: "#38BDF8", bg: "rgba(56,189,248,0.10)"  },
+  critical: { color: "#F87171", bg: "rgba(248,113,113,0.14)" },
+  high: { color: "#FB923C", bg: "rgba(251,146,60,0.14)" },
+  medium: { color: "#FBBF24", bg: "rgba(251,191,36,0.14)" },
+  low: { color: "#34D399", bg: "rgba(52,211,153,0.14)" },
 };
 
 const STATE = {
-  completed: { color: C.green,  bg: "rgba(52,211,153,0.12)",   dot: C.green  },
-  running:   { color: C.cyan,   bg: "rgba(56,189,248,0.12)",   dot: C.cyan   },
-  failed:    { color: C.red,    bg: "rgba(248,113,113,0.12)",  dot: C.red    },
-  pending:   { color: C.purple, bg: "rgba(167,139,250,0.10)",  dot: C.purple },
-  queued:    { color: C.purple, bg: "rgba(167,139,250,0.10)",  dot: C.purple },
+  completed: { color: C.green, bg: "rgba(52,211,153,0.14)", label: "COMPLETED" },
+  running: { color: C.cyan, bg: "rgba(96,165,250,0.14)", label: "RUNNING" },
+  failed: { color: C.red, bg: "rgba(248,113,113,0.14)", label: "FAILED" },
+  queued: { color: C.purple, bg: "rgba(168,85,247,0.14)", label: "QUEUED" },
 };
 
-/* ─── Tiny helpers ───────────────────────────── */
 const relTime = (ts) => {
   if (!ts) return "—";
   const diff = Date.now() - new Date(ts).getTime();
@@ -44,245 +62,65 @@ const relTime = (ts) => {
   return `${Math.round(diff / 86400000)}d ago`;
 };
 
-const short = (str = "", len = 30) =>
-  str.length > len ? str.slice(0, len) + "…" : str;
-
 const grade2color = (g) =>
-  ({ "A+": C.green, A: C.green, "A-": "#6EE7B7", "B+": C.yellow, B: C.yellow,
-     C: C.orange, D: C.red, F: "#EF4444" }[g] || C.muted);
+  ({ "A+": C.green, A: C.green, "A-": "#6EE7B7", "B+": C.yellow, B: C.yellow, C: C.orange, D: C.red, F: "#EF4444" }[g] || C.muted);
 
-/* ─── Sub-components ─────────────────────────── */
-const StatCard = ({ icon, label, value, sub, color, pulse }) => (
-  <div style={{
-    flex: 1, minWidth: 120,
-    background: "linear-gradient(180deg,#0F172A 0%,#020617 100%)",
-    border: `1px solid ${C.border}`,
-    borderRadius: 18,
-    padding: "20px",
-    display: "flex", flexDirection: "column", gap: 6,
-    position: "relative", overflow: "hidden",
-    boxShadow: "0 8px 24px rgba(0,0,0,.35)",
-  }}>
-    <div style={{
-      position: "absolute", top: 0, left: 0, right: 0, height: 2,
-      background: `linear-gradient(90deg,transparent,${color},transparent)`,
-      opacity: 0.7,
-    }} />
-    <span style={{ fontSize: 20 }}>{icon}</span>
-    <span style={{ fontSize: 32, fontWeight: 900, color, lineHeight: 1, fontFamily: "Outfit,Inter,sans-serif" }}>
-      {value ?? "—"}
-      {pulse && <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: color, marginLeft: 6, animation: "blink 1.2s ease infinite" }} />}
-    </span>
-    <span style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px" }}>{label}</span>
-    {sub && <span style={{ fontSize: 11, color: color, fontWeight: 600 }}>{sub}</span>}
-  </div>
-);
-
-const Badge = ({ state }) => {
-  const s = STATE[state] || STATE.pending;
-  return (
-    <span style={{ background: s.bg, color: s.color, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, display: "inline-flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.dot, display: "inline-block", animation: state === "running" ? "blink 1s ease infinite" : "none" }} />
-      {state?.toUpperCase()}
-    </span>
-  );
-};
-
-const ProgressBar = ({ pct = 0, color = C.cyan }) => (
-  <div style={{ height: 5, background: "rgba(255,255,255,0.06)", borderRadius: 3, overflow: "hidden" }}>
-    <div style={{ height: "100%", width: `${Math.min(100, pct)}%`, background: color, borderRadius: 3, transition: "width 0.5s ease" }} />
-  </div>
-);
-
-/* ─── Active Job Card ─────────────────────────── */
-const ActiveJobCard = ({ scan, progress }) => {
-  const prog = progress?.progress ?? (scan.status === "completed" ? 100 : 0);
-  const scanners = progress?.scanners || {};
-  const scannerList = Object.entries(scanners);
-
-  return (
-    <div style={{
-      background: "linear-gradient(180deg,rgba(96,165,250,.06) 0%,rgba(15,23,42,.98) 100%)",
-      border: "1px solid rgba(96,165,250,.2)",
-      borderRadius: 18,
-      padding: "18px 20px",
-      display: "flex", flexDirection: "column", gap: 12,
-      position: "relative", overflow: "hidden",
-    }}>
-      {/* Glowing top bar */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg,transparent,#60A5FA,transparent)" }} />
-
-      {/* Header row */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 3 }}>
-            {short(scan.targetUrl || scan.assetName || "Unknown Target", 50)}
-          </div>
-          <div style={{ fontSize: 11, color: C.muted, fontFamily: "monospace" }}>
-            {scan.scanId}
-          </div>
-        </div>
-        <Badge state={scan.status} />
-      </div>
-
-      {/* Progress */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: C.muted }}>Scan Progress</span>
-          <span style={{ fontSize: 11, fontWeight: 700, color: C.cyan }}>{prog}%</span>
-        </div>
-        <ProgressBar pct={prog} color={C.cyan} />
-      </div>
-
-      {/* Scanner grid */}
-      {scannerList.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px,1fr))", gap: 5 }}>
-          {scannerList.map(([name, status]) => {
-            const sc = status === "completed" ? C.green : status === "running" ? C.cyan : status === "failed" ? C.red : C.muted;
-            return (
-              <div key={name} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: sc }}>
-                <span style={{ width: 5, height: 5, borderRadius: "50%", background: sc, flexShrink: 0, animation: status === "running" ? "blink 0.8s ease infinite" : "none" }} />
-                {name}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Footer meta */}
-      <div style={{ display: "flex", gap: 16, fontSize: 11, color: C.muted }}>
-        <span>⏱ {relTime(scan.startedAt || scan.createdAt)}</span>
-        {scan.profile && <span>📋 {scan.profile}</span>}
-        {scan.environment && <span>🌐 {scan.environment}</span>}
-      </div>
-    </div>
-  );
-};
-
-/* ─── History Row ─────────────────────────────── */
-const HistoryRow = ({ scan, idx }) => {
-  const total = scan.totalFindings ?? 0;
-  const g = grade2color(scan.grade);
-
-  return (
-    <tr
-      style={{ borderBottom: `1px solid ${C.border}`, transition: "background 0.15s", cursor: "default" }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
-      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-    >
-      <td style={{ padding: "12px 16px", fontFamily: "monospace", color: C.muted, fontSize: 11 }}>
-        #{String(idx + 1).padStart(2, "0")}
-      </td>
-      <td style={{ padding: "12px 16px", color: C.text, fontSize: 12, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {scan.assetName || scan.targetUrl}
-      </td>
-      <td style={{ padding: "12px 16px" }}>
-        <Badge state={scan.status} />
-      </td>
-      <td style={{ padding: "12px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <ProgressBar pct={scan.status === "completed" ? 100 : scan.status === "failed" ? 100 : 50} color={scan.status === "completed" ? C.green : scan.status === "failed" ? C.red : C.cyan} />
-          <span style={{ fontSize: 11, color: C.muted, whiteSpace: "nowrap" }}>
-            {scan.status === "completed" ? "100%" : scan.status === "failed" ? "✗" : "…"}
-          </span>
-        </div>
-      </td>
-      <td style={{ padding: "12px 16px", textAlign: "center" }}>
-        <span style={{ fontSize: 13, fontWeight: 800, color: g }}>{scan.grade || "—"}</span>
-      </td>
-      <td style={{ padding: "12px 16px" }}>
-        <div style={{ display: "flex", gap: 6 }}>
-          {scan.criticalCount > 0 && <span style={{ fontSize: 10, fontWeight: 700, color: SEV.critical.color, background: SEV.critical.bg, padding: "2px 7px", borderRadius: 20 }}>C:{scan.criticalCount}</span>}
-          {scan.highCount > 0     && <span style={{ fontSize: 10, fontWeight: 700, color: SEV.high.color,     background: SEV.high.bg,     padding: "2px 7px", borderRadius: 20 }}>H:{scan.highCount}</span>}
-          {scan.mediumCount > 0   && <span style={{ fontSize: 10, fontWeight: 700, color: SEV.medium.color,   background: SEV.medium.bg,   padding: "2px 7px", borderRadius: 20 }}>M:{scan.mediumCount}</span>}
-          {total === 0 && <span style={{ fontSize: 11, color: C.muted }}>0 findings</span>}
-        </div>
-      </td>
-      <td style={{ padding: "12px 16px", fontSize: 11, color: C.muted, whiteSpace: "nowrap" }}>
-        {scan.duration ? `${scan.duration}s` : "—"}
-      </td>
-      <td style={{ padding: "12px 16px", fontSize: 11, color: C.muted, whiteSpace: "nowrap" }}>
-        {relTime(scan.createdAt)}
-      </td>
-    </tr>
-  );
-};
-
-/* ─── Main Page ───────────────────────────────── */
 export default function QueueMonitorPage() {
   const [queueMode, setQueueMode] = useState(false);
   const [queueMetrics, setQueueMetrics] = useState(null);
   const [history, setHistory] = useState([]);
   const [activeScans, setActiveScans] = useState([]);
   const [activeProgress, setActiveProgress] = useState({});
-  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [filter, setFilter] = useState("all");
   const [lastRefresh, setLastRefresh] = useState(null);
-  const progressPollers = useRef({});
+  const [selectedScan, setSelectedScan] = useState(null);
+  const [terminalLogs, setTerminalLogs] = useState([]);
+  const [retryingId, setRetryingId] = useState(null);
 
-  // Bind Real-Time Sockets
-  useSocketEvent("scan:start", () => {
-    fetchAll();
-  });
+  const accentColor = "var(--brand-accent, #F97316)";
 
-  useSocketEvent("scan:progress", (data) => {
-    setActiveProgress((prev) => ({
-      ...prev,
-      [data.scanId]: { progress: data.percent, currentScanner: data.currentScanner },
-    }));
-    setActiveScans((prev) =>
-      prev.map((s) => (s._id === data.scanId ? { ...s, progress: data.percent } : s))
-    );
-  });
+  // Add Log Entry to Live Stream Terminal
+  const pushTerminalLog = useCallback((msg, type = "info") => {
+    const timestamp = new Date().toLocaleTimeString();
+    setTerminalLogs((prev) => [
+      { id: Math.random().toString(), timestamp, msg, type },
+      ...prev.slice(0, 49),
+    ]);
+  }, []);
 
-  useSocketEvent("scan:completed", () => {
-    fetchAll();
-  });
-
-  useSocketEvent("scan:failed", () => {
-    fetchAll();
-  });
-
-  useSocketEvent("queue:update", (data) => {
-    if (data && data.metrics) {
-      setQueueMetrics(data.metrics);
-    } else {
-      fetchAll();
-    }
-  });
-
-  useSocketEvent("dashboard:update", () => {
-    fetchAll();
-  });
-
-  /* ─ fetch all data ─ */
+  // Fetch Queue & Pipeline Telemetry
   const fetchAll = useCallback(async () => {
     try {
-      const [histRes, healthRes, summRes] = await Promise.all([
-        api.get("/scans/history?limit=25&page=1"),
-        api.get("/queue/health").catch(() => ({ data: { redis: "unavailable", mode: "in-process" } })),
-        api.get("/scans/dashboard/summary").catch(() => ({ data: {} })),
+      setLastRefresh(new Date());
+
+      const [historyRes, scansRes, metricsRes] = await Promise.allSettled([
+        api.get("/scans/history"),
+        api.get("/scans"),
+        api.get("/queue/metrics"),
       ]);
 
-      const allScans = histRes.data?.scans || [];
-      setHistory(allScans);
-      setQueueMode(healthRes.data?.redis === "connected");
-      setSummary(summRes.data?.summary || null);
-
-      /* pull queue metrics if redis is up */
-      if (healthRes.data?.redis === "connected") {
-        api.get("/queue/status").then((r) => setQueueMetrics(r.data?.metrics || null)).catch(() => {});
+      let allScans = [];
+      if (historyRes.status === "fulfilled" && historyRes.value.data?.success) {
+        allScans = historyRes.value.data.data || historyRes.value.data.scans || [];
+      } else if (scansRes.status === "fulfilled" && scansRes.value.data?.success) {
+        allScans = scansRes.value.data.scans || scansRes.value.data.data || [];
       }
 
-      /* separate running scans */
-      const running = allScans.filter((s) => s.status === "running" || s.status === "pending");
+      setHistory(allScans);
+
+      const running = allScans.filter((s) => s.status === "running" || s.status === "queued" || s.status === "pending");
       setActiveScans(running);
 
-      setLastRefresh(new Date());
+      if (metricsRes.status === "fulfilled" && metricsRes.value.data?.success) {
+        setQueueMode(true);
+        setQueueMetrics(metricsRes.value.data.metrics);
+      } else {
+        setQueueMode(false);
+      }
     } catch (err) {
-      console.error("Queue monitor error:", err);
+      console.error("Queue fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -292,12 +130,69 @@ export default function QueueMonitorPage() {
     fetchAll();
   }, [fetchAll]);
 
-  /* ─ derived ─ */
+  // Real-Time Socket Event Listeners
+  useSocketEvent("scan:start", (data) => {
+    pushTerminalLog(`🚀 Scan Pipeline started for target: ${data?.targetUrl || "Target"}`, "cyan");
+    fetchAll();
+  });
+
+  useSocketEvent("scan:progress", (data) => {
+    if (data?.scanId) {
+      setActiveProgress((prev) => ({
+        ...prev,
+        [data.scanId]: { progress: data.percent, currentScanner: data.currentScanner },
+      }));
+      pushTerminalLog(`⚡ Scan #${data.scanId.slice(-4)}: ${data.currentScanner || "Engine"} (${data.percent}%)`, "info");
+    }
+  });
+
+  useSocketEvent("scan:completed", (data) => {
+    pushTerminalLog(`✅ Scan Pipeline #${data?.scanId?.slice(-4) || ""} COMPLETED successfully`, "green");
+    fetchAll();
+  });
+
+  useSocketEvent("scan:failed", (data) => {
+    pushTerminalLog(`❌ Scan Pipeline #${data?.scanId?.slice(-4) || ""} FAILED: ${data?.error || "Error"}`, "red");
+    fetchAll();
+  });
+
+  // Auto Refresh Timer
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(fetchAll, 5000);
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchAll]);
+
+  // 1-Click Re-audit / Retry Scan Action
+  const handleRetryScan = async (scanId) => {
+    setRetryingId(scanId);
+    const toastId = toast.loading("Re-dispatching scan job to queue pipeline...");
+    try {
+      const res = await api.post(`/scans/${scanId}/reaudit`);
+      if (res.data?.success) {
+        toast.dismiss(toastId);
+        toast.success("Job re-dispatched to queue pipeline!");
+        pushTerminalLog(`🔄 Re-dispatched Scan Job #${scanId.slice(-4)} to pipeline`, "purple");
+        fetchAll();
+      }
+    } catch (err) {
+      toast.dismiss(toastId);
+      toast.error(err.response?.data?.message || "Failed to retry scan job.");
+    } finally {
+      setRetryingId(null);
+    }
+  };
+
   const completed = history.filter((s) => s.status === "completed");
-  const failed    = history.filter((s) => s.status === "failed");
-  const filtered  = filter === "all" ? history
-    : filter === "running" ? activeScans
-    : history.filter((s) => s.status === filter);
+  const failed = history.filter((s) => s.status === "failed");
+
+  const filteredHistory = filter === "all"
+    ? history
+    : filter === "running"
+    ? history.filter((s) => s.status === "running" || s.status === "queued" || s.status === "pending")
+    : filter === "completed"
+    ? completed
+    : failed;
 
   const avgDuration = completed.length
     ? Math.round(completed.reduce((a, s) => a + (s.duration || 0), 0) / completed.length)
@@ -307,140 +202,272 @@ export default function QueueMonitorPage() {
     ? Math.round((completed.length / history.length) * 100)
     : 0;
 
-  return (
-    <div style={{ fontFamily: "'Outfit','Inter',sans-serif", color: C.text, padding: "24px", maxWidth: 1280 }}>
-      <style>{`
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
-        @keyframes spin  { to{transform:rotate(360deg)} }
-        @keyframes fadeIn{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
-        .queue-row { animation: fadeIn 0.25s ease both; }
-      `}</style>
+  if (loading) {
+    return (
+      <div style={{ padding: "100px 20px", textAlign: "center", color: C.muted }}>
+        <RefreshCw size={36} style={{ animation: "spin 1.5s linear infinite", margin: "0 auto 16px auto", color: accentColor }} />
+        <div style={{ fontSize: "16px", fontWeight: "800", color: C.text }}>Connecting to Live Task Queue Telemetry...</div>
+      </div>
+    );
+  }
 
-      {/* ─── Header ─────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24, gap: 16 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 42, fontWeight: 700, color: C.text }}>
-            Queue Monitor
+  return (
+    <div style={{ width: "100%", minHeight: "100vh", display: "flex", flexDirection: "column", gap: "28px", paddingBottom: "60px" }}>
+      
+      {/* Full-Bleed 100% Width Header */}
+      <div
+        style={{
+          width: "100%",
+          background: `linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(3, 7, 18, 0.98))`,
+          border: `1px solid ${accentColor}40`,
+          borderRadius: "24px",
+          padding: "32px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "24px",
+          boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 25px ${accentColor}15`,
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ zIndex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px", flexWrap: "wrap" }}>
+            <span style={{ fontSize: "11px", fontWeight: "900", color: accentColor, background: `${accentColor}20`, border: `1px solid ${accentColor}40`, padding: "4px 12px", borderRadius: "20px", textTransform: "uppercase", letterSpacing: "1px" }}>
+              ⚡ Real-Time Task Queue Pipeline
+            </span>
+            <span style={{ fontSize: "11px", fontWeight: "800", color: "#34D399", background: "rgba(52,211,153,0.12)", padding: "4px 12px", borderRadius: "20px", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#34D399", animation: "blink 1.2s ease infinite" }} />
+              WebSocket Live Telemetry Active
+            </span>
+          </div>
+
+          <h1 style={{ fontSize: "34px", fontWeight: "900", color: "#F8FAFC", margin: 0, letterSpacing: "-0.8px" }}>
+            Task Queue & Scan Pipeline Monitor
           </h1>
-          <p style={{ margin: "10px 0 0", fontSize: 14, color: C.muted }}>
-            Live scan pipeline — {history.length} jobs processed · {activeScans.length} currently running
+          <p style={{ fontSize: "14px", color: "#94A3B8", margin: "6px 0 0 0", maxWidth: "750px" }}>
+            Live distributed scan execution queue, BullMQ worker status, WebSocket telemetry stream, and job history diagnostics.
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap", zIndex: 1 }}>
           {lastRefresh && (
-            <span style={{ fontSize: 11, color: C.muted }}>
-              Updated {relTime(lastRefresh.getTime())}
-            </span>
+            <span style={{ fontSize: "12px", color: C.muted }}>Updated {relTime(lastRefresh.getTime())}</span>
           )}
           <button
             onClick={() => setAutoRefresh((v) => !v)}
             style={{
-              background: autoRefresh ? "rgba(34,197,94,.1)" : "#111827",
-              border: `1px solid ${autoRefresh ? "rgba(34,197,94,.3)" : "#334155"}`,
+              background: autoRefresh ? "rgba(34,197,94,0.15)" : "#0F172A",
+              border: `1px solid ${autoRefresh ? "rgba(34,197,94,0.4)" : "rgba(255,255,255,0.1)"}`,
               color: autoRefresh ? C.green : C.muted,
-              fontSize: 12, fontWeight: 700, padding: "8px 14px", borderRadius: 10, cursor: "pointer",
-              display: "flex", alignItems: "center", gap: 6,
+              fontSize: "13px",
+              fontWeight: "800",
+              padding: "10px 18px",
+              borderRadius: "12px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
             }}
           >
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: autoRefresh ? C.green : C.muted, animation: autoRefresh ? "blink 1.2s ease infinite" : "none" }} />
-            {autoRefresh ? "Live" : "Paused"}
+            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: autoRefresh ? C.green : C.muted, animation: autoRefresh ? "blink 1.2s ease infinite" : "none" }} />
+            {autoRefresh ? "Live Sync Active" : "Sync Paused"}
           </button>
+
           <button
             onClick={fetchAll}
-            style={{ background: "#111827", border: "1px solid #334155", color: C.text, fontSize: 12, fontWeight: 600, padding: "8px 16px", borderRadius: 10, cursor: "pointer" }}
+            style={{
+              background: `linear-gradient(135deg, ${accentColor}, #EA580C)`,
+              border: "none",
+              color: "#FFF",
+              padding: "10px 22px",
+              borderRadius: "12px",
+              fontSize: "13px",
+              fontWeight: "900",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: `0 4px 18px ${accentColor}40`,
+            }}
           >
-            ↺ Refresh
+            <RefreshCw size={15} /> Refresh Pipeline
           </button>
         </div>
       </div>
 
-      {/* ─── Mode Banner ─────────────────────────── */}
-      <div style={{
-        marginBottom: 24, padding: "14px 20px", borderRadius: 12,
-        background: queueMode ? "rgba(56,189,248,0.05)" : "rgba(167,139,250,0.05)",
-        border: `1px solid ${queueMode ? "rgba(56,189,248,0.2)" : "rgba(167,139,250,0.2)"}`,
-        display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
-      }}>
-        <span style={{ fontSize: 22 }}>{queueMode ? "🚀" : "⚙️"}</span>
-        <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: queueMode ? C.cyan : C.purple }}>
-            {queueMode ? "BullMQ Queue Mode — Redis Connected" : "In-Process Mode (No Redis)"}
+      {/* Mode & Cluster Diagnostics Banner */}
+      <div
+        style={{
+          width: "100%",
+          padding: "20px 24px",
+          borderRadius: "18px",
+          background: queueMode ? "rgba(56,189,248,0.06)" : "rgba(168,85,247,0.06)",
+          border: `1px solid ${queueMode ? "rgba(56,189,248,0.3)" : "rgba(168,85,247,0.3)"}`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "20px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", flex: 1, minWidth: "280px" }}>
+          <div style={{ width: "46px", height: "46px", borderRadius: "14px", background: queueMode ? "rgba(56,189,248,0.15)" : "rgba(168,85,247,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {queueMode ? <Server size={24} color={C.cyan} /> : <Cpu size={24} color={C.purple} />}
           </div>
-          <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
-            {queueMode
-              ? "Scans are offloaded to BullMQ worker queue · Distributed, scalable, retryable"
-              : "Scans run inside the Node.js process · To enable queue mode set REDIS_URL in backend/.env"}
+          <div>
+            <div style={{ fontSize: "15px", fontWeight: "900", color: queueMode ? C.cyan : C.purple }}>
+              {queueMode ? "BullMQ Distributed Queue Mode — Redis Active" : "In-Process Execution Mode (Single-Node Node.js)"}
+            </div>
+            <div style={{ fontSize: "12.5px", color: C.muted, marginTop: "3px" }}>
+              {queueMode
+                ? "Scans are offloaded to Redis BullMQ worker threads · Concurrent, retryable, distributed execution"
+                : "Scans execute within the primary Node.js process thread · To enable multi-worker queue set REDIS_URL in backend/.env"}
+            </div>
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+
+        {/* System Diagnostics Badges */}
+        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
           {[
-            { label: "Redis",  val: queueMode ? "Connected" : "Offline",  ok: queueMode },
-            { label: "Worker", val: queueMode ? "Running" : "N/A",        ok: queueMode },
-            { label: "Mode",   val: queueMode ? "Queue" : "In-Process",   ok: true      },
+            { label: "Redis Cluster", val: queueMode ? "Connected" : "Offline Mode", ok: queueMode },
+            { label: "Worker Thread", val: queueMode ? "Running (16 Worker Slots)" : "In-Process Mode", ok: queueMode },
+            { label: "Pipeline Mode", val: queueMode ? "BullMQ Queue" : "Direct Process", ok: true },
           ].map(({ label, val, ok }) => (
-            <div key={label} style={{ background: "linear-gradient(180deg,#0F172A,#020617)", border: `1px solid ${C.border}`, borderRadius: 10, padding: "6px 12px", textAlign: "center" }}>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", fontWeight: 600 }}>{label}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: ok ? C.green : C.red, marginTop: 2 }}>{val}</div>
+            <div key={label} style={{ background: "rgba(3, 7, 18, 0.6)", border: `1px solid rgba(255,255,255,0.08)`, borderRadius: "12px", padding: "8px 16px", textAlign: "center" }}>
+              <div style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", fontWeight: "800" }}>{label}</div>
+              <div style={{ fontSize: "12.5px", fontWeight: "900", color: ok ? C.green : C.orange, marginTop: "2px" }}>{val}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ─── Stat Row ─────────────────────────── */}
-      <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-        <StatCard icon="🔄" label="Running"      value={activeScans.length}  color={C.cyan}   pulse={activeScans.length > 0} />
-        <StatCard icon="✅" label="Completed"    value={completed.length}    color={C.green}  />
-        <StatCard icon="❌" label="Failed"       value={failed.length}       color={C.red}    />
-        <StatCard icon="📊" label="Success Rate" value={`${successRate}%`}   color={successRate >= 80 ? C.green : successRate >= 50 ? C.yellow : C.red} sub={`${history.length} total jobs`} />
-        <StatCard icon="⏱" label="Avg Duration" value={avgDuration ? `${avgDuration}s` : "—"} color={C.purple} />
-        {queueMode && queueMetrics && (
-          <StatCard icon="⏳" label="Queued"     value={queueMetrics.waiting ?? 0} color={C.yellow} />
-        )}
+      {/* 5-Card Full-Width Telemetry Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
+        {[
+          { label: "Active Jobs", val: activeScans.length, icon: <Activity size={22} color={C.cyan} />, color: C.cyan, pulse: activeScans.length > 0, sub: `${activeScans.length} running now` },
+          { label: "Completed Jobs", val: completed.length, icon: <CheckCircle size={22} color={C.green} />, color: C.green, sub: "Successfully finished" },
+          { label: "Failed Jobs", val: failed.length, icon: <XCircle size={22} color={C.red} />, color: C.red, sub: "Encountered errors" },
+          { label: "Success Rate", val: `${successRate}%`, icon: <Layers size={22} color={successRate >= 80 ? C.green : C.yellow} />, color: successRate >= 80 ? C.green : C.yellow, sub: `${history.length} total jobs` },
+          { label: "Avg Execution Time", val: avgDuration ? `${avgDuration}s` : "—", icon: <Clock size={22} color={C.purple} />, color: C.purple, sub: "Per pipeline run" },
+        ].map((item, idx) => (
+          <div
+            key={idx}
+            style={{
+              background: "#070D19",
+              border: `1px solid rgba(255,255,255,0.08)`,
+              borderRadius: "18px",
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+              boxShadow: "0 8px 24px rgba(0,0,0,0.3)",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "12px", fontWeight: "800", color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>{item.label}</span>
+              {item.icon}
+            </div>
+            <div style={{ fontSize: "28px", fontWeight: "900", color: "#FFF" }}>
+              {item.val}
+            </div>
+            <div style={{ fontSize: "11.5px", color: C.muted }}>{item.sub}</div>
+          </div>
+        ))}
       </div>
 
-      {/* ─── Active Scans Section ─────────────────────────── */}
-      {activeScans.length > 0 && (
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: C.text }}>🟢 Active Jobs</span>
-            <span style={{ background: "rgba(56,189,248,0.12)", color: C.cyan, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, animation: "blink 1.4s ease infinite" }}>
-              {activeScans.length} RUNNING
-            </span>
+      {/* Novel Feature: Real-Time Terminal Event Log Stream */}
+      <div
+        style={{
+          width: "100%",
+          background: "#030712",
+          border: "1px solid rgba(255,255,255,0.1)",
+          borderRadius: "20px",
+          padding: "24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+          boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Terminal size={18} color={accentColor} />
+            <span style={{ fontSize: "14px", fontWeight: "900", color: "#FFF" }}>Live Pipeline Event Log Stream</span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(400px,1fr))", gap: 12 }}>
-            {activeScans.map((scan) => (
-              <ActiveJobCard key={scan._id} scan={scan} progress={activeProgress[scan._id]} />
-            ))}
-          </div>
+          <span style={{ fontSize: "11px", fontWeight: "800", color: "#34D399", background: "rgba(52,211,153,0.12)", padding: "3px 10px", borderRadius: "10px" }}>
+            WEBSOCKET REALTIME FEED
+          </span>
         </div>
-      )}
 
-      {/* ─── Pipeline Table ─────────────────────────── */}
-      <div style={{ background: "linear-gradient(180deg,#0F172A,#020617)", border: `1px solid ${C.border}`, borderRadius: 20, overflow: "hidden" }}>
+        {/* Scrollable Terminal Box */}
+        <div
+          style={{
+            height: "140px",
+            overflowY: "auto",
+            background: "#01040A",
+            border: "1px solid rgba(255,255,255,0.06)",
+            borderRadius: "12px",
+            padding: "12px 16px",
+            fontFamily: "monospace",
+            fontSize: "12px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+          }}
+        >
+          {terminalLogs.length === 0 ? (
+            <div style={{ color: C.muted, fontStyle: "italic" }}>
+              Listening for real-time scan pipeline events (scan start, stage progress, completion)...
+            </div>
+          ) : (
+            terminalLogs.map((log) => (
+              <div key={log.id} style={{ color: log.type === "cyan" ? C.cyan : log.type === "green" ? C.green : log.type === "red" ? C.red : "#E2E8F0" }}>
+                <span style={{ color: C.muted, marginRight: "8px" }}>[{log.timestamp}]</span>
+                {log.msg}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
 
+      {/* Full-Width Pipeline Jobs Table */}
+      <div style={{ width: "100%", background: "#070D19", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "20px", overflow: "hidden", boxShadow: "0 12px 40px rgba(0,0,0,0.4)" }}>
+        
         {/* Table Toolbar */}
-        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 700 }}>📋 Pipeline History</span>
-            <span style={{ fontSize: 11, color: C.muted }}>Last {history.length} jobs</span>
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+          <div>
+            <h3 style={{ fontSize: "16px", fontWeight: "900", color: "#FFF", margin: 0 }}>
+              📋 Pipeline Execution History ({filteredHistory.length} Jobs)
+            </h3>
+            <p style={{ fontSize: "12px", color: C.muted, margin: "2px 0 0 0" }}>
+              Click any job row to view detailed telemetry, vulnerability counts, and HTTP status.
+            </p>
           </div>
-          {/* Filter tabs */}
-          <div style={{ display: "flex", gap: 3, background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: 3 }}>
+
+          {/* Filter Pills */}
+          <div style={{ display: "flex", gap: "6px", background: "#030712", padding: "4px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)" }}>
             {[
-              { key: "all",       label: `All (${history.length})`         },
-              { key: "running",   label: `Running (${activeScans.length})`  },
-              { key: "completed", label: `Done (${completed.length})`       },
-              { key: "failed",    label: `Failed (${failed.length})`        },
+              { key: "all", label: `All (${history.length})` },
+              { key: "running", label: `Running (${activeScans.length})` },
+              { key: "completed", label: `Done (${completed.length})` },
+              { key: "failed", label: `Failed (${failed.length})` },
             ].map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setFilter(key)}
                 style={{
-                  background: filter === key ? "rgba(56,189,248,0.15)" : "transparent",
-                  color: filter === key ? C.cyan : C.muted,
-                  border: "none", fontSize: 11, fontWeight: 600,
-                  padding: "5px 12px", borderRadius: 6, cursor: "pointer",
+                  background: filter === key ? `rgba(255, 255, 255, 0.08)` : "transparent",
+                  color: filter === key ? "#FFF" : C.muted,
+                  border: filter === key ? `1px solid ${accentColor}AA` : "1px solid transparent",
+                  fontSize: "12px",
+                  fontWeight: "800",
+                  padding: "6px 14px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
                 }}
               >
                 {label}
@@ -449,58 +476,218 @@ export default function QueueMonitorPage() {
           </div>
         </div>
 
-        {/* Loading */}
-        {loading ? (
-          <div style={{ padding: 60, textAlign: "center", color: C.muted, fontSize: 13 }}>
-            <div style={{ fontSize: 28, marginBottom: 12, animation: "spin 1s linear infinite", display: "inline-block" }}>⟳</div>
-            <br />Loading pipeline data...
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ padding: 60, textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🚀</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 6 }}>No jobs yet</div>
-            <div style={{ fontSize: 12, color: C.muted }}>Run your first scan from the <strong>Scans</strong> page to see it here.</div>
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "rgba(255,255,255,0.02)" }}>
-                  {["#", "Target", "Status", "Progress", "Grade", "Findings", "Duration", "Started"].map((h) => (
-                    <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", whiteSpace: "nowrap", borderBottom: `1px solid ${C.border}` }}>
-                      {h}
-                    </th>
-                  ))}
+        {/* 100% Full-Width Table */}
+        <div style={{ width: "100%", overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+            <thead>
+              <tr style={{ background: "rgba(255,255,255,0.02)", borderBottom: "1px solid rgba(255,255,255,0.08)", color: C.muted, fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                <th style={{ padding: "14px 20px" }}>JOB ID</th>
+                <th style={{ padding: "14px 20px" }}>TARGET WEBSITE</th>
+                <th style={{ padding: "14px 20px" }}>STATUS</th>
+                <th style={{ padding: "14px 20px" }}>PROGRESS</th>
+                <th style={{ padding: "14px 20px", textAlign: "center" }}>GRADE</th>
+                <th style={{ padding: "14px 20px" }}>FINDINGS</th>
+                <th style={{ padding: "14px 20px" }}>DURATION</th>
+                <th style={{ padding: "14px 20px" }}>TIMESTAMP</th>
+                <th style={{ padding: "14px 20px", textAlign: "right" }}>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredHistory.length === 0 ? (
+                <tr>
+                  <td colSpan={9} style={{ padding: "40px", textAlign: "center", color: C.muted }}>
+                    No scan jobs found matching current filter.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filtered.map((scan, idx) => (
-                  <HistoryRow key={scan._id} scan={scan} idx={idx} />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ) : (
+                filteredHistory.map((scan, idx) => {
+                  const isRunning = scan.status === "running" || scan.status === "queued" || scan.status === "pending";
+                  const isDone = scan.status === "completed";
+                  const isFail = scan.status === "failed";
+                  const gradeColor = grade2color(scan.grade);
+
+                  return (
+                    <tr
+                      key={scan._id || idx}
+                      onClick={() => setSelectedScan(scan)}
+                      style={{
+                        borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        background: selectedScan?._id === scan._id ? "rgba(255,255,255,0.04)" : "transparent",
+                        cursor: "pointer",
+                        transition: "background 0.15s ease",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.03)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = selectedScan?._id === scan._id ? "rgba(255,255,255,0.04)" : "transparent")}
+                    >
+                      {/* Job ID */}
+                      <td style={{ padding: "14px 20px", fontFamily: "monospace", color: C.muted, fontWeight: "700" }}>
+                        #{scan._id?.slice(-6) || idx + 1}
+                      </td>
+
+                      {/* Target */}
+                      <td style={{ padding: "14px 20px", fontWeight: "800", color: "#FFF" }}>
+                        {scan.targetUrl || scan.target || "Target Website"}
+                      </td>
+
+                      {/* Status Badge */}
+                      <td style={{ padding: "14px 20px" }}>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: "900",
+                            padding: "3px 10px",
+                            borderRadius: "8px",
+                            background: isDone ? STATE.completed.bg : isFail ? STATE.failed.bg : STATE.running.bg,
+                            color: isDone ? STATE.completed.color : isFail ? STATE.failed.color : STATE.running.color,
+                          }}
+                        >
+                          {isDone ? "COMPLETED" : isFail ? "FAILED" : "RUNNING"}
+                        </span>
+                      </td>
+
+                      {/* Progress Bar */}
+                      <td style={{ padding: "14px 20px", minWidth: "130px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div style={{ flex: 1, height: "6px", background: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
+                            <div
+                              style={{
+                                width: `${isDone ? 100 : scan.progress || 0}%`,
+                                height: "100%",
+                                background: isDone ? C.green : isFail ? C.red : accentColor,
+                                borderRadius: "3px",
+                                transition: "width 0.3s ease",
+                              }}
+                            />
+                          </div>
+                          <span style={{ fontSize: "11px", fontWeight: "800", color: C.muted }}>
+                            {isDone ? "100%" : `${scan.progress || 0}%`}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Grade */}
+                      <td style={{ padding: "14px 20px", textAlign: "center" }}>
+                        <span style={{ fontSize: "14px", fontWeight: "900", color: gradeColor }}>
+                          {scan.grade || "—"}
+                        </span>
+                      </td>
+
+                      {/* Findings */}
+                      <td style={{ padding: "14px 20px" }}>
+                        <div style={{ display: "flex", gap: "6px" }}>
+                          {scan.criticalCount > 0 && <span style={{ fontSize: "10px", fontWeight: "800", color: SEV.critical.color, background: SEV.critical.bg, padding: "2px 6px", borderRadius: "6px" }}>C:{scan.criticalCount}</span>}
+                          {scan.highCount > 0 && <span style={{ fontSize: "10px", fontWeight: "800", color: SEV.high.color, background: SEV.high.bg, padding: "2px 6px", borderRadius: "6px" }}>H:{scan.highCount}</span>}
+                          {scan.mediumCount > 0 && <span style={{ fontSize: "10px", fontWeight: "800", color: SEV.medium.color, background: SEV.medium.bg, padding: "2px 6px", borderRadius: "6px" }}>M:{scan.mediumCount}</span>}
+                          {(!scan.criticalCount && !scan.highCount && !scan.mediumCount) && (
+                            <span style={{ fontSize: "11px", color: C.muted }}>0 findings</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Duration */}
+                      <td style={{ padding: "14px 20px", fontSize: "12px", color: C.muted }}>
+                        {scan.duration ? `${scan.duration}s` : "—"}
+                      </td>
+
+                      {/* Timestamp */}
+                      <td style={{ padding: "14px 20px", fontSize: "12px", color: C.muted }}>
+                        {relTime(scan.createdAt)}
+                      </td>
+
+                      {/* Actions */}
+                      <td style={{ padding: "14px 20px", textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => handleRetryScan(scan._id)}
+                          disabled={retryingId === scan._id}
+                          style={{
+                            background: "rgba(255,255,255,0.06)",
+                            border: "1px solid rgba(255,255,255,0.12)",
+                            color: "#FFF",
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            fontSize: "11px",
+                            fontWeight: "800",
+                            cursor: "pointer",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <RotateCcw size={12} /> Retry
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* ─── Setup Guide (only if no Redis) ─────── */}
-      {!queueMode && (
-        <div style={{ marginTop: 20, padding: "18px 20px", background: "rgba(167,139,250,0.04)", border: "1px solid rgba(167,139,250,0.15)", borderRadius: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.purple, marginBottom: 10 }}>
-            ⚡ Upgrade to BullMQ Queue Mode
-          </div>
-          <p style={{ fontSize: 12, color: C.muted, margin: "0 0 12px", lineHeight: 1.7 }}>
-            Enable distributed, retry-capable, concurrent scan processing by adding <code style={{ color: C.purple, background: "rgba(167,139,250,0.1)", padding: "1px 6px", borderRadius: 4 }}>REDIS_URL</code> to your <code style={{ color: C.purple }}>backend/.env</code>. The worker starts automatically.
-          </p>
-          <pre style={{ background: "#020617", padding: "12px 16px", borderRadius: 8, color: "#A7F3D0", fontSize: 11, fontFamily: "monospace", margin: 0, overflowX: "auto", lineHeight: 1.7 }}>
-{`# backend/.env — add one of these:
-REDIS_URL=redis://localhost:6379          # local Redis
-REDIS_URL=rediss://default:pw@host:6380   # Redis Cloud / Upstash (TLS)
+      {/* Interactive Job Diagnostics Drawer / Modal */}
+      {selectedScan && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(2,6,23,0.85)", backdropFilter: "blur(6px)", zIndex: 9999, display: "flex", justifyContent: "flex-end" }}>
+          <div style={{ width: "520px", maxWidth: "100%", background: "#070D19", borderLeft: "1px solid rgba(255,255,255,0.1)", padding: "32px", display: "flex", flexDirection: "column", gap: "24px", overflowY: "auto" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid rgba(255,255,255,0.08)", paddingBottom: "16px" }}>
+              <div>
+                <div style={{ fontSize: "11px", fontWeight: "900", color: accentColor, textTransform: "uppercase" }}>Job Telemetry Diagnostics</div>
+                <h2 style={{ fontSize: "20px", fontWeight: "900", color: "#FFF", margin: "4px 0 0 0" }}>Job #{selectedScan._id?.slice(-8)}</h2>
+              </div>
+              <button onClick={() => setSelectedScan(null)} style={{ background: "transparent", border: "none", color: C.muted, fontSize: "20px", cursor: "pointer" }}>✕</button>
+            </div>
 
-QUEUE_CONCURRENCY=3   # parallel scan workers (default: 3)`}
-          </pre>
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ background: "#030712", padding: "14px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ fontSize: "11px", color: C.muted, fontWeight: "800" }}>TARGET URL</div>
+                <div style={{ fontSize: "14px", fontWeight: "900", color: "#FFF", marginTop: "2px", wordBreak: "break-all" }}>{selectedScan.targetUrl || selectedScan.target}</div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div style={{ background: "#030712", padding: "14px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize: "11px", color: C.muted, fontWeight: "800" }}>STATUS</div>
+                  <div style={{ fontSize: "14px", fontWeight: "900", color: selectedScan.status === "completed" ? C.green : C.red, marginTop: "2px" }}>{selectedScan.status?.toUpperCase()}</div>
+                </div>
+                <div style={{ background: "#030712", padding: "14px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ fontSize: "11px", color: C.muted, fontWeight: "800" }}>SECURITY GRADE</div>
+                  <div style={{ fontSize: "14px", fontWeight: "900", color: grade2color(selectedScan.grade), marginTop: "2px" }}>{selectedScan.grade || "N/A"}</div>
+                </div>
+              </div>
+
+              <div style={{ background: "#030712", padding: "14px", borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div style={{ fontSize: "11px", color: C.muted, fontWeight: "800" }}>VULNERABILITY COUNTS</div>
+                <div style={{ display: "flex", gap: "10px", marginTop: "6px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "800", color: SEV.critical.color }}>Critical: {selectedScan.criticalCount || 0}</span>
+                  <span style={{ fontSize: "12px", fontWeight: "800", color: SEV.high.color }}>High: {selectedScan.highCount || 0}</span>
+                  <span style={{ fontSize: "12px", fontWeight: "800", color: SEV.medium.color }}>Medium: {selectedScan.mediumCount || 0}</span>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleRetryScan(selectedScan._id)}
+              style={{
+                width: "100%",
+                background: `linear-gradient(135deg, ${accentColor}, #EA580C)`,
+                border: "none",
+                color: "#FFF",
+                padding: "14px",
+                borderRadius: "12px",
+                fontSize: "14px",
+                fontWeight: "900",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+            >
+              <RotateCcw size={16} /> Re-dispatch Job to Queue
+            </button>
+          </div>
         </div>
       )}
+
     </div>
   );
 }
