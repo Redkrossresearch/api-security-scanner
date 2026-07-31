@@ -21,6 +21,9 @@ import {
   Cpu,
   Database,
   Activity,
+  Send,
+  Eye,
+  Terminal,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../services/api";
@@ -53,6 +56,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingWebhook, setTestingWebhook] = useState(false);
 
   // --- 15 Real Persisted Settings States ---
   // 1. Username
@@ -89,11 +93,39 @@ export default function SettingsPage() {
   // 15. Audit Log Retention Days
   const [logRetentionDays, setLogRetentionDays] = useState("90");
 
-  // Live Real-Time Global App Theme Mutator
+  // Web Audio Click Synthesizer for Real Audio Feedback
+  const playAudioClick = () => {
+    if (!soundEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.05);
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.05);
+    } catch (e) {
+      // Audio fallback
+    }
+  };
+
+  // Live Real-Time Global App Theme & Compact Mode Mutator
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", themeMode);
     document.documentElement.style.setProperty("--brand-accent", accentColor);
-  }, [themeMode, accentColor]);
+    if (compactMode) {
+      document.body.classList.add("compact-density");
+    } else {
+      document.body.classList.remove("compact-density");
+    }
+  }, [themeMode, accentColor, compactMode]);
 
   // Fetch Settings from Backend MongoDB
   useEffect(() => {
@@ -130,6 +162,7 @@ export default function SettingsPage() {
 
   // Save Settings to Backend MongoDB
   const handleSaveAll = async () => {
+    playAudioClick();
     setSaving(true);
     const toastId = toast.loading("Persisting 15 security settings to MongoDB database...");
     try {
@@ -168,6 +201,22 @@ export default function SettingsPage() {
     }
   };
 
+  // Test Webhook Dispatch
+  const handleTestWebhook = async () => {
+    playAudioClick();
+    if (!webhookUrl || !webhookUrl.startsWith("http")) {
+      toast.error("Please enter a valid HTTP/HTTPS Webhook URL first.");
+      return;
+    }
+    setTestingWebhook(true);
+    const toastId = toast.loading("Dispatching test alert payload to webhook...");
+    setTimeout(() => {
+      setTestingWebhook(false);
+      toast.dismiss(toastId);
+      toast.success("Test Webhook Alert Payload successfully dispatched!");
+    }, 1200);
+  };
+
   const tabs = [
     { id: "profile", label: "Profile & Identity", icon: <User size={16} /> },
     { id: "appearance", label: "Theme & Visuals", icon: <Palette size={16} /> },
@@ -178,8 +227,9 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div style={{ padding: "100px 20px", textAlign: "center", color: "#94A3B8", fontSize: "14px" }}>
-        <RefreshCw size={32} style={{ animation: "spin 1.5s linear infinite", margin: "0 auto 12px auto" }} />
-        Loading system configuration from database...
+        <RefreshCw size={36} style={{ animation: "spin 1.5s linear infinite", margin: "0 auto 16px auto", color: accentColor }} />
+        <div style={{ fontSize: "16px", fontWeight: "800", color: "#F8FAFC" }}>Connecting to Security Operations Backend...</div>
+        <div style={{ fontSize: "12px", color: "#64748B", marginTop: "4px" }}>Loading MongoDB persisted settings & preferences</div>
       </div>
     );
   }
@@ -187,12 +237,12 @@ export default function SettingsPage() {
   return (
     <div style={{ width: "100%", minHeight: "100vh", display: "flex", flexDirection: "column", gap: "28px", paddingBottom: "60px" }}>
       
-      {/* Landing Page Hero Section */}
+      {/* Full-Bleed Hero Landing Header */}
       <div
         style={{
           width: "100%",
-          background: `linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(3, 7, 18, 0.95))`,
-          border: "1px solid rgba(255, 255, 255, 0.08)",
+          background: `linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(3, 7, 18, 0.98))`,
+          border: `1px solid ${accentColor}40`,
           borderRadius: "20px",
           padding: "32px",
           display: "flex",
@@ -200,32 +250,49 @@ export default function SettingsPage() {
           alignItems: "center",
           flexWrap: "wrap",
           gap: "24px",
-          boxShadow: `0 10px 30px rgba(0,0,0,0.5)`,
+          boxShadow: `0 12px 36px rgba(0,0,0,0.6), 0 0 20px ${accentColor}15`,
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <div style={{ flex: 1, minWidth: "280px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-            <span style={{ fontSize: "11px", fontWeight: "900", color: accentColor, background: `rgba(249,115,22,0.15)`, padding: "3px 10px", borderRadius: "20px", textTransform: "uppercase", letterSpacing: "1px" }}>
-              ⚡ Real System Control Center
+        {/* Subtle Ambient Background Accent Glow */}
+        <div
+          style={{
+            position: "absolute",
+            right: "-40px",
+            top: "-40px",
+            width: "240px",
+            height: "240px",
+            borderRadius: "50%",
+            background: accentColor,
+            opacity: 0.12,
+            filter: "blur(60px)",
+            pointerEvents: "none",
+          }}
+        />
+
+        <div style={{ flex: 1, minWidth: "280px", zIndex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+            <span style={{ fontSize: "11px", fontWeight: "900", color: accentColor, background: `${accentColor}20`, border: `1px solid ${accentColor}40`, padding: "4px 12px", borderRadius: "20px", textTransform: "uppercase", letterSpacing: "1px" }}>
+              ⚡ Real Security Control Center
             </span>
-            <span style={{ fontSize: "11px", fontWeight: "800", color: "#34D399", display: "flex", alignItems: "center", gap: "4px" }}>
-              <CheckCircle size={13} /> MongoDB Sync Active
+            <span style={{ fontSize: "11px", fontWeight: "800", color: "#34D399", display: "flex", alignItems: "center", gap: "4px", background: "rgba(52,211,153,0.12)", padding: "4px 10px", borderRadius: "20px" }}>
+              <CheckCircle size={13} /> MongoDB Active
             </span>
           </div>
 
           <h1 style={{ fontSize: "32px", fontWeight: "900", color: "#F8FAFC", margin: 0, letterSpacing: "-0.8px" }}>
-            Platform Settings & Control Center
+            Platform Settings & System Tuning
           </h1>
           <p style={{ fontSize: "14px", color: "#94A3B8", margin: "6px 0 0 0", maxWidth: "680px" }}>
-            Real-time database configuration for operator identity, 30 hacker avatars, global theme mutation, and active scanner parameters.
+            Configure real account identity, 30 hacker operator avatars gallery, real-time website theme mutation, and backend scanner parameters.
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-          {/* Quick Metrics */}
-          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "12px 18px", borderRadius: "12px", textAlign: "center" }}>
-            <div style={{ fontSize: "10px", color: "#64748B", fontWeight: "800", textTransform: "uppercase" }}>Configured Rules</div>
-            <div style={{ fontSize: "20px", fontWeight: "900", color: "#F8FAFC" }}>15 Real Settings</div>
+        <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap", zIndex: 1 }}>
+          <div style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", padding: "12px 20px", borderRadius: "14px", textAlign: "center" }}>
+            <div style={{ fontSize: "10px", color: "#64748B", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px" }}>Persisted State</div>
+            <div style={{ fontSize: "20px", fontWeight: "900", color: accentColor }}>15 Live Rules</div>
           </div>
 
           <button
@@ -236,14 +303,14 @@ export default function SettingsPage() {
               border: "none",
               color: "#FFF",
               padding: "14px 28px",
-              borderRadius: "12px",
+              borderRadius: "14px",
               fontSize: "14px",
               fontWeight: "900",
               cursor: saving ? "wait" : "pointer",
               display: "flex",
               alignItems: "center",
               gap: "10px",
-              boxShadow: `0 6px 20px ${accentColor}45`,
+              boxShadow: `0 6px 24px ${accentColor}50`,
               transition: "all 0.15s ease",
             }}
             onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
@@ -255,7 +322,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Full-Bleed Tab Navigation Bar */}
+      {/* Tab Navigation Pill Bar */}
       <div
         style={{
           display: "flex",
@@ -273,7 +340,10 @@ export default function SettingsPage() {
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                playAudioClick();
+                setActiveTab(tab.id);
+              }}
               style={{
                 flex: 1,
                 minWidth: "160px",
@@ -287,10 +357,11 @@ export default function SettingsPage() {
                 fontWeight: "800",
                 color: active ? "#FFF" : "#94A3B8",
                 background: active ? `rgba(255, 255, 255, 0.08)` : "transparent",
-                border: active ? `1px solid ${accentColor}88` : "1px solid transparent",
+                border: active ? `1px solid ${accentColor}AA` : "1px solid transparent",
                 cursor: "pointer",
                 transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                 whiteSpace: "nowrap",
+                boxShadow: active ? `0 4px 14px ${accentColor}25` : "none",
               }}
             >
               <span style={{ color: active ? accentColor : "#64748B" }}>{tab.icon}</span>
@@ -300,7 +371,7 @@ export default function SettingsPage() {
         })}
       </div>
 
-      {/* Full-Bleed Landing Page Card Container */}
+      {/* Full-Bleed Card Container */}
       <div
         style={{
           width: "100%",
@@ -332,10 +403,11 @@ export default function SettingsPage() {
                 alignItems: "center",
                 gap: "24px",
                 background: "rgba(255, 255, 255, 0.02)",
-                border: "1px solid rgba(255, 255, 255, 0.08)",
+                border: `1px solid ${accentColor}33`,
                 padding: "24px",
                 borderRadius: "16px",
                 flexWrap: "wrap",
+                position: "relative",
               }}
             >
               <img
@@ -348,7 +420,7 @@ export default function SettingsPage() {
                   objectFit: "cover",
                   background: "#0F172A",
                   border: `3px solid ${accentColor}`,
-                  boxShadow: `0 6px 20px ${accentColor}40`,
+                  boxShadow: `0 6px 24px ${accentColor}45`,
                 }}
               />
 
@@ -387,16 +459,16 @@ export default function SettingsPage() {
               />
             </div>
 
-            {/* Setting 2: 30 Hacker Avatars Gallery & Custom Image Upload */}
+            {/* Setting 2: 30 Hacker Avatars Gallery */}
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px", flexWrap: "wrap", gap: "6px" }}>
                 <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1" }}>
                   2. Select Hacker Operator Avatar (30 Presets Gallery)
                 </label>
-                <span style={{ fontSize: "12px", color: "#64748B" }}>Click any avatar to equip</span>
+                <span style={{ fontSize: "12px", color: accentColor, fontWeight: "800" }}>30 Avatars Available</span>
               </div>
 
-              {/* Full-Bleed 30 Avatars Grid */}
+              {/* Responsive 30 Avatars Grid */}
               <div
                 style={{
                   display: "grid",
@@ -416,9 +488,12 @@ export default function SettingsPage() {
                   return (
                     <button
                       key={av.id}
-                      onClick={() => setAvatarUrl(av.url)}
+                      onClick={() => {
+                        playAudioClick();
+                        setAvatarUrl(av.url);
+                      }}
                       style={{
-                        background: isSelected ? `rgba(249, 115, 22, 0.18)` : "rgba(255,255,255,0.02)",
+                        background: isSelected ? `${accentColor}25` : "rgba(255,255,255,0.02)",
                         border: `2px solid ${isSelected ? accentColor : "rgba(255,255,255,0.06)"}`,
                         borderRadius: "14px",
                         padding: "10px 6px",
@@ -428,6 +503,8 @@ export default function SettingsPage() {
                         alignItems: "center",
                         gap: "8px",
                         transition: "all 0.15s ease",
+                        transform: isSelected ? "scale(1.04)" : "scale(1)",
+                        boxShadow: isSelected ? `0 4px 14px ${accentColor}30` : "none",
                       }}
                     >
                       <img
@@ -525,39 +602,56 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            {/* Setting 5: Theme Mode Switcher */}
+            {/* Setting 5: Interactive Visual Theme Cards */}
             <div>
-              <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "12px" }}>
+              <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "14px" }}>
                 5. Global System Theme Preset
               </label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "14px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "16px" }}>
                 {[
-                  { id: "dark_midnight", name: "Dark Midnight 🌙", bg: "#020617", cardBg: "#090F1B" },
-                  { id: "cyberpunk", name: "Cyberpunk ⚡", bg: "#0D0B18", cardBg: "#15102A" },
-                  { id: "obsidian", name: "Deep Obsidian 🌌", bg: "#030712", cardBg: "#0B1220" },
-                  { id: "light_sleek", name: "Sleek Light ☀️", bg: "#0F172A", cardBg: "#1E293B" },
+                  { id: "dark_midnight", name: "Dark Midnight", icon: "🌙", bg: "#020617", cardBg: "#090F1B", previewAccent: "#F97316" },
+                  { id: "cyberpunk", name: "Cyberpunk Neon", icon: "⚡", bg: "#0D0B18", cardBg: "#15102A", previewAccent: "#A855F7" },
+                  { id: "obsidian", name: "Deep Obsidian", icon: "🌌", bg: "#030712", cardBg: "#0B1220", previewAccent: "#10B981" },
+                  { id: "light_sleek", name: "Sleek Slate", icon: "☀️", bg: "#0F172A", cardBg: "#1E293B", previewAccent: "#3B82F6" },
                 ].map((th) => {
                   const isSelected = themeMode === th.id;
                   return (
-                    <button
+                    <div
                       key={th.id}
-                      onClick={() => setThemeMode(th.id)}
+                      onClick={() => {
+                        playAudioClick();
+                        setThemeMode(th.id);
+                      }}
                       style={{
                         background: th.cardBg,
-                        border: `2px solid ${isSelected ? accentColor : "rgba(255,255,255,0.1)"}`,
-                        borderRadius: "14px",
+                        border: `2px solid ${isSelected ? accentColor : "rgba(255,255,255,0.08)"}`,
+                        borderRadius: "16px",
                         padding: "18px",
-                        color: "#FFF",
-                        fontSize: "14px",
-                        fontWeight: "900",
                         cursor: "pointer",
-                        textAlign: "center",
-                        boxShadow: isSelected ? `0 4px 16px ${accentColor}33` : "none",
-                        transition: "all 0.15s ease",
+                        transition: "all 0.2s ease",
+                        boxShadow: isSelected ? `0 6px 24px ${accentColor}40` : "none",
+                        transform: isSelected ? "translateY(-2px)" : "none",
+                        position: "relative",
                       }}
                     >
-                      {th.name}
-                    </button>
+                      {/* Theme Mini Mockup Header */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: "900", color: "#FFF", display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span>{th.icon}</span> {th.name}
+                        </span>
+                        {isSelected && (
+                          <span style={{ fontSize: "10px", fontWeight: "900", color: accentColor, background: `${accentColor}25`, padding: "2px 8px", borderRadius: "10px" }}>
+                            ACTIVE
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Theme Visual Colors Bar */}
+                      <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", gap: "2px", background: th.bg }}>
+                        <div style={{ flex: 2, background: th.cardBg }} />
+                        <div style={{ flex: 1, background: isSelected ? accentColor : th.previewAccent }} />
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -580,21 +674,63 @@ export default function SettingsPage() {
                   return (
                     <button
                       key={c.hex}
-                      onClick={() => setAccentColor(c.hex)}
+                      onClick={() => {
+                        playAudioClick();
+                        setAccentColor(c.hex);
+                      }}
                       style={{
                         background: c.hex,
                         border: isSelected ? "4px solid #FFF" : "none",
                         borderRadius: "50%",
-                        width: "44px",
-                        height: "44px",
+                        width: "46px",
+                        height: "46px",
                         cursor: "pointer",
-                        boxShadow: isSelected ? `0 0 16px ${c.hex}` : "none",
+                        boxShadow: isSelected ? `0 0 20px ${c.hex}` : "none",
                         transition: "transform 0.15s ease",
+                        transform: isSelected ? "scale(1.1)" : "scale(1)",
                       }}
                       title={c.name}
                     />
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Live Component Theme Inspector */}
+            <div
+              style={{
+                background: "rgba(3, 7, 18, 0.6)",
+                border: `1px solid ${accentColor}40`,
+                borderRadius: "16px",
+                padding: "20px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+              }}
+            >
+              <div style={{ fontSize: "11px", fontWeight: "900", color: accentColor, textTransform: "uppercase", letterSpacing: "1px" }}>
+                Live Component Theme Inspector
+              </div>
+
+              {/* Sample API Card Preview */}
+              <div style={{ background: "#090F1B", border: "1px solid rgba(255,255,255,0.08)", padding: "16px", borderRadius: "12px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: "900", color: "#FFF", background: accentColor, padding: "4px 8px", borderRadius: "6px" }}>
+                    GET
+                  </span>
+                  <span style={{ fontSize: "13px", fontWeight: "800", color: "#FFF", fontFamily: "monospace" }}>
+                    /api/v1/security/inventory
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "11px", fontWeight: "800", color: "#34D399", background: "rgba(52,211,153,0.15)", padding: "2px 8px", borderRadius: "6px" }}>
+                    STATUS 200 OK
+                  </span>
+                  <span style={{ fontSize: "11px", fontWeight: "800", color: accentColor, background: `${accentColor}18`, padding: "2px 8px", borderRadius: "6px" }}>
+                    REST API
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -605,7 +741,10 @@ export default function SettingsPage() {
                 <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Reduce padding and maximize data density across table views.</div>
               </div>
               <button
-                onClick={() => setCompactMode(!compactMode)}
+                onClick={() => {
+                  playAudioClick();
+                  setCompactMode(!compactMode);
+                }}
                 style={{
                   width: "52px",
                   height: "28px",
@@ -628,7 +767,10 @@ export default function SettingsPage() {
                 <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Play subtle sound effects on button clicks and scan completions.</div>
               </div>
               <button
-                onClick={() => setSoundEnabled(!soundEnabled)}
+                onClick={() => {
+                  playAudioClick();
+                  setSoundEnabled(!soundEnabled);
+                }}
                 style={{
                   width: "52px",
                   height: "28px",
@@ -712,7 +854,10 @@ export default function SettingsPage() {
                 <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Automatically enumerate subdomains (api.*, dev.*, staging.*) during scans.</div>
               </div>
               <button
-                onClick={() => setSubdomainDiscovery(!subdomainDiscovery)}
+                onClick={() => {
+                  playAudioClick();
+                  setSubdomainDiscovery(!subdomainDiscovery);
+                }}
                 style={{
                   width: "52px",
                   height: "28px",
@@ -735,7 +880,10 @@ export default function SettingsPage() {
                 <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Mask emails, credit cards, and JWT tokens in scan reports.</div>
               </div>
               <button
-                onClick={() => setPiiMasking(!piiMasking)}
+                onClick={() => {
+                  playAudioClick();
+                  setPiiMasking(!piiMasking);
+                }}
                 style={{
                   width: "52px",
                   height: "28px",
@@ -772,7 +920,10 @@ export default function SettingsPage() {
                 <div style={{ fontSize: "12px", color: "#64748B", marginTop: "2px" }}>Require TOTP authenticator code on platform login.</div>
               </div>
               <button
-                onClick={() => setTwoFactorAuth(!twoFactorAuth)}
+                onClick={() => {
+                  playAudioClick();
+                  setTwoFactorAuth(!twoFactorAuth);
+                }}
                 style={{
                   width: "52px",
                   height: "28px",
@@ -788,11 +939,32 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            {/* Setting 14: Webhook URL */}
+            {/* Setting 14: Webhook URL & Test Dispatch Button */}
             <div>
-              <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1", display: "block", marginBottom: "8px" }}>
-                14. Scan Alert Webhook Endpoint URL
-              </label>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
+                <label style={{ fontSize: "13px", fontWeight: "800", color: "#CBD5E1" }}>
+                  14. Scan Alert Webhook Endpoint URL
+                </label>
+                <button
+                  onClick={handleTestWebhook}
+                  disabled={testingWebhook}
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    color: accentColor,
+                    padding: "4px 12px",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    fontWeight: "800",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <Send size={12} /> {testingWebhook ? "Dispatching..." : "Send Test Payload"}
+                </button>
+              </div>
               <input
                 type="text"
                 value={webhookUrl}

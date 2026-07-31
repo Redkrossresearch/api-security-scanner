@@ -41,30 +41,43 @@ body {
   transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Global Theme Attributes */
+/* Real Global Theme Attributes */
+:root {
+  --brand-accent: #F97316;
+  --bg-primary: #020617;
+  --bg-card: #090F1B;
+  --text-main: #F8FAFC;
+  --border-color: rgba(255, 255, 255, 0.08);
+}
+
 :root[data-theme="dark_midnight"] {
   --bg-primary: #020617;
   --bg-card: #090F1B;
   --text-main: #F8FAFC;
-  --border-color: rgba(255,255,255,0.08);
+  --border-color: rgba(255, 255, 255, 0.08);
 }
 :root[data-theme="cyberpunk"] {
   --bg-primary: #0D0B18;
   --bg-card: #15102A;
   --text-main: #F4F4F5;
-  --border-color: rgba(168,85,247,0.25);
+  --border-color: rgba(168, 85, 247, 0.25);
 }
 :root[data-theme="obsidian"] {
   --bg-primary: #030712;
   --bg-card: #0B1220;
   --text-main: #F8FAFC;
-  --border-color: rgba(255,255,255,0.06);
+  --border-color: rgba(255, 255, 255, 0.06);
 }
 :root[data-theme="light_sleek"] {
   --bg-primary: #0F172A;
   --bg-card: #1E293B;
   --text-main: #FFFFFF;
-  --border-color: rgba(255,255,255,0.12);
+  --border-color: rgba(255, 255, 255, 0.12);
+}
+
+body.compact-density table th,
+body.compact-density table td {
+  padding: 6px 10px !important;
 }
 
 h1, h2, h3, h4, h5, h6 {
