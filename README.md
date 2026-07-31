@@ -1,4 +1,4 @@
-# 🛡️ API Security Scanner — Enterprise AI Autonomous Security Platform (v3.0)
+# 🛡️ API Security Scanner — Enterprise AI Autonomous Security Platform (v3.2)
 
 <div align="center">
 
@@ -11,7 +11,7 @@
 [![BullMQ](https://img.shields.io/badge/Task--Queue-BullMQ--Redis-orange?style=for-the-badge&logo=redis)](https://bullmq.io/)
 [![Multi-Agent Orchestrator](https://img.shields.io/badge/AI--Engine-DAG--RAG--Copilot-darkviolet?style=for-the-badge&logo=openai)](https://openrouter.ai/)
 
-**An enterprise autonomous API vulnerability assessment platform, 52-scanner DAST execution engine, multi-agent AI remediation copilot, multi-framework compliance radar, and cryptographic audit proof generator.**
+**An enterprise autonomous API vulnerability assessment platform, 52-scanner DAST execution engine, multi-agent AI remediation copilot, distributed task queue telemetry monitor, full-bleed settings control center, multi-framework compliance radar, and cryptographic audit proof generator.**
 
 </div>
 
@@ -27,6 +27,7 @@ graph TD
         Server --> Auth["🔐 Auth & RBAC Service (Firebase + JWT)"]
         Server --> ScanController["🎯 Scan Execution Controller"]
         Server --> AIController["🤖 AI Copilot (/api/ai/analyze)"]
+        Server --> SettingsService["⚙️ 15 Settings MongoDB Persistence (/api/settings)"]
         Server --> ReportService["📑 Executive Report & PDF Engine"]
     end
 
@@ -56,31 +57,26 @@ graph TD
 
 ---
 
-## ⚡ Autonomous Scanning & Remediation Flow
+## ⚡ Key Platform Capabilities
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Dev as Security Engineer
-    participant UI as Dashboard UI
-    participant Backend as Node.js Express API
-    participant Worker as Scan Worker Queue
-    participant AI as AI LLM Copilot Engine
-    participant Cert as Cryptographic Cert Generator
+### 1. 🚀 100% Full-Width Task Queue & Worker Telemetry Monitor (`/queue`)
+- Real-time **WebSocket Terminal Event Stream Log** capturing `scan:start`, `scan:progress`, `scan:completed`, and `scan:failed` live logs.
+- **8-Slot Worker Thread Pool Capacity Visualizer Grid** showing active slot allocation and CPU state.
+- **1-Click Re-queueing Action** with instant progress state animation and CSV audit export.
 
-    Dev->>UI: Input Target API URL (e.g. https://api.target.com)
-    UI->>Backend: POST /api/scans/run (Scope & Policy)
-    Backend->>Worker: Dispatch Parallel Scan Jobs
-    Worker->>Worker: Execute 52 Security Scanners (BOLA, JWT, CORS, SSRF...)
-    Worker-->>Backend: Stream Telemetry Logs via WebSockets
-    Backend-->>UI: Real-Time Telemetry Stream
-    Worker->>Backend: Consolidate Findings & Risk Score
-    UI->>AI: Click "ANALYZE NOW" (/api/ai/analyze)
-    AI-->>UI: Return Express.js Remediation Code Patch
-    Dev->>UI: Request Verified Compliance Certificate
-    UI->>Cert: Generate SHA256 Hash + Agupta Signature Seal
-    Cert-->>UI: Render Printable Executive Security Diploma
-```
+### 2. 🎛️ Full-Bleed Settings Control Center (`/settings`)
+- **15 Persistent Settings Fields** backed by MongoDB (`GET /api/settings`, `PUT /api/settings`).
+- **Interactive Visual Theme Cards** (`Dark Midnight`, `Cyberpunk Neon`, `Deep Obsidian`, `Sleek Slate`) mutating CSS root variables site-wide in real-time via `athx-settings-updated` global event bus.
+- **30 Hacker Operator Avatars Gallery**, Web Audio Synthesizer, dynamic Security Posture Score meter (0-100%), and 1-click JSON backup export/import.
+
+### 3. 🎯 Direct Target Discovery Scanner & API Inventory (`/inventory`)
+- Direct website ingestion bar extracting API endpoints from JS ASTs.
+- High-contrast URL input box, host grouping, risk badges, and 1-click **OpenAPI 3.0 Specification Export**.
+
+### 4. 📊 Glassmorphic Security Overview Dashboard (`/dashboard`)
+- Circular glowing **Security Grade Score Ring Meter** with score denominator (`51 / 100`).
+- Ambient purple **AI Security Copilot Banner** with live pulse badge.
+- **180px High-Definition Scan Activity Trend Chart** with glowing dual area gradients.
 
 ---
 
@@ -90,32 +86,35 @@ sequenceDiagram
 api-security-scanner/
 ├── backend/
 │   ├── src/
-│   │   ├── config/              # Feature flags & MongoDB connection
+│   │   ├── config/              # Database, environment & feature flag settings
 │   │   ├── modules/
 │   │   │   ├── ai/              # AI Remediation engine & multi-LLM adapters
 │   │   │   ├── agents/          # Autonomous Agent Roster (Planner, Fixer, Judge)
 │   │   │   ├── copilot/         # Chat controllers & learned insight model
+│   │   │   ├── inventory/       # Target endpoint discovery scanner & OpenAPI exporter
 │   │   │   ├── knowledge/       # Tag taxonomy & knowledge graph services
 │   │   │   ├── llm/             # RAG Vector store, Reranker, DAG Knowledge Graph
+│   │   │   ├── queue/           # BullMQ status metrics & worker diagnostics routes
 │   │   │   ├── reports/         # PDF Report Builder & Cryptographic Cert Engine
-│   │   │   ├── scanner/         # 52 Security Scanner Modules
+│   │   │   ├── scanner/         # 52 Security Scanner Modules (BOLA, JWT, SSRF, XXE...)
 │   │   │   ├── scans/           # Scan orchestrator, attack graph & stage telemetry
-│   │   │   └── vulnerabilities/ # Vulnerability catalog definitions
-│   │   └── utils/               # Storage cleanup cron, mailer, load tests
+│   │   │   ├── settings/        # 15 Settings schema & MongoDB persistence controller
+│   │   │   └── vulnerabilities/ # Vulnerability catalog (CVSS 3.1 & remediation)
+│   │   └── utils/               # Storage cleanup, mailer, load tests
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ai/              # Attack diagram cards & remediation panels
+│   │   │   ├── ai/              # Attack diagram cards & AI remediation panels
 │   │   │   ├── copilot/         # Chart, Image Lightbox, Copy & Citation renderers
 │   │   │   ├── dashboard/       # Dashboard KPIs, trend charts & threat feeds
 │   │   │   ├── layouts/         # Sidebar, Navbar & Particle background
-│   │   │   └── scans/           # Live scanner logs, Attack Surface Map, Findings
+│   │   │   └── scans/           # Live scanner logs, ScanConfigurationCard, Findings
 │   │   ├── contexts/            # AuthContext (Firebase + JWT)
 │   │   ├── layouts/             # MainLayout (100vh viewport scroll container)
-│   │   ├── pages/               # Scans, History, Copilot, Reports, Queue, Settings
+│   │   ├── pages/               # Scans, History, Copilot, Reports, Queue, Settings, Inventory
 │   │   ├── services/            # Axios API client with production Vercel auto-fallback
 │   │   └── sockets/             # Socket.IO client & ConnectionStatus badge
-│   └── index.css                # Global Design Tokens & Responsive Utilities
+│   └── index.css                # Global Design Tokens, Micro-Interactions & Mobile Grids
 ├── collaboration_log.md         # Official Sprint & Teamwork Contribution Log
 ├── README.md                    # Enterprise Documentation & Setup Guide
 └── vercel.json                  # Production Build & Rewrite Configuration
@@ -123,115 +122,31 @@ api-security-scanner/
 
 ---
 
-## 🌟 Complete Feature Inventory
+## 🛠️ Quickstart & Local Setup
 
-### 🛡️ 1. 52 Specialized Security Scanner Modules
-The platform embeds 52 specialized automated DAST security scanners covering all major API threat vectors:
-
-- **OWASP API Top 10 (2023 Categories)**:
-  - `bola-idor.scanner.js`: Broken Object-Level Authorization & IDOR probe.
-  - `bfla.scanner.js`: Broken Function-Level Authorization scanner.
-  - `mass-assignment.scanner.js`: Object property injection & mass assignment vulnerability probe.
-  - `jwt-weak-secret.scanner.js`: JWT signature forgery, `none` algorithm, and dictionary secret cracker.
-  - `rate-limiting.scanner.js`: Unrestricted resource consumption & rate limit bypass testing.
-- **Injection & Server-Side Probes**:
-  - `ssrf.scanner.js`: Server-Side Request Forgery & internal metadata endpoint probes.
-  - `xxe.scanner.js`: XML External Entity injection testing.
-  - `ssti.scanner.js`: Server-Side Template Injection.
-  - `nosql-injection.scanner.js`: MongoDB / CouchDB operator injection.
-  - `ldap-injection.scanner.js` & `xpath-injection.scanner.js`: Directory & XML query injection.
-- **Infrastructure & Configuration Leakage**:
-  - `cloud-metadata.scanner.js`: AWS / GCP / Azure IMDSv1/v2 metadata exposure.
-  - `git-exposure.scanner.js` & `env-exposure.scanner.js`: `.git/config` & `.env` environment file leaks.
-  - `redis-exposure.scanner.js` & `grpc-security.scanner.js`: Unauthenticated Redis & gRPC service exposure.
-  - `swagger-exposure.scanner.js`: Exposed OpenAPI / Swagger documentation endpoints.
-  - `cors-null-origin.scanner.js`: Misconfigured CORS with trusted null or wildcards.
-
----
-
-### 🤖 2. AI Neural Copilot & Dynamic Remediation Engine
-- **Multi-LLM Adapter Architecture**: Supports OpenRouter, Google Gemini Flash (`gemini-flash-latest`), and Groq LPU (`llama-3.3-70b`) with automatic failover.
-- **DAG Knowledge Graph**: Directed Acyclic Graph connecting OWASP API categories, CWE taxonomies, and remediation patterns.
-- **AI Critic Evaluator**: Self-learning feedback pipeline that refines rule accuracy based on user validation.
-
----
-
-### 📜 3. Cryptographic Compliance Certificate System
-- **Verified Audit Certificate**: Renders a printable A4 executive diploma featuring gold/emerald double borders, SHA256 audit hashes, HMAC integrity seals, and a transparent handwritten `Agupta` signature stamp.
-- **Multi-Framework Matrix**: Evaluates security compliance across **OWASP API Top 10**, **PCI-DSS v4.0**, **SOC 2 Type II**, and **ISO 27001**.
-
----
-
-## 👥 Sprint & Author Ownership Matrix
-
-| Feature Module | Primary Author | Status | Deliverables |
-| :--- | :--- | :--- | :--- |
-| **Backend & 52 Scanners** | **Atharv Gupta** | 🟢 Complete | `scan.service.js`, `vulnerability.catalog.js`, 52 scanner modules |
-| **AI Copilot & DAG RAG** | **Atharv Gupta** | 🟢 Complete | `dag.knowledge.graph.js`, `openrouter.service.js`, `critic.evaluator.service.js` |
-| **Network & Deployment** | **Atharv Gupta** | 🟢 Complete | `api.js` Vercel auto-fallback, Render WebSocket integration, PostCSS fixes |
-| **Frontend UI & Layouts** | **Muskan** | 🟢 Complete | `MainLayout.jsx`, `Sidebar.jsx`, single-container scroll system in `index.css` |
-| **Reports & Certificate UI**| **Atharv & Muskan** | 🟢 Complete | `ReportsPage.jsx`, `pdfReport.service.js`, Agupta handwritten signature seal |
-
----
-
-## 🔮 Future Roadmap (Phase 4 / Sprints 151-200)
-
-| Feature | Description | Target Quarter |
-| :--- | :--- | :--- |
-| **eBPF Kernel Probe Agent** | Kernel-level API traffic inspection without proxy latency | Q3 2026 |
-| **Autonomous DAST Fuzzer** | AI-generated mutations for GraphQL, gRPC, and WebSockets | Q3 2026 |
-| **Kubernetes Operator** | Native K8s CRD (`APISecurityScan`) for continuous CI/CD scanning | Q4 2026 |
-| **SAML 2.0 / Enterprise SSO**| Okta, Azure AD, and PingIdentity integration | Q4 2026 |
-
----
-
-## 🚀 Local Setup & Installation Guide
-
-### Prerequisites
-- **Node.js**: v20.x or higher (v24 recommended)
-- **MongoDB**: Local MongoDB instance or MongoDB Atlas connection string
-- **Git**: Installed and configured
-
-### 1. Clone Repository
-```bash
-git clone https://github.com/Redkrossresearch/api-security-scanner.git
-cd api-security-scanner
-```
+### 1. Prerequisites
+- **Node.js**: v20.x or higher
+- **MongoDB**: Local URI or MongoDB Atlas Cluster
+- **Redis (Optional)**: For BullMQ multi-worker queue mode
 
 ### 2. Backend Setup
 ```bash
 cd backend
 npm install
-# Create a .env file with your PORT, MONGODB_URI, and OPENROUTER_API_KEY
+# Configure backend/.env
+# PORT=5000, MONGO_URI=mongodb://localhost:27017/api-security-scanner
 npm run dev
 ```
 
 ### 3. Frontend Setup
 ```bash
-cd ../frontend
+cd frontend
 npm install
 npm run dev
 ```
-Open your browser at `http://localhost:5173`.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## 📄 Intellectual Property, Copyright & Proprietary License
-
-```
-Copyright (c) 2024-2026 Atharv Gupta & Muskan. All Rights Reserved.
-Repository: Redkrossresearch/api-security-scanner
-Platform: ATHX Security Platform (Enterprise API Security Engine)
-```
-
-### ⚖️ Legal Terms & Ownership Statement
-This repository, source code, underlying algorithms, multi-agent RAG orchestration architecture, 52 specialized DAST security scanner modules, custom user interface design system, and associated documentation are the **exclusive proprietary intellectual property** of **Atharv Gupta** and **Muskan** (operating under Redkross Research / ATHX Security Platform).
-
-1. **Proprietary Notice**: Unauthorized copying, modification, redistribution, reverse engineering, sublicensing, or commercial deployment of this software, in whole or in part, via any medium, without the express written permission of the copyright holders is strictly prohibited.
-2. **Usage Restrictions**: Permission to view this repository is granted solely for code review, audit evaluation, and demonstration purposes. No license is granted for public hosting, commercial resale, or integration into third-party security platforms without an explicit Enterprise License Agreement.
-3. **Trademark & Brand Protection**: "ATHX Security", "ATHX API Scanner", and related logos, badges, and seals are proprietary marks of Atharv Gupta & Muskan.
-
-For enterprise licensing inquiries, commercial partnerships, or vulnerability disclosure:
-- **Lead Security Architect**: Atharv Gupta ([`atharvgupta720@gmail.com`](mailto:atharvgupta720@gmail.com))
-- **Co-Author & Lead UI Engineer**: Muskan
-- **Organization**: Redkross Research / ATHX Security Platform
+## ⚖️ Intellectual Property & Licensing
+Copyright (c) 2024-2026 **Atharv Gupta** and **Muskan** (Redkross Research / ATHX Security Platform). All Rights Reserved.
