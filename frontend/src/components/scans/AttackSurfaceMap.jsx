@@ -192,8 +192,6 @@ const NODE_TYPES = Object.freeze({ customCyber: CustomCyberNode });
 const EDGE_TYPES = Object.freeze({ cyberEdge: AnimatedCyberEdge });
 
 export default function AttackSurfaceMap({ scan, scanStatus }) {
-  const nodeTypes = useMemo(() => NODE_TYPES, []);
-  const edgeTypes = useMemo(() => EDGE_TYPES, []);
 
   const [selectedNode, setSelectedNode] = useState(null);
   const [filterState, setFilterState] = useState("all");
@@ -482,8 +480,8 @@ export default function AttackSurfaceMap({ scan, scanStatus }) {
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          nodeTypes={nodeTypes}
-          edgeTypes={edgeTypes}
+          nodeTypes={NODE_TYPES}
+          edgeTypes={EDGE_TYPES}
           fitView
           style={{ width: "100%", height: "100%", minHeight: "500px" }}
           nodesDraggable={false}
