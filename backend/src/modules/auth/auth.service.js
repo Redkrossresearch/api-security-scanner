@@ -132,7 +132,7 @@ const logoutAllUser = async (userId) => {
   await user.save();
 };
 
-const googleLoginUser = async ({ name, email }) => {
+const googleLoginUser = async ({ name, email, avatarUrl }) => {
   let user = await User.findOne({
     email,
     isDeleted: false,
@@ -147,9 +147,13 @@ const googleLoginUser = async ({ name, email }) => {
       name,
       email,
       passwordHash: dummyPasswordHash,
+      avatarUrl: avatarUrl || "",
     });
     // Auto-link pending invitations
     await autoLinkTeamInvitations(user._id, user.email);
+  } else if (avatarUrl && (!user.avatarUrl || user.avatarUrl !== avatarUrl)) {
+    user.avatarUrl = avatarUrl;
+    await user.save();
   }
 
   const accessToken = generateAccessToken(user);
@@ -171,6 +175,7 @@ const googleLoginUser = async ({ name, email }) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      avatarUrl: user.avatarUrl || avatarUrl || "",
     },
   };
 };

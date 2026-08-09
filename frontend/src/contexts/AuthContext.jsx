@@ -48,9 +48,13 @@ export const AuthProvider = ({ children }) => {
 
       // Exchange Firebase user for backend JWT token immediately
       const { user } = result;
+      if (user?.photoURL) {
+        localStorage.setItem("athx_google_avatar", user.photoURL);
+      }
       const res = await api.post("/auth/google-login", {
         name: user.displayName,
         email: user.email,
+        avatarUrl: user.photoURL,
       });
 
       if (res.data && res.data.accessToken) {
@@ -71,10 +75,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        if (user?.photoURL) {
+          localStorage.setItem("athx_google_avatar", user.photoURL);
+        }
         try {
           const res = await api.post("/auth/google-login", {
             name: user.displayName,
             email: user.email,
+            avatarUrl: user.photoURL,
           });
           if (res.data && res.data.accessToken) {
             localStorage.setItem("token", res.data.accessToken);
@@ -105,12 +113,14 @@ export const AuthProvider = ({ children }) => {
     return unsubscribe;
   }, []);
 
+  const userPhotoUrl = currentUser?.photoURL || currentUser?.providerData?.[0]?.photoURL || localStorage.getItem("athx_google_avatar") || null;
+
   const user = currentUser
     ? {
         uid: currentUser.uid,
         name: currentUser.displayName,
         email: currentUser.email,
-        photoURL: currentUser.photoURL,
+        photoURL: userPhotoUrl,
       }
     : null;
 

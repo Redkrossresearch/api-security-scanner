@@ -47,7 +47,7 @@ ${reportStyles}
       <div><span class="confidential-badge">CONFIDENTIAL</span></div>
       <div><strong>Scan Date:</strong> ${new Date().toLocaleDateString()}</div>
       <div><strong>Client:</strong> Enterprise Target Asset</div>
-      <div><strong>Assessment ID:</strong> ATHX-SEC-${vulnerability._id ? vulnerability._id.substring(0, 8) : "2026-X"}</div>
+      <div><strong>Assessment ID:</strong> ATHX-SEC-${vulnerability?._id ? String(vulnerability._id).substring(0, 8) : "2026-X"}</div>
       <div><strong>Prepared By:</strong> ATHX AI Quantum Engine</div>
       <div><strong>Report Version:</strong> v4.2.0-STABLE</div>
     </div>

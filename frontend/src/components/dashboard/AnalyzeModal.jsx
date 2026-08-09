@@ -12,6 +12,7 @@ import { createPortal } from "react-dom";
 import { analyzeVulnerability } from "../../services/vulnerabilityService";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "../../services/api";
+import toast from "react-hot-toast";
 
 export default function AnalyzeModal({ vulnerability, onClose }) {
   const loadingSteps = [
@@ -102,15 +103,26 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
       const safeTitle = (vulnerability?.title || "security-report").replace(/[^a-zA-Z0-9_-]/g, "_");
       a.download = `${safeTitle}.pdf`;
 
-
       document.body.appendChild(a);
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+      toast.success("PDF report downloaded successfully!");
     } catch (error) {
-      console.error(error);
-      const message = error?.response?.data?.message || "Failed to generate PDF.";
-      alert(message);
+      console.error("[AnalyzeModal] PDF Download Error:", error);
+      let message = "Failed to generate PDF.";
+      if (error?.response?.data) {
+        if (error.response.data instanceof Blob) {
+          try {
+            const text = await error.response.data.text();
+            const parsed = JSON.parse(text);
+            message = parsed.message || parsed.error || message;
+          } catch (e) {}
+        } else if (error.response.data.message) {
+          message = error.response.data.message;
+        }
+      }
+      toast.error(message);
     } finally {
       setPdfLoading(false);
     }

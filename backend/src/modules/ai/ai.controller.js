@@ -28,14 +28,6 @@ const analyze = async (req, res) => {
 const exportPdf = async (req, res) => {
   try {
     const { vulnerability, analysis } = req.body;
-    const safeTitle = (vulnerability?.title || "security-report").replace(/[^a-zA-Z0-9_-]/g, "_");
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${safeTitle}.pdf"`,
-    );
-
     await generatePdfReport(vulnerability, analysis, res);
   } catch (error) {
     console.error("PDF export error:", error);
@@ -43,7 +35,7 @@ const exportPdf = async (req, res) => {
     if (!res.headersSent) {
       res.status(500).json({
         success: false,
-        message: "PDF export failed",
+        message: error.message || "PDF export failed",
       });
     }
   }

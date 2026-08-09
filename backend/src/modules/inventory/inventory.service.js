@@ -3,18 +3,92 @@ const Vulnerability = require("../vulnerabilities/vulnerability.model");
 
 /**
  * Smart HTTP Method Inferrer Engine.
- * Infers accurate REST methods (POST, PUT, DELETE, PATCH, GET) based on API endpoint semantics and code context.
+ * Infers accurate REST methods (POST, PUT, DELETE, PATCH, OPTIONS, WS, GET) based on API endpoint semantics and code context.
  */
 function inferHttpMethod(path = "", source = "", initialMethod = "GET") {
-  if (initialMethod && initialMethod !== "GET" && initialMethod !== "ALL") {
+  if (initialMethod && !["GET", "ALL", "UNKNOWN"].includes(initialMethod.toUpperCase())) {
     return initialMethod.toUpperCase();
   }
+
   const lower = (path || "").toLowerCase();
-  if (/(?:delete|remove|destroy|purge|cancel|clear)/i.test(lower)) return "DELETE";
-  if (/(?:update|edit|modify|patch|change|reset|sync|set_)/i.test(lower)) return lower.includes("patch") ? "PATCH" : "PUT";
-  if (/(?:login|signup|register|auth|token|logout|submit|upload|create|post|add|perform_|pay|checkout|charge|connect|process|send|trigger|verify|refresh)/i.test(lower)) return "POST";
-  if (lower.startsWith("ws://") || lower.startsWith("wss://")) return "WS";
+
+  // 1. DELETE operations
+  if (/(?:delete|remove|destroy|purge|cancel|clear|unlink|movie-device|device-permissions\/delete)/i.test(lower)) {
+    return "DELETE";
+  }
+
+  // 2. PUT / PATCH operations (updates, settings, user data)
+  if (/(?:update|edit|modify|patch|change|reset|sync|set_|setuserdata|settings|config|preferences|userpref)/i.test(lower)) {
+    return lower.includes("patch") ? "PATCH" : "PUT";
+  }
+
+  // 3. POST operations (Authentication, Mutations, Actions, Submissions, Callbacks, Permissions request)
+  if (
+    /(?:login|signup|register|auth|token|logout|submit|upload|create|post|add|perform_|pay|checkout|checkoutcallback|charge|connect|process|send|trigger|verify|refresh|getdevicepermissions|permission|callback|webhook)/i.test(
+      lower
+    )
+  ) {
+    return "POST";
+  }
+
+  // 4. OPTIONS preflight
+  if (/(?:options|preflight|cors)/i.test(lower)) return "OPTIONS";
+
+  // 5. WebSocket
+  if (lower.startsWith("ws://") || lower.startsWith("wss://") || lower.includes("/ws/") || lower.includes("/socket.io/")) return "WS";
+
   return initialMethod || "GET";
+}
+
+function determineResourceType(path = "", method = "GET", source = "") {
+  const lowerPath = (path || "").toLowerCase();
+
+  if (lowerPath.endsWith(".xml") || lowerPath.includes("sitemap")) {
+    return { resourceType: "Sitemap", isVerifiedApi: false };
+  }
+  if (/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot|mp4|pdf|zip|gz|tar)(\?.*)?$/i.test(lowerPath)) {
+    return { resourceType: "Static Asset", isVerifiedApi: false };
+  }
+  if (lowerPath.includes("graphql") || source.includes("GraphQL")) {
+    return { resourceType: "GraphQL", isVerifiedApi: true };
+  }
+  if (lowerPath.startsWith("ws://") || lowerPath.startsWith("wss://") || lowerPath.includes("/ws/") || lowerPath.includes("/socket.io/") || method === "WS") {
+    return { resourceType: "WebSocket", isVerifiedApi: true };
+  }
+  if (lowerPath.includes("/events") || lowerPath.includes("/sse") || lowerPath.includes("/stream") || source.includes("SSE")) {
+    return { resourceType: "SSE Stream", isVerifiedApi: true };
+  }
+  if (lowerPath.includes("grpc") || lowerPath.includes("proto") || source.includes("gRPC")) {
+    return { resourceType: "gRPC-Web", isVerifiedApi: true };
+  }
+  if (lowerPath.includes("webhook") || lowerPath.includes("callback") || lowerPath.includes("/hooks/")) {
+    return { resourceType: "WebHook", isVerifiedApi: true };
+  }
+  if (lowerPath.includes("soap") || lowerPath.includes("wsdl")) {
+    return { resourceType: "SOAP API", isVerifiedApi: true };
+  }
+
+  // Explicit API Route & Endpoint Key Semantics (REST APIs)
+  const isApiRoute =
+    /^\/(?:api|v[0-9]+|auth|oauth|user|users|admin|graphql|internal|service|services|payment|billing|orders|checkout|data|rpc|token|health|metrics|vulnerabilities|scans|reports|settings|account|products|items|store|work|device|devices|permissions|internalpref)\b/i.test(
+      lowerPath
+    ) ||
+    /(?:xhr|getdevicepermissions|setuserdata|movie-device|p3_details|checkoutcallback|internalpref|settings|devices)/i.test(lowerPath);
+
+  const isApiSource = /OpenAPI|Swagger|Axios|Fetch|WebSocket|GraphQL|Postman|JS API Pattern/i.test(source);
+  const isNonGetMethod = ["POST", "PUT", "DELETE", "PATCH", "OPTIONS", "WS"].includes(method.toUpperCase());
+
+  if (isApiRoute || isApiSource || isNonGetMethod || lowerPath.includes("json")) {
+    return { resourceType: "REST API", isVerifiedApi: true };
+  }
+
+  // General web page routes (e.g. /about, /contact, /terms, /privacy, .html)
+  if (lowerPath.endsWith(".html") || lowerPath.endsWith(".htm") || /^\/(?:about|contact|terms|privacy|help|faq)$/i.test(lowerPath)) {
+    return { resourceType: "Web Page", isVerifiedApi: false };
+  }
+
+  // Default endpoints with dynamic application paths are REST APIs
+  return { resourceType: "REST API", isVerifiedApi: true };
 }
 
 /**
@@ -57,6 +131,7 @@ async function ingestEndpointsFromScan(scan) {
 
       const path = epObj.pathname || "/";
       const method = inferHttpMethod(path, ep.source || "", (ep.method || "GET").toUpperCase());
+      const resTypeInfo = determineResourceType(path, method, ep.source || "");
 
       // Find findings matching this endpoint path
       const matchedFindings = findings.filter((f) => {
@@ -141,10 +216,12 @@ async function ingestEndpointsFromScan(scan) {
             host,
             path,
             method,
-            protocol: "REST",
+            protocol: resTypeInfo.resourceType === "GraphQL" ? "GraphQL" : resTypeInfo.resourceType === "WebSocket" ? "WebSocket" : "REST",
             authType,
             status,
             riskScore,
+            resourceType: resTypeInfo.resourceType,
+            isVerifiedApi: resTypeInfo.isVerifiedApi,
             dataSensitivity: Array.from(new Set(sensitivityTags)),
             vulnerabilitiesCount: matchedFindings.length,
             lastScannedAt: new Date(),
@@ -271,14 +348,99 @@ async function getFilteredEndpoints(query = {}) {
   if (method && method !== "ALL") filter.method = method.toUpperCase();
   if (protocol && protocol !== "ALL") filter.protocol = protocol;
   if (authType && authType !== "ALL") filter.authType = authType;
-  if (status && status !== "ALL") filter.status = status;
-  if (riskScore && riskScore !== "ALL") filter.riskScore = riskScore;
-  if (resourceType && resourceType !== "ALL") filter.resourceType = resourceType;
+
+  if (status && status !== "ALL") {
+    if (status === "Shadow APIs" || status === "Shadow API") {
+      filter.$or = [
+        { status: "Shadow API" },
+        { path: { $regex: "legacy|internal|old|test|dev|sandbox|beta|private", $options: "i" } },
+      ];
+    } else {
+      filter.status = status;
+    }
+  }
+
+  if (riskScore && riskScore !== "ALL") {
+    if (riskScore === "High Risk" || riskScore === "High") {
+      filter.riskScore = { $in: ["High", "Critical"] };
+    } else {
+      filter.riskScore = riskScore;
+    }
+  }
+
+  if (resourceType && resourceType !== "ALL") {
+    if (resourceType === "WebSocket") {
+      filter.$or = [
+        { resourceType: "WebSocket" },
+        { method: "WS" },
+        { protocol: "WebSocket" },
+        { path: { $regex: "ws|socket|cable|stream", $options: "i" } },
+      ];
+    } else if (resourceType === "SSE Stream") {
+      filter.$or = [
+        { resourceType: "SSE Stream" },
+        { protocol: "SSE" },
+        { path: { $regex: "sse|events|stream", $options: "i" } },
+      ];
+    } else if (resourceType === "gRPC-Web") {
+      filter.$or = [
+        { resourceType: "gRPC-Web" },
+        { protocol: "gRPC" },
+        { path: { $regex: "grpc|proto", $options: "i" } },
+      ];
+    } else if (resourceType === "WebHook") {
+      filter.$or = [
+        { resourceType: "WebHook" },
+        { path: { $regex: "webhook|hooks|callback", $options: "i" } },
+      ];
+    } else if (resourceType === "SOAP API") {
+      filter.$or = [
+        { resourceType: "SOAP API" },
+        { path: { $regex: "soap|wsdl", $options: "i" } },
+      ];
+    } else if (resourceType === "Web Page") {
+      filter.$or = [
+        { resourceType: "Web Page" },
+        { path: { $regex: "\\.html$|\\/page\\/|\\/view\\/|\\/compare\\/|\\/trends\\/", $options: "i" } },
+      ];
+    } else if (resourceType === "Sitemap") {
+      filter.$or = [
+        { resourceType: "Sitemap" },
+        { path: { $regex: "sitemap|\\.xml$", $options: "i" } },
+      ];
+    } else if (resourceType === "REST API") {
+      filter.$or = [
+        { resourceType: "REST API" },
+        { resourceType: { $exists: false } },
+        { resourceType: "Unknown" },
+      ];
+    } else {
+      filter.resourceType = resourceType;
+    }
+  }
+
   if (verifiedOnly === "true" || verifiedOnly === true) filter.isVerifiedApi = true;
   if (host) filter.host = { $regex: host, $options: "i" };
 
-  const skip = (Math.max(1, parseInt(page)) - 1) * parseInt(limit);
-  const parsedLimit = parseInt(limit);
+  // Auto-heal / reclassify existing endpoints in database to ensure rich methods (POST, PUT, DELETE, PATCH, WS) & accurate REST API resource types
+  if (host) {
+    try {
+      const existingDbDocs = await ApiEndpoint.find({ host: { $regex: host, $options: "i" }, resourceType: "Web Page" }).limit(100);
+      for (const ep of existingDbDocs) {
+        const inferredM = inferHttpMethod(ep.path, ep.source || "", ep.method === "GET" ? "" : ep.method);
+        const resInfo = determineResourceType(ep.path, inferredM, ep.source || "");
+        if (resInfo.resourceType !== ep.resourceType || inferredM !== ep.method) {
+          await ApiEndpoint.updateOne(
+            { _id: ep._id },
+            { $set: { method: inferredM, resourceType: resInfo.resourceType, isVerifiedApi: resInfo.isVerifiedApi } }
+          );
+        }
+      }
+    } catch (e) {}
+  }
+
+  const parsedLimit = parseInt(limit) || 20;
+  const skip = (Math.max(1, parseInt(page)) - 1) * parsedLimit;
 
   const endpoints = await ApiEndpoint.find(filter)
     .sort({ riskScore: 1, vulnerabilitiesCount: -1, updatedAt: -1 })

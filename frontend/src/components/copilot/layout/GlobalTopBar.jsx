@@ -4,11 +4,19 @@ import { useAuth } from "../../../contexts/AuthContext";
 import toast from "react-hot-toast";
 
 export default function GlobalTopBar({ onOpenSettings, onOpenCommandPalette, isScanning, activeModel, theme, setTheme }) {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, user, logout } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
-  const userName = currentUser?.displayName || "Authenticated User";
-  const userEmail = currentUser?.email || "No Email";
+  const userName = currentUser?.displayName || user?.name || "Authenticated User";
+  const userEmail = currentUser?.email || user?.email || "No Email";
+  const userPhoto =
+    currentUser?.photoURL ||
+    currentUser?.providerData?.[0]?.photoURL ||
+    user?.photoURL ||
+    localStorage.getItem("athx_google_avatar") ||
+    localStorage.getItem("athx_settings_avatar") ||
+    null;
   
   return (
     <>
@@ -227,21 +235,37 @@ export default function GlobalTopBar({ onOpenSettings, onOpenCommandPalette, isS
               onClick={() => setDropdownOpen(!dropdownOpen)}
               style={{ padding: "0 8px 0 6px" }}
             >
-              <div style={{
-                width: "24px",
-                height: "24px",
-                borderRadius: "6px",
-                background: "linear-gradient(135deg, #1E293B, #0F172A)",
-                border: "1.5px solid rgba(249, 115, 22, 0.4)",
-                color: "#F97316",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "11px",
-                fontWeight: "800",
-              }}>
-                {userName.charAt(0)}
-              </div>
+              {userPhoto && !imgError ? (
+                <img
+                  src={userPhoto}
+                  alt="Profile"
+                  referrerPolicy="no-referrer"
+                  onError={() => setImgError(true)}
+                  style={{
+                    width: "24px",
+                    height: "24px",
+                    borderRadius: "6px",
+                    objectFit: "cover",
+                    border: "1.5px solid rgba(249, 115, 22, 0.4)",
+                  }}
+                />
+              ) : (
+                <div style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "6px",
+                  background: "linear-gradient(135deg, #1E293B, #0F172A)",
+                  border: "1.5px solid rgba(249, 115, 22, 0.4)",
+                  color: "#F97316",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "11px",
+                  fontWeight: "800",
+                }}>
+                  {userName.charAt(0)}
+                </div>
+              )}
               <ChevronDown size={12} color="rgba(255,255,255,0.4)" />
             </button>
 

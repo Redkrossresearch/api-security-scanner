@@ -68,7 +68,7 @@ const menuItems = [
 
 function Sidebar({ isMobileOpen, onClose }) {
   const location = useLocation();
-  const { currentUser, logout } = useAuth();
+  const { currentUser, user, logout } = useAuth();
   const [teams, setTeams] = useState([]);
   const [activeTeam, setActiveTeam] = useState("");
   const [imgError, setImgError] = useState(false);
@@ -79,7 +79,7 @@ function Sidebar({ isMobileOpen, onClose }) {
 
   useEffect(() => {
     setImgError(false);
-  }, [currentUser?.photoURL]);
+  }, [currentUser?.photoURL, user?.photoURL]);
 
   useEffect(() => {
     const fetchTeams = async () => {
@@ -165,9 +165,15 @@ function Sidebar({ isMobileOpen, onClose }) {
     window.location.reload();
   };
 
-  const userName = currentUser?.displayName || "Authenticated User";
-  const userEmail = currentUser?.email || "No Email";
-  const userPhoto = currentUser?.photoURL || null;
+  const userName = currentUser?.displayName || user?.name || "Authenticated User";
+  const userEmail = currentUser?.email || user?.email || "No Email";
+  const userPhoto =
+    currentUser?.photoURL ||
+    currentUser?.providerData?.[0]?.photoURL ||
+    user?.photoURL ||
+    localStorage.getItem("athx_google_avatar") ||
+    localStorage.getItem("athx_settings_avatar") ||
+    null;
 
   return (
     <aside
@@ -485,6 +491,7 @@ function Sidebar({ isMobileOpen, onClose }) {
             <img
               src={userPhoto}
               alt="Profile"
+              referrerPolicy="no-referrer"
               onError={() => setImgError(true)}
               style={{
                 width: "40px",

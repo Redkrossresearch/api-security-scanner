@@ -22,7 +22,7 @@ const apiEndpointSchema = new mongoose.Schema(
     method: {
       type: String,
       required: true,
-      enum: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+      enum: ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "WS"],
       default: "GET",
       uppercase: true,
       index: true,
@@ -35,7 +35,7 @@ const apiEndpointSchema = new mongoose.Schema(
     },
     protocol: {
       type: String,
-      enum: ["REST", "GraphQL", "gRPC", "WebSocket"],
+      enum: ["REST", "GraphQL", "gRPC", "WebSocket", "SSE", "WebHook", "SOAP", "HTTP", "XML"],
       default: "REST",
       index: true,
     },
@@ -153,6 +153,24 @@ const apiEndpointSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: null,
     },
+    // API Confidence Score & Correlation Engine Fields
+    confidenceScore: {
+      type: Number,
+      default: 80,
+      min: 0,
+      max: 100,
+      index: true,
+    },
+    detectedBy: [
+      {
+        type: String,
+      },
+    ],
+    sdkDetected: [
+      {
+        type: String,
+      },
+    ],
     // Resource Classification & Verification Engine Fields
     resourceType: {
       type: String,
