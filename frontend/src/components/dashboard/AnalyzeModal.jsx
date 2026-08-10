@@ -34,33 +34,45 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [scanTime, setScanTime] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
+    setLoading(true);
+    setError(null);
+    setScanTime(0);
+    setStepIndex(0);
+
     const runAnalysis = async () => {
       try {
         const result = await analyzeVulnerability(vulnerability);
         if (isMounted) {
           setAnalysis(result);
         }
-      } catch (error) {
-        console.error("Vulnerability analysis error:", error);
+      } catch (err) {
+        console.error("Vulnerability analysis error:", err);
+        if (isMounted) {
+          const isTimeout = err?.code === "ECONNABORTED" || err?.message?.includes("timeout");
+          setError(
+            isTimeout
+              ? "AI Engine timed out — Render backend may be waking up (cold start). Please retry in a few seconds."
+              : err?.response?.data?.message || err?.message || "AI analysis failed. Please try again."
+          );
+        }
       } finally {
         if (isMounted) {
-          setTimeout(() => {
-            setLoading(false);
-          }, 800);
+          setTimeout(() => setLoading(false), 800);
         }
       }
     };
 
     runAnalysis();
-    return () => {
-      isMounted = false;
-    };
-  }, [vulnerability]);
+    return () => { isMounted = false; };
+  }, [vulnerability, retryCount]);
+
 
   useEffect(() => {
     if (!loading) return;
@@ -130,6 +142,7 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
 
   const modalContent = (() => {
     if (loading) {
+
       const progressPercent = Math.min(100, Math.round(((stepIndex + 1) / loadingSteps.length) * 100));
 
       return (
@@ -596,6 +609,64 @@ export default function AnalyzeModal({ vulnerability, onClose }) {
               </motion.span>
             </AnimatePresence>
           </div>
+        </motion.div>
+      );
+    }
+
+    if (error) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          style={{
+            fontFamily: "'Inter', ui-sans-serif, system-ui, sans-serif",
+            background: "linear-gradient(165deg, #050B14 0%, #0A1124 40%, #0F172A 100%)",
+            border: "1px solid rgba(239, 68, 68, 0.4)",
+            borderRadius: "28px",
+            padding: "48px 42px",
+            width: "92vw",
+            maxWidth: "520px",
+            color: "#FFFFFF",
+            boxShadow: "0 35px 90px -15px rgba(0,0,0,0.9), 0 0 60px rgba(239,68,68,0.15)",
+            textAlign: "center",
+            position: "relative",
+          }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              position: "absolute", top: "18px", right: "18px",
+              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: "50%", width: "36px", height: "36px",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#94A3B8", fontSize: "15px", cursor: "pointer",
+            }}
+          >✕</button>
+
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>⚠️</div>
+          <div style={{ fontSize: "22px", fontWeight: "900", color: "#F97316", marginBottom: "10px" }}>
+            Analysis Engine Re-evaluating
+          </div>
+          <div style={{
+            fontSize: "13px", color: "#94A3B8", lineHeight: 1.7,
+            maxWidth: "380px", margin: "0 auto 28px",
+          }}>
+            {error}
+          </div>
+
+          <button
+            onClick={() => setRetryCount((c) => c + 1)}
+            style={{
+              padding: "12px 32px",
+              background: "linear-gradient(90deg, #F97316, #FB923C)",
+              border: "none", borderRadius: "12px",
+              color: "#FFF", fontWeight: "800", fontSize: "14px",
+              cursor: "pointer", boxShadow: "0 0 25px rgba(249,115,22,0.4)",
+              display: "inline-flex", alignItems: "center", gap: "8px",
+            }}
+          >
+            🔄 Retry AI Security Analysis
+          </button>
         </motion.div>
       );
     }

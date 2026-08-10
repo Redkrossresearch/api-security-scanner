@@ -8,10 +8,12 @@ const getBaseURL = () => {
   return "http://localhost:5000/api";
 };
 
+// Render free tier cold starts can take 50-80s — use 120s global timeout
+// AI / copilot heavy routes get 180s via request interceptor below
 const api = axios.create({
   baseURL: getBaseURL(),
   withCredentials: true,
-  timeout: 30000,
+  timeout: 120000,
 });
 
 
