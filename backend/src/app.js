@@ -23,6 +23,7 @@ const workflowRoutes = require("./modules/workflows/workflow.routes");
 const mcpRoutes = require("./modules/mcp/mcp.routes");
 const ragRoutes = require("./modules/llm/rag/rag.routes");
 const inventoryRoutes = require("./modules/inventory/inventory.routes");
+const threatIntelRoutes = require("./modules/threat-intel/threat-intel.routes");
 const requestLogger = require("./middleware/requestLogger");
 
 const app = express();
@@ -103,7 +104,6 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/settings", settingRoutes);
 app.use("/api/copilot", copilotRoutes);
 app.use("/api/history", historyRoutes);
-app.use("/api/history", historyRoutes);
 app.use("/api/queue", queueRoutes);
 app.use("/api/teams", teamRoutes);
 app.use("/api/autonomous", autonomousRoutes);
@@ -111,6 +111,7 @@ app.use("/api/workflows", workflowRoutes);
 app.use("/api/mcp", mcpRoutes);
 app.use("/api/rag", ragRoutes);
 app.use("/api/inventory", inventoryRoutes);
+app.use("/api/threat-intel", threatIntelRoutes);
 
 // 🟡 Recommended 2 — 404 Handler (Express 5 compatible - no "*" wildcard)
 app.use((req, res) => {
