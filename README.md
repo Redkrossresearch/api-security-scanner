@@ -1,242 +1,491 @@
-# 🛡️ API Security Scanner — Enterprise AI Autonomous Security Platform (v3.2)
-
 <div align="center">
 
-![Platform Banner](https://img.shields.io/badge/ATHX--SECURITY-AUTONOMOUS--API--SCANNER-0F172A?style=for-the-badge&logo=shield&logoColor=38BDF8&labelColor=060910)
+<img src="https://img.shields.io/badge/ATHX_SECURITY-PLATFORM-0F172A?style=for-the-badge&logoColor=F97316&labelColor=060910" height="36"/>
 
-[![Completion Status](https://img.shields.io/badge/PROJECT--STATUS-100%25--COMPLETE--STABLE-brightgreen?style=for-the-badge&logo=checkmarx)](https://api-security-scanner-mauve.vercel.app)
-[![React 19](https://img.shields.io/badge/React-19.x-blue?style=for-the-badge&logo=react)](https://react.dev/)
-[![Vite 8](https://img.shields.io/badge/Vite-8.x-purple?style=for-the-badge&logo=vite)](https://vite.dev/)
-[![Node.js 24](https://img.shields.io/badge/Node.js-24.x-green?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-brightgreen?style=for-the-badge&logo=mongodb)](https://www.mongodb.com/)
-[![BullMQ](https://img.shields.io/badge/Task--Queue-BullMQ--Redis-orange?style=for-the-badge&logo=redis)](https://bullmq.io/)
-[![Multi-Agent Orchestrator](https://img.shields.io/badge/AI--Engine-DAG--RAG--Copilot-darkviolet?style=for-the-badge&logo=openai)](https://openrouter.ai/)
+# ATHX Security — Enterprise AI API Security Platform
 
-**An enterprise-grade, 100% complete autonomous API security auditing ecosystem featuring a 52-scanner parallel DAST execution engine, real-time WebSocket telemetry worker queue monitor, multi-agent RAG AI remediation copilot, full-bleed persistent settings control center, multi-framework compliance radar, and SHA256 cryptographic audit diploma generator.**
+**_"Find. Understand. Fix. Before attackers do."_**
+
+[![Live Demo](https://img.shields.io/badge/🌐_LIVE_DEMO-api--security--scanner--mauve.vercel.app-F97316?style=for-the-badge)](https://api-security-scanner-mauve.vercel.app)
+[![Backend](https://img.shields.io/badge/Backend-Render_Production-38BDF8?style=for-the-badge&logo=render)](https://api-security-scanner-puum.onrender.com)
+[![Status](https://img.shields.io/badge/STATUS-PRODUCTION_STABLE-10B981?style=for-the-badge&logo=checkmarx)](https://github.com/Redkrossresearch/api-security-scanner)
+
+[![React 19](https://img.shields.io/badge/React-19.x-61DAFB?style=flat-square&logo=react)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8.x-646CFF?style=flat-square&logo=vite)](https://vite.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-24.x-339933?style=flat-square&logo=nodedotjs)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Atlas-47A248?style=flat-square&logo=mongodb)](https://www.mongodb.com/)
+[![BullMQ](https://img.shields.io/badge/Queue-BullMQ_+_Redis-FF4444?style=flat-square&logo=redis)](https://bullmq.io/)
+[![Socket.IO](https://img.shields.io/badge/Realtime-Socket.IO-010101?style=flat-square&logo=socket.io)](https://socket.io/)
+[![Gemini](https://img.shields.io/badge/AI-Gemini_+_Groq-8B5CF6?style=flat-square&logo=google)](https://ai.google.dev/)
 
 </div>
 
 ---
 
-## 🟢 100% Project Completion Status & Verification Sign-Off
+## 🎯 Main Mission
 
-The **API Security Scanner Platform** has reached **100% Production Readiness (v3.2 STABLE)**. All backend micro-services, scanner suites, queue workers, AI neural agents, frontend page layouts, theme buses, and PDF cryptographic generators have been fully implemented, integrated, tested, and deployed.
+> **ATHX Security is an autonomous, AI-powered API security platform that scans any web application for vulnerabilities, enriches findings with live threat intelligence from the internet, and delivers AI-generated fixes — all in real time.**
 
-| Core Component | Completion | Verified Features & Endpoints |
-| :--- | :---: | :--- |
-| **52-Scanner DAST Execution Engine** | 🟢 **100%** | Parallel execution via `Promise.all`, CVSS 3.1 vector calculation, attack graph builder, WebSocket stage telemetry |
-| **Distributed Task Queue & Worker Monitor** | 🟢 **100%** | 100% full-width layout, 8-slot worker thread pool visualizer, live WebSocket terminal stream (`scan:*`), 1-click re-queue |
-| **Multi-Agent RAG AI Remediation Copilot** | 🟢 **100%** | OpenRouter, Gemini Flash, Groq LPU adapters, DAG Knowledge Graph, RAG Vector Reranker, live Web Search fetcher |
-| **Full-Bleed Settings Control Center** | 🟢 **100%** | 15 persistent MongoDB settings (`GET/PUT /api/settings`), 4 visual themes, global event bus (`athx-settings-updated`), Web Audio synth, 30 avatars |
-| **Direct Target Discovery Scanner** | 🟢 **100%** | JS AST route crawler (`POST /api/inventory/scan-target`), host grouping, OpenAPI 3.0 specification generator & exporter |
-| **Executive Reports & Cryptographic Certs** | 🟢 **100%** | PDF/DOCX/CSV/JSON/YAML export, SHA256 seals, HMAC signature verification, Agupta handwritten diploma seal |
-| **Multi-Framework Compliance Radar** | 🟢 **100%** | Dynamic score calculation across OWASP API Top 10, PCI-DSS v4.0, SOC 2 Type II, and ISO 27001 |
-| **Production Network & Deployment Architecture** | 🟢 **100%** | Axios Vercel production URL auto-fallback, Render WebSocket server reconnection resilience, zero-warning Vite build |
+Most security tools tell you *what* is broken. ATHX tells you **what it is, how severe it is, where it came from, and exactly how to fix it** — with code patches, compliance mappings, and cryptographic audit reports ready to share with your team.
+
+Built for developers, security engineers, and DevSecOps teams who need deep API security without a six-figure enterprise contract.
 
 ---
 
-## 🔍 Detailed Feature Specifications (Minute-by-Minute Capabilities)
+## 🏗️ System Architecture
 
-### 1. 🛡️ 52-Scanner DAST Security Probe Engine
-The core scanning engine executes **52 specialized Dynamic Application Security Testing (DAST) probes** concurrently:
-- **BOLA / IDOR Probes**: Checks object-level authorization bypasses by mutating path parameters and user session tokens.
-- **JWT Vulnerability Scanner**: Tests for `none` algorithm exploits, weak HMAC secret key cracking, and expired token acceptance.
-- **Mass Assignment Probe**: Attempts schema poisoning by injecting unexpected attributes (`isAdmin`, `role`, `privileges`).
-- **SSRF & XXE Probes**: Detects Server-Side Request Forgery and XML External Entity injection vulnerabilities.
-- **Injection Probes**: Probes for Blind SQL Injection, Command Injection, and NoSQL Payload execution.
-- **CORS & Security Headers**: Audits `Access-Control-Allow-Origin: *`, `Strict-Transport-Security`, `X-Content-Type-Options`, and `CSP`.
-- **Rate Limiting & Brute-Force**: Evaluates HTTP 429 responses under burst traffic loads.
-
-### 2. 🚀 100% Full-Width Task Queue & Worker Telemetry Monitor (`/queue`)
-- **Full-Width Viewport Spanning**: Built without arbitrary width bottlenecks (`maxWidth: 100%`), allowing security operators to inspect deep telemetry on ultrawide monitors.
-- **Live Terminal Event Stream**: Real-time WebSocket listener rendering formatted ASCII-style logs for `scan:start`, `scan:progress`, `scan:completed`, and `scan:failed` events.
-- **Worker Thread Pool Visualizer**: Displays an 8-slot interactive grid representing BullMQ Redis worker thread allocations (`IDLE`, `PROCESSING`, `FAILED`).
-- **Interactive Job Diagnostics Drawer**: Clicking any queued job opens a slide-over drawer displaying raw payload parameters, error stack traces, and a 1-click **Re-Queue Job** button (`POST /api/scans/:id/reaudit`).
-- **CSV Audit Export**: Exports full queue metrics and historical job logs into structured CSV format.
-
-### 3. 🧠 Multi-Agent Neural AI Copilot & RAG Pipeline (`/copilot`)
-- **Multi-LLM Adapter Layer**: Seamlessly switches between OpenRouter, Google Gemini Flash, and Groq LPU engines based on latency requirements.
-- **DAG Security Knowledge Graph**: Traverses OWASP/CWE taxonomy graphs to compute root-cause threat vectors.
-- **RAG Reranker & Vector Store**: Indexes past scan results and vulnerability catalogs to ground AI responses in empirical codebase data.
-- **AI Remediation Code Generator**: Produces drop-in Express.js / Node.js security patches with before/after diffs.
-- **Live Web Search Fetcher**: Queries live web search APIs for newly published CVEs and zero-day exploits, rendering clickable authority citation cards.
-
-### 4. 🎛️ Full-Bleed Settings Control Center & Site-Wide Theme Engine (`/settings`)
-- **15 MongoDB Persistent Settings**:
-  - *User & Org Profile*: `username`, `avatarUrl`, `email`, `orgHandle`.
-  - *Appearance*: `themeMode` (`dark-midnight`, `cyberpunk-neon`, `deep-obsidian`, `sleek-slate`), `accentColor`, `compactMode`, `soundEnabled`.
-  - *Scan Engine Defaults*: `crawlDepth`, `rateLimit`, `subdomainDiscovery`, `piiMasking`.
-  - *Security & Integrations*: `twoFactorAuth`, `webhookUrl`, `logRetentionDays`.
-- **Global Theme Event Bus**: Changes made in Settings emit `athx-settings-updated`, causing [`App.jsx`](file:///c:/Users/athar/api-security-scanner/frontend/src/App.jsx) to instantly mutate CSS root variables site-wide without requiring a page refresh.
-- **Web Audio Feedback Synthesizer**: Triggers sci-fi UI sound effects upon button clicks and theme switches when `soundEnabled` is toggled ON.
-- **30 Hacker Operator Avatars**: Selectable high-tech avatar gallery stored in database profile settings.
-- **Security Posture Score Meter**: Dynamic 0-100% gauge evaluating overall platform security posture based on enabled security controls.
-
-### 5. 🎯 Direct Target Endpoint Discovery Scanner & API Inventory (`/inventory`)
-- **Direct Target Ingestion Bar**: Input any target web URL (e.g. `https://api.target.com`) to crawl client-side JavaScript bundles and extract hidden API endpoints via AST parsing.
-- **Host Grouping & Risk Badges**: Categorizes endpoints by domain host and assigns risk badges (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`).
-- **OpenAPI 3.0 Specification Export**: 1-click generation and download of complete OpenAPI 3.0 JSON specifications for discovered inventory endpoints.
-
-### 6. 📜 Cryptographic Audit Diploma & PDF Report Builder (`/reports`)
-- **Executive PDF Generator**: Renders Fortune 500 security audit reports complete with CVSS score breakdowns, attack vector diagrams, and compliance summaries.
-- **Cryptographic Certificate Verification**: Issues printable security certificates sealed with SHA256 hashes, HMAC digital signatures, and an authentic Agupta handwritten signature seal.
-- **Multi-Format Export Suite**: Supports 6 export formats (PDF, DOCX, CSV, JSON, YAML, and bundled ZIP packages).
-
----
-
-## 📐 Complete Technical Architecture & Data Flow
-
-```mermaid
-graph TD
-    Client["💻 React 19 + Vite Dashboard UI"] -->|REST API & WebSockets| Server["⚡ Express.js Backend Server (Port 5000)"]
-    
-    subgraph Backend Core Engine
-        Server --> Auth["🔐 Auth & RBAC Service (Firebase + JWT)"]
-        Server --> ScanController["🎯 Scan Execution Controller"]
-        Server --> AIController["🤖 AI Copilot (/api/ai/analyze)"]
-        Server --> SettingsService["⚙️ 15 Settings MongoDB Persistence (/api/settings)"]
-        Server --> ReportService["📑 Executive Report & PDF Engine"]
-    end
-
-    subgraph Async Worker Queue & 52 Scanner Suite
-        ScanController --> TaskQueue["🚀 Parallel Scan Worker Queue (BullMQ)"]
-        TaskQueue --> ScannerEngine["🛡️ 52 Security Scanner Modules"]
-        ScannerEngine --> BOLA["BOLA / IDOR Scanner"]
-        ScannerEngine --> JWT["JWT Weak Secret Probe"]
-        ScannerEngine --> MassAssign["Mass Assignment Scanner"]
-        ScannerEngine --> SSRF["SSRF & XXE Probe"]
-        ScannerEngine --> SecurityHeaders["Security Headers & CORS"]
-    end
-
-    subgraph AI Neural Copilot & RAG Pipeline
-        AIController --> DAGGraph["🧠 DAG Security Knowledge Graph"]
-        AIController --> RAGEngine["📚 RAG Vector Store & Reranker"]
-        AIController --> CriticEval["⚖️ AI Critic Evaluator & Self-Learner"]
-        DAGGraph & RAGEngine & CriticEval --> LLMProvider["✨ OpenRouter / Gemini Flash / Groq LPU"]
-    end
-
-    subgraph Persistence & Cryptographic Audit Proof
-        ScannerEngine --> DB[("🍃 MongoDB Database")]
-        ReportService --> CertGen["📜 Cryptographic Certificate Engine (SHA256 & Signature)"]
-        CertGen --> OutputDoc["📄 Printable Diploma & PDF/CSV/JSON Package"]
-    end
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                           ATHX SECURITY PLATFORM                                │
+│                                                                                 │
+│  ┌──────────────────────────────────────────────────────────────────────────┐  │
+│  │                    React 19 + Vite Frontend (Vercel)                     │  │
+│  │   Dashboard │ Scans │ Inventory │ Copilot │ Reports │ Queue │ Settings   │  │
+│  └────────────────────────────────┬─────────────────────────────────────────┘  │
+│                                   │ REST + WebSocket                            │
+│  ┌────────────────────────────────▼─────────────────────────────────────────┐  │
+│  │                   Node.js / Express Backend (Render)                      │  │
+│  │                                                                           │  │
+│  │  ┌─────────────────┐  ┌──────────────────┐  ┌───────────────────────┐  │  │
+│  │  │  Auth & RBAC    │  │  52-Scanner DAST  │  │  Threat Intel Module  │  │  │
+│  │  │  Firebase+JWT   │  │  Engine (Parallel) │  │  Vulners│NVD│Shodan  │  │  │
+│  │  └─────────────────┘  └────────┬─────────┘  │  VirusTotal (Live)    │  │  │
+│  │                                │             └───────────────────────┘  │  │
+│  │  ┌─────────────────┐  ┌────────▼─────────┐  ┌───────────────────────┐  │  │
+│  │  │  BullMQ + Redis │  │  Vulnerability   │  │  AI Copilot           │  │  │
+│  │  │  Task Queue     │◄─│  Catalog (8137+  │  │  Gemini│Groq│RAG      │  │  │
+│  │  │  Worker Monitor │  │  entries)         │  │  DAG Knowledge Graph  │  │  │
+│  │  └─────────────────┘  └──────────────────┘  └───────────────────────┘  │  │
+│  │                                                                           │  │
+│  │  ┌──────────────────────────────────────────────────────────────────┐   │  │
+│  │  │                    MongoDB Atlas Database                         │   │  │
+│  │  │   Scans │ Users │ Settings │ Vulnerabilities │ Inventory │ Logs  │   │  │
+│  │  └──────────────────────────────────────────────────────────────────┘   │  │
+│  └───────────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🗄️ Database Schemas & Endpoints Registry
+## 🔄 Scan Execution Flow
 
-### Key MongoDB Schemas
-
-```javascript
-// Setting Schema (15 Fields)
-const SettingSchema = new mongoose.Schema({
-  userId: { type: String, default: "default_user" },
-  username: { type: String, default: "Hacker_Operator" },
-  avatarUrl: { type: String, default: "https://api.dicebear.com/7.x/bottts/svg?seed=Hacker" },
-  email: { type: String, default: "security@company.com" },
-  orgHandle: { type: String, default: "Redkross Research" },
-  themeMode: { type: String, default: "dark-midnight" },
-  accentColor: { type: String, default: "#F97316" },
-  compactMode: { type: Boolean, default: false },
-  soundEnabled: { type: Boolean, default: true },
-  crawlDepth: { type: Number, default: 15 },
-  rateLimit: { type: Number, default: 50 },
-  subdomainDiscovery: { type: Boolean, default: true },
-  piiMasking: { type: Boolean, default: true },
-  twoFactorAuth: { type: Boolean, default: true },
-  webhookUrl: { type: String, default: "" },
-  logRetentionDays: { type: Number, default: 30 },
-});
 ```
-
-### Core API Endpoints
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/api/scans/start` | Initiates parallel 52-scanner DAST audit with configuration payload |
-| `GET` | `/api/scans/:id` | Retrieves full scan telemetry, findings, and CVSS vector details |
-| `POST` | `/api/scans/:id/reaudit` | Re-queues an existing scan job for instant re-auditing |
-| `GET` | `/api/queue/status` | Returns live BullMQ task queue metrics and worker thread pool capacity |
-| `GET` | `/api/settings` | Fetches persistent 15-setting user profile configuration |
-| `PUT` | `/api/settings` | Updates 15-setting configuration and persists to MongoDB |
-| `POST` | `/api/inventory/scan-target` | Ingests website URL, extracts endpoints from JS AST, populates inventory |
-| `GET` | `/api/inventory/export` | Generates and exports OpenAPI 3.0 specification JSON file |
-| `POST` | `/api/ai/analyze` | Invokes RAG AI Copilot for threat analysis and code patch generation |
-| `GET` | `/api/reports/:id/pdf` | Renders Fortune 500 executive PDF report with SHA256 seal |
+User submits target URL
+         │
+         ▼
+┌─────────────────┐     ┌──────────────────────────────────────────────────┐
+│  Web Crawler    │────►│  Tech Stack Detection (PHP/Apache/Nginx/Node.js) │
+│  & JS AST Parse │     └───────────────────┬──────────────────────────────┘
+└─────────────────┘                         │
+                                            ▼
+                         ┌──────────────────────────────────────────────┐
+                         │       PARALLEL EXECUTION (Promise.all)        │
+                         │                                                │
+                         │  ┌─────────────┐  ┌──────────────────────┐  │
+                         │  │ 52 DAST     │  │  Threat Intel APIs   │  │
+                         │  │ Scanners    │  │  ┌──────────────────┐ │  │
+                         │  │             │  │  │ Vulners → CVEs   │ │  │
+                         │  │ BOLA│JWT   │  │  │ Shodan → Ports   │ │  │
+                         │  │ SSRF│XXE   │  │  │ VirusTotal→Malwr │ │  │
+                         │  │ SQLi│XSS   │  │  │ NVD → CVSS Score │ │  │
+                         │  │ CORS│...   │  │  └──────────────────┘ │  │
+                         │  └──────┬──────┘  └──────────┬───────────┘  │
+                         └─────────┼────────────────────┼───────────────┘
+                                   │                    │
+                                   ▼                    ▼
+                         ┌──────────────────────────────────────┐
+                         │   Merge + Deduplicate by CVE ID       │
+                         │   NVD CVSS Enrichment (Background)    │
+                         └──────────────────┬───────────────────┘
+                                            │
+                                            ▼
+                         ┌──────────────────────────────────────┐
+                         │   AI Analysis & Code Patch Generator  │
+                         │   Gemini / Groq + RAG Vector Store    │
+                         └──────────────────┬───────────────────┘
+                                            │
+                                            ▼
+                         ┌──────────────────────────────────────┐
+                         │   PDF Report + SHA256 Audit Diploma   │
+                         │   OWASP / PCI-DSS / SOC2 Compliance  │
+                         └──────────────────────────────────────┘
+```
 
 ---
 
-## 📂 Project Directory Structure
+## ✨ Full Feature Breakdown
+
+### 🛡️ 1. 52-Scanner Parallel DAST Engine
+
+The core of ATHX — **52 specialized Dynamic Application Security Testing probes** running concurrently via `Promise.all`. Every probe is an independent module that fires real HTTP requests against the target.
+
+| Category | Scanners |
+|---|---|
+| **Injection** | SQL Injection, NoSQL Injection, Command Injection, LDAP Injection, XPath Injection, SSTI |
+| **Auth & Access** | BOLA/IDOR, BFLA, JWT Weak Secret, JWT Algorithm Confusion, OAuth Misconfiguration |
+| **Headers & Config** | CORS, CSP Eval, HSTS, Clickjacking, Referrer Policy, Content-Type Sniffing, Security Headers |
+| **Data Exposure** | Server Header Disclosure, Env File Exposure, Git Exposure, Swagger Exposure, Exposed Files |
+| **Injection Advanced** | SSRF, XXE, Path Traversal, HTTP Smuggling, Mass Assignment, Prototype Pollution, Open Redirect |
+| **Network** | SSL/TLS Config, Redis Exposure, Cloud Metadata, Subdomain Takeover, Rate Limiting |
+| **API Specific** | GraphQL Introspection, gRPC Security, WebSockets, API Versioning, Cookie Security |
+| **Discovery** | Attack Surface Mapping, Endpoint Risk Scoring, Directory Bruteforce, Technology Fingerprinting |
+
+```
+Each finding includes:
+  ✔ CVSS 3.1 Base Score
+  ✔ CWE / OWASP Top 10 mapping
+  ✔ Severity: Critical / High / Medium / Low / Info
+  ✔ Reproduction steps
+  ✔ AI-generated code fix
+```
+
+---
+
+### 🌐 2. Live Threat Intelligence Integration
+
+**Sources queried in parallel on every scan.** If any source is down → instant fallback to internal catalog with zero latency.
+
+```
+┌──────────────┬─────────────────────────────────────────────────────────────┐
+│   Source     │ What it does                                                │
+├──────────────┼─────────────────────────────────────────────────────────────┤
+│  🔴 Vulners  │ Finds all known CVEs for detected software (PHP, Apache...) │
+│  🟠 Shodan   │ Scans open ports, exposed services, host-level CVEs         │
+│  🟢 Virus-   │ Checks domain/URL/IP against 70+ antivirus engines          │
+│     Total    │                                                             │
+│  🔵 NVD      │ Authoritative CVSS v3.1 scores for every CVE found          │
+├──────────────┼─────────────────────────────────────────────────────────────┤
+│  📁 Catalog  │ 8,137+ entry internal vuln database (instant, always works) │
+└──────────────┴─────────────────────────────────────────────────────────────┘
+```
+
+**NVD is the authoritative CVSS source** — it enriches ALL CVEs whether they came from live sources or the catalog. Catalog scores get updated in background.
+
+**New API endpoints:**
+```
+POST /api/threat-intel/scan           → Full scan all sources
+GET  /api/threat-intel/cve/:cveId    → NVD CVE details
+GET  /api/threat-intel/shodan/:host  → Shodan host scan
+GET  /api/threat-intel/virustotal/:t → VirusTotal scan
+GET  /api/threat-intel/vulners/:sw   → Vulners CVE search
+```
+
+---
+
+### 🧠 3. Multi-Agent AI Security Copilot
+
+A multi-model AI assistant that understands your scan results and generates actionable fixes.
+
+```
+User Query
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    AI Copilot Pipeline                       │
+│                                                             │
+│  RAG Vector Store ──► Relevant scan history + vuln catalog  │
+│  DAG Knowledge Graph → OWASP/CWE root-cause traversal       │
+│  Live Web Search ───► Latest CVEs, zero-days, advisories    │
+│  AI Critic Loop ────► Self-evaluates answer quality         │
+│                                                             │
+│  LLM Options: Gemini Flash │ Groq LPU │ OpenRouter          │
+└──────────────────────────────────┬──────────────────────────┘
+                                   │
+                                   ▼
+           Code patch + explanation + compliance reference
+```
+
+**Capabilities:**
+- 💬 Natural language vulnerability Q&A
+- 🔧 Drop-in Node.js / Express security patches with before/after diffs
+- 📎 Clickable citation cards from NIST, OWASP, CVE databases
+- 🖼️ Attack diagram generation
+- 🧠 Learns from your previous scan history via RAG
+
+---
+
+### 📊 4. Real-Time Dashboard & Telemetry
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Live Dashboard KPIs                                             │
+│                                                                  │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐   │
+│  │  Total   │  │  Active  │  │  Critical│  │  Compliance  │   │
+│  │  Scans   │  │  Threats │  │  CVEs    │  │  Score       │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────────┘   │
+│                                                                  │
+│  📈 Trend charts (7-day, 30-day vulnerability history)           │
+│  🔴 Live Threat Feed (real-time WebSocket events)                │
+│  🌍 Attack origin map                                            │
+│  📋 Recent scan activity log                                     │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 🚀 5. BullMQ Worker Queue Monitor (`/queue`)
+
+Real-time scan job management with full-width telemetry display.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│   BullMQ Worker Thread Pool — 8 Slots                           │
+│                                                                 │
+│  [PROCESSING] [IDLE] [IDLE] [PROCESSING] [IDLE] [IDLE] [IDLE] [FAILED] │
+│                                                                 │
+│  📟 Live Terminal Log Stream (WebSocket)                        │
+│  scan:start → scan:progress → scan:completed / scan:failed      │
+│                                                                 │
+│  [Re-Queue] [Export CSV] [View Payload] [Error Trace]           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 🎯 6. API Inventory & Endpoint Discovery (`/inventory`)
+
+```
+Input: https://target-api.com
+         │
+         ▼
+   JS Bundle Download → AST Parsing → Route Extraction
+         │
+         ▼
+   ┌─────────────────────────────────────────────┐
+   │  Discovered Endpoints                        │
+   │  api.target.com/users          [HIGH RISK]  │
+   │  api.target.com/admin/export   [CRITICAL]   │
+   │  api.target.com/payments/:id   [HIGH RISK]  │
+   └──────────────────────┬──────────────────────┘
+                          │
+                          ▼
+              OpenAPI 3.0 Spec Export (JSON)
+              Endpoint Risk Score per route
+              Host grouping + risk badges
+```
+
+---
+
+### 📜 7. Reports & Cryptographic Audit Diplomas (`/reports`)
+
+| Format | Contents |
+|---|---|
+| **PDF** | Executive summary, CVSS breakdown, attack vector diagrams, compliance scores |
+| **DOCX** | Word-compatible security audit report |
+| **CSV** | Tabular vulnerability data for spreadsheet analysis |
+| **JSON/YAML** | Machine-readable findings for CI/CD pipelines |
+| **ZIP** | All formats bundled |
+| **Diploma** | Printable certificate with SHA256 seal + HMAC signature |
+
+---
+
+### ⚙️ 8. Settings Control Center (`/settings`)
+
+15 persistent MongoDB settings with real-time theme propagation:
+
+| Category | Settings |
+|---|---|
+| **Profile** | `username`, `email`, `avatarUrl`, `orgHandle` |
+| **Appearance** | `themeMode` (4 themes), `accentColor`, `compactMode`, `soundEnabled` |
+| **Scanner** | `crawlDepth`, `rateLimit`, `subdomainDiscovery`, `piiMasking` |
+| **Security** | `twoFactorAuth`, `webhookUrl`, `logRetentionDays` |
+
+**Theme change → emits `athx-settings-updated` event → CSS root variables mutate site-wide instantly (no reload).**
+
+---
+
+## 🗂️ Project Structure
 
 ```
 api-security-scanner/
 ├── backend/
 │   ├── src/
-│   │   ├── config/              # Database, environment & feature flag settings
 │   │   ├── modules/
-│   │   │   ├── ai/              # AI Remediation engine, OpenRouter & Groq adapters
-│   │   │   ├── agents/          # Autonomous Agent Roster (Planner, Fixer, Judge)
-│   │   │   ├── copilot/         # RAG conversation controller & learned insights
-│   │   │   ├── inventory/       # Target endpoint discovery scanner & OpenAPI exporter
-│   │   │   ├── knowledge/       # Tag taxonomy & knowledge graph services
-│   │   │   ├── llm/             # RAG Vector store, Reranker, DAG Graph
-│   │   │   ├── queue/           # BullMQ status metrics & worker diagnostics routes
-│   │   │   ├── reports/         # PDF Report Builder & Cryptographic Cert Engine
-│   │   │   ├── scanner/         # 52 Security Scanner Modules (BOLA, JWT, SSRF, XXE...)
-│   │   │   ├── scans/           # Scan orchestrator, attack graph & stage telemetry
-│   │   │   ├── settings/        # 15 Settings schema & MongoDB persistence controller
-│   │   │   └── vulnerabilities/ # Vulnerability catalog (CVSS 3.1 & remediation)
-│   │   └── utils/               # Storage cleanup, mailer, load tests
+│   │   │   ├── ai/              # AI analysis, PDF export, Gemini/Groq adapters
+│   │   │   ├── agents/          # Autonomous agent roster (Planner, Fixer, Judge)
+│   │   │   ├── auth/            # JWT auth, Google OAuth, RBAC middleware
+│   │   │   ├── copilot/         # RAG conversation controller
+│   │   │   ├── dashboard/       # KPI stats, activity logs endpoints
+│   │   │   ├── engines/         # CVSS engine, Risk engine, Severity engine
+│   │   │   ├── inventory/       # Target crawling, endpoint discovery, OpenAPI export
+│   │   │   ├── llm/             # RAG vector store, reranker, DAG graph, external sources
+│   │   │   ├── queue/           # BullMQ worker status, diagnostics routes
+│   │   │   ├── reports/         # PDF/DOCX/CSV/JSON report builder + crypto certs
+│   │   │   ├── scanner/         # ← 52 DAST scanner modules live here
+│   │   │   ├── scans/           # Scan orchestration, attack graph, WebSocket telemetry
+│   │   │   ├── settings/        # 15-field settings schema + MongoDB persistence
+│   │   │   ├── threat-intel/    # ← NEW: Vulners, NVD, Shodan, VirusTotal services
+│   │   │   └── vulnerabilities/ # 8,137+ entry vuln catalog + factory
+│   │   ├── middleware/          # Rate limiter, request logger, auth middleware
+│   │   ├── config/              # DB, env, CORS utilities
+│   │   └── sockets/             # Socket.IO server for real-time scan events
+│   └── server.js
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ai/              # Attack diagram cards & AI remediation panels
-│   │   │   ├── copilot/         # Chart, Image Lightbox, Copy & Citation renderers
-│   │   │   ├── dashboard/       # Dashboard KPIs, trend charts & threat feeds
-│   │   │   ├── layouts/         # Sidebar, Navbar & Particle background
-│   │   │   └── scans/           # Live scanner logs, ScanConfigurationCard, Findings
-│   │   ├── contexts/            # AuthContext (Firebase + JWT)
-│   │   ├── layouts/             # MainLayout (100vh viewport scroll container)
-│   │   ├── pages/               # Scans, History, Copilot, Reports, Queue, Settings, Inventory
-│   │   ├── services/            # Axios API client with production Vercel auto-fallback
-│   │   └── sockets/             # Socket.IO client & ConnectionStatus badge
-│   └── index.css                # Global Design Tokens, Micro-Interactions & Mobile Grids
-├── collaboration_log.md         # Official Sprint & Teamwork Contribution Log
-├── README.md                    # Enterprise Documentation & Setup Guide
-└── vercel.json                  # Production Build & Rewrite Configuration
+│   │   │   ├── ai/              # Attack diagram cards, AI analysis panels
+│   │   │   ├── copilot/         # Chat UI, citation cards, message renderers
+│   │   │   ├── dashboard/       # KPI cards, trend charts, threat feed
+│   │   │   ├── inventory/       # Endpoint inspector drawer, WebsiteFavicon
+│   │   │   ├── layouts/         # Sidebar (with Google avatar), GlobalTopBar
+│   │   │   └── scans/           # Live scanner log, AttackSurfaceMap, findings
+│   │   ├── contexts/            # AuthContext (Firebase + JWT token exchange)
+│   │   ├── pages/               # Scans, History, Copilot, Reports, Queue, Settings
+│   │   ├── services/            # Axios client (120s timeout, auto Vercel fallback)
+│   │   └── sockets/             # Socket.IO client + ConnectionStatus badge
+│   ├── public/                  # favicon.ico
+│   └── index.html
+├── docs/
+│   └── diagrams/                # Contribution breakdown, timeline, branch flow charts
+├── collaboration_log.md         # Full 224-commit sprint registry + author attribution
+├── vercel.json                  # Production SPA rewrite config
+└── README.md
 ```
 
 ---
 
-## 🛠️ Quickstart & Local Setup
+## 📡 Complete API Reference
 
-### 1. Prerequisites
-- **Node.js**: v20.x or higher
-- **MongoDB**: Local URI (`mongodb://localhost:27017/api-security-scanner`) or MongoDB Atlas Cluster
-- **Redis (Optional)**: For BullMQ multi-worker queue mode
+### Auth
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/google-login` | Google OAuth → JWT token exchange |
+| `POST` | `/api/auth/register` | Email/password registration |
+| `POST` | `/api/auth/login` | Email/password login |
+| `POST` | `/api/auth/logout` | Invalidate session |
 
-### 2. Backend Setup
+### Scans
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/scans/start` | Launch 52-scanner parallel DAST audit |
+| `GET` | `/api/scans` | List all scans with status |
+| `GET` | `/api/scans/:id` | Full scan detail (findings, CVSS, telemetry) |
+| `POST` | `/api/scans/:id/reaudit` | Re-queue existing scan |
+| `DELETE` | `/api/scans/:id` | Delete scan record |
+
+### Threat Intelligence _(NEW)_
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/threat-intel/scan` | Full scan — all sources + catalog + NVD enrichment |
+| `GET` | `/api/threat-intel/cve/:cveId` | NVD official CVE details + CVSS v3.1 |
+| `GET` | `/api/threat-intel/shodan/:host` | Shodan open ports + host CVEs |
+| `GET` | `/api/threat-intel/virustotal/:target` | VirusTotal domain/URL/IP reputation |
+| `GET` | `/api/threat-intel/vulners/:software` | Vulners CVE search by software name |
+
+### AI & Copilot
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/ai/analyze` | AI vulnerability analysis + code fix |
+| `POST` | `/api/ai/export-pdf` | Generate PDF report for a vulnerability |
+| `POST` | `/api/copilot/chat` | RAG AI copilot conversation |
+
+### Inventory
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/inventory/scan-target` | Crawl target → discover endpoints |
+| `GET` | `/api/inventory` | List all discovered endpoints |
+| `GET` | `/api/inventory/export` | Export OpenAPI 3.0 JSON spec |
+
+### Settings & Other
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/settings` | Fetch 15 persistent settings |
+| `PUT` | `/api/settings` | Update and persist settings |
+| `GET` | `/api/queue/status` | BullMQ worker pool metrics |
+| `GET` | `/api/dashboard/stats` | Dashboard KPI data |
+| `GET` | `/api/reports/:id/pdf` | Generate executive PDF report |
+
+---
+
+## 🚀 Local Setup
+
+### Prerequisites
+- Node.js v20+
+- MongoDB (local or Atlas)
+- Redis (optional — for BullMQ multi-worker mode)
+
+### 1. Clone
+```bash
+git clone https://github.com/Redkrossresearch/api-security-scanner.git
+cd api-security-scanner
+```
+
+### 2. Backend
 ```bash
 cd backend
 npm install
-# Create backend/.env file with:
-# PORT=5000
-# MONGO_URI=mongodb://localhost:27017/api-security-scanner
-# OPENROUTER_API_KEY=your_key_here
-npm run dev
 ```
 
-### 3. Frontend Setup
+Create `backend/.env`:
+```env
+NODE_ENV=development
+PORT=5000
+
+MONGODB_URI=mongodb://localhost:27017/api-security-scanner
+
+JWT_ACCESS_SECRET=your_secret_here
+JWT_REFRESH_SECRET=your_refresh_secret
+
+CLIENT_URL=http://localhost:5173
+
+GEMINI_API_KEY=your_gemini_key
+GROQ_API_KEY=your_groq_key
+OPENROUTER_API_KEY=your_openrouter_key
+
+# Threat Intelligence APIs
+VULNERS_API_KEY=your_vulners_key
+NVD_API_KEY=your_nvd_key
+SHODAN_API_KEY=your_shodan_key
+VIRUSTOTAL_API_KEY=your_virustotal_key
+THREAT_INTEL_TIMEOUT_MS=8000
+```
+
+```bash
+npm run dev
+# Server: http://localhost:5000
+```
+
+### 3. Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
+# App: http://localhost:5173
 ```
-Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## ⚖️ Intellectual Property & Licensing
-Copyright (c) 2024-2026 **Atharv Gupta** and **Muskan** (Redkross Research / ATHX Security Platform). All Rights Reserved.  
-This software, source code, underlying algorithms, multi-agent AI architecture, and 52 security scanner modules constitute proprietary trade secrets and intellectual property. Unauthorized copying, distribution, or commercial deployment without prior written permission is strictly prohibited under applicable copyright laws.
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 19, Vite 8, React Router 7, Framer Motion, ReactFlow |
+| **State** | React Context API, WebSocket (Socket.IO client) |
+| **Backend** | Node.js 24, Express 5, Socket.IO |
+| **Database** | MongoDB + Mongoose |
+| **Task Queue** | BullMQ + Redis (in-process fallback) |
+| **Auth** | Firebase Google OAuth → Backend JWT exchange |
+| **AI** | Google Gemini Flash, Groq LPU, OpenRouter |
+| **Threat Intel** | Vulners API, NVD NIST, Shodan, VirusTotal |
+| **PDF Engine** | PDFKit, Puppeteer |
+| **Deployment** | Vercel (frontend) + Render (backend) |
+
+---
+
+## 👥 Team
+
+| Member | Role | Branch |
+|---|---|---|
+| **Atharv Gupta** | Backend Architecture, 52 Scanners, AI Engine, Threat Intel, BullMQ, Auth, Reports | `atharv-dev` |
+| **Muskan** | Frontend UI/UX, React Components, Dashboard, Settings, Inventory, Copilot Chat | `muskan-dev` |
+
+**Total Commits: 224+** across 4 branches (`main`, `dev`, `atharv-dev`, `muskan-dev`)  
+See [collaboration_log.md](./collaboration_log.md) for the full sprint history.
+
+---
+
+## ⚖️ License
+
+Copyright © 2024–2026 **Atharv Gupta & Muskan** — Redkross Research / ATHX Security Platform.  
+All Rights Reserved. Proprietary software — unauthorized use, copying, or distribution is strictly prohibited.
